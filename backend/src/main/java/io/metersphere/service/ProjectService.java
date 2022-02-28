@@ -20,8 +20,10 @@ import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.commons.utils.ServiceUtils;
 import io.metersphere.commons.utils.SessionUtils;
+import io.metersphere.controller.request.AddProjectRequest;
 import io.metersphere.controller.request.ProjectRequest;
 import io.metersphere.controller.request.ScheduleRequest;
+import io.metersphere.dto.ProjectConfig;
 import io.metersphere.dto.ProjectDTO;
 import io.metersphere.dto.WorkspaceMemberDTO;
 import io.metersphere.i18n.Translator;
@@ -107,9 +109,11 @@ public class ProjectService {
     private ApiScenarioReportService apiScenarioReportService;
     @Resource
     private ProjectApplicationMapper projectApplicationMapper;
+    @Resource
+    private ProjectApplicationService projectApplicationService;
 
 
-    public Project addProject(Project project) {
+    public Project addProject(AddProjectRequest project) {
         if (StringUtils.isBlank(project.getName())) {
             MSException.throwException(Translator.get("project_name_is_null"));
         }
@@ -344,45 +348,15 @@ public class ProjectService {
         });
     }
 
-
-
-
-    public void updateProject(Project project) {
-        //查询之前的TCP端口，用于检查是否需要开启/关闭 TCP接口
-        int lastTcpNum = 0;
-        Project oldData = projectMapper.selectByPrimaryKey(project.getId());
-        if (oldData != null && oldData.getMockTcpPort() != null) {
-            lastTcpNum = oldData.getMockTcpPort().intValue();
-        }
-
-        if (project.getMockTcpPort().intValue() > 0) {
-            this.checkMockTcpPort(project.getMockTcpPort().intValue());
-        }
-
-        this.checkProjectTcpPort(project);
-
+    public void updateProject(AddProjectRequest project) {
         project.setCreateTime(null);
         project.setCreateUser(null);
         project.setUpdateTime(System.currentTimeMillis());
         checkProjectExist(project);
-        if (BooleanUtils.isTrue(project.getCustomNum())) {
-            testCaseService.updateTestCaseCustomNumByProjectId(project.getId());
-        }
         projectMapper.updateByPrimaryKeySelective(project);
-        addOrUpdateCleanUpSchedule(project);
-
-        //检查Mock环境是否需要同步更新
-        ApiTestEnvironmentService apiTestEnvironmentService = CommonBeanFactory.getBean(ApiTestEnvironmentService.class);
-        apiTestEnvironmentService.getMockEnvironmentByProjectId(project.getId());
-        //开启tcp mock
-        if (project.getIsMockTcpOpen()) {
-            this.reloadMockTcp(project, lastTcpNum);
-        } else {
-            this.closeMockTcp(project);
-        }
     }
 
-    public void addOrUpdateCleanUpSchedule(Project project) {
+    public void addOrUpdateCleanUpSchedule(AddProjectRequest project) {
         Boolean cleanTrackReport = project.getCleanTrackReport();
         Boolean cleanApiReport = project.getCleanApiReport();
         Boolean cleanLoadReport = project.getCleanLoadReport();
@@ -453,7 +427,7 @@ public class ProjectService {
         return inRange;
     }
 
-    private void checkMockTcpPort(int port) {
+    public void checkMockTcpPort(int port) {
         if (StringUtils.isNotEmpty(this.tcpMockPorts)) {
             try {
                 if (this.tcpMockPorts.contains("-")) {
@@ -486,14 +460,15 @@ public class ProjectService {
         }
     }
 
-    private void checkProjectTcpPort(Project project) {
+    public void checkProjectTcpPort(AddProjectRequest project) {
         //判断端口是否重复
         if (project.getMockTcpPort() != null && project.getMockTcpPort().intValue() != 0) {
             String projectId = StringUtils.isEmpty(project.getId()) ? "" : project.getId();
-            ProjectExample example = new ProjectExample();
-            example.createCriteria().andMockTcpPortEqualTo(project.getMockTcpPort()).andIdNotEqualTo(projectId);
-            long countResult = projectMapper.countByExample(example);
-            if (countResult > 0) {
+            ProjectApplicationExample example = new ProjectApplicationExample();
+            example.createCriteria().andTypeEqualTo(ProjectApplicationType.MOCK_TCP_PORT.name())
+                    .andTypeValueEqualTo(String.valueOf(project.getMockTcpPort()))
+                    .andProjectIdNotEqualTo(projectId);
+            if (projectApplicationMapper.countByExample(example) > 0) {
                 MSException.throwException("TCP Port is not unique！");
             }
         }
@@ -557,7 +532,8 @@ public class ProjectService {
 
     public boolean useCustomNum(Project project) {
         if (project != null) {
-            Boolean customNum = project.getCustomNum();
+            ProjectConfig config = projectApplicationService.getSpecificTypeValue(project.getId(), ProjectApplicationType.CASE_CUSTOM_NUM.name());
+            Boolean customNum = config.getCaseCustomNum();
             // 未开启自定义ID
             if (!customNum) {
                 return false;
@@ -741,10 +717,12 @@ public class ProjectService {
         if (project == null) {
             MSException.throwException("Project not found!");
         } else {
-            if (project.getMockTcpPort() == null) {
+            ProjectConfig config = projectApplicationService.getSpecificTypeValue(project.getId(), ProjectApplicationType.MOCK_TCP_PORT.name());
+            Integer mockPort = config.getMockTcpPort();
+            if (mockPort == null || mockPort != 0) {
                 MSException.throwException("Mock tcp port is not Found!");
             } else {
-                TCPPool.createTcp(project.getMockTcpPort());
+                TCPPool.createTcp(mockPort);
             }
         }
     }
@@ -763,10 +741,12 @@ public class ProjectService {
         if (project == null) {
             MSException.throwException("Project not found!");
         } else {
-            if (project.getMockTcpPort() == null) {
+            ProjectConfig config = projectApplicationService.getSpecificTypeValue(project.getId(), ProjectApplicationType.MOCK_TCP_PORT.name());
+            Integer mockPort = config.getMockTcpPort();
+            if (mockPort == null || mockPort != 0) {
                 MSException.throwException("Mock tcp port is not Found!");
             } else {
-                this.closeMockTcp(project.getMockTcpPort().intValue());
+                this.closeMockTcp(mockPort);
             }
         }
     }
@@ -782,24 +762,28 @@ public class ProjectService {
      */
     public void initMockTcpService() {
         try {
-            ProjectExample example = new ProjectExample();
-            Integer portInteger = new Integer(0);
-            Boolean statusBoolean = new Boolean(true);
-            example.createCriteria().andIsMockTcpOpenEqualTo(statusBoolean).andMockTcpPortNotEqualTo(portInteger);
-            List<Project> projectList = projectMapper.selectByExample(example);
-
-            List<Integer> opendPortList = new ArrayList<>();
-            for (Project p : projectList) {
-                boolean isPortInRange = this.isMockTcpPortIsInRange(p.getMockTcpPort());
-                if (isPortInRange && !opendPortList.contains(p.getMockTcpPort())) {
-                    opendPortList.add(p.getMockTcpPort());
-                    this.openMockTcp(p);
+            ProjectApplicationExample pae = new ProjectApplicationExample();
+            pae.createCriteria().andTypeEqualTo(ProjectApplicationType.MOCK_TCP_OPEN.name())
+                    .andTypeValueEqualTo(String.valueOf(true));
+            pae.or().andTypeEqualTo(ProjectApplicationType.MOCK_TCP_PORT.name())
+                    .andTypeValueEqualTo(String.valueOf(0));
+            List<ProjectApplication> projectApplications = projectApplicationMapper.selectByExample(pae);
+            List<String> projectIds = projectApplications.stream().map(ProjectApplication::getProjectId).collect(Collectors.toList());
+            List<Integer> openedPortList = new ArrayList<>();
+            for (String projectId : projectIds) {
+                ProjectConfig config = projectApplicationService.getSpecificTypeValue(projectId, ProjectApplicationType.MOCK_TCP_PORT.name());
+                Integer mockPort = config.getMockTcpPort();
+                boolean isPortInRange = this.isMockTcpPortIsInRange(mockPort);
+                if (isPortInRange && !openedPortList.contains(mockPort)) {
+                    openedPortList.add(mockPort);
+                    Project project = new Project();
+                    project.setId(projectId);
+                    this.openMockTcp(project);
                 } else {
-                    if (opendPortList.contains(p.getMockTcpPort())) {
-                        p.setMockTcpPort(0);
+                    if (openedPortList.contains(mockPort)) {
+                        projectApplicationService.createOrUpdateConfig(projectId, ProjectApplicationType.MOCK_TCP_PORT.name(), String.valueOf(mockPort));
                     }
-                    p.setIsMockTcpOpen(false);
-                    projectMapper.updateByPrimaryKeySelective(p);
+                    projectApplicationService.createOrUpdateConfig(projectId, ProjectApplicationType.MOCK_TCP_OPEN.name(), String.valueOf(false));
                 }
             }
         } catch (Exception e) {
@@ -810,9 +794,11 @@ public class ProjectService {
     public String genTcpMockPort(String id) {
         int returnPort = 0;
         Project project = projectMapper.selectByPrimaryKey(id);
-        if (project != null && project.getMockTcpPort() != null && project.getMockTcpPort().intValue() != 0) {
-            if (this.isMockTcpPortIsInRange(project.getMockTcpPort().intValue())) {
-                returnPort = project.getMockTcpPort();
+        ProjectConfig config = projectApplicationService.getSpecificTypeValue(id, ProjectApplicationType.MOCK_TCP_PORT.name());
+        Integer mockPort = config.getMockTcpPort();
+        if (project != null && mockPort != 0) {
+            if (this.isMockTcpPortIsInRange(mockPort)) {
+                returnPort = mockPort;
             }
         } else {
             if (StringUtils.isNotEmpty(this.tcpMockPorts)) {
@@ -897,7 +883,9 @@ public class ProjectService {
         if(project == null){
             MSException.throwException(Translator.get("cannot_find_project"));
         }else {
-            if(!project.getRepeatable()){
+            ProjectConfig config = projectApplicationService.getSpecificTypeValue(project.getId(), ProjectApplicationType.URL_REPEATABLE.name());
+            boolean urlRepeat = config.getUrlRepeatable();
+            if(!urlRepeat){
                 MSException.throwException(Translator.get("project_repeatable_is_false"));
             }
         }
