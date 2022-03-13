@@ -24,6 +24,7 @@ public class SystemReference {
     public static Map<String, String> groupColumns = new LinkedHashMap<>();
     public static Map<String, String> apiFieldColumns = new LinkedHashMap<>();
     public static Map<String, String> projectApplicationColumns = new LinkedHashMap<>();
+    public static Map<String, String> workspaceRepositoryColumns = new LinkedHashMap<>();
 
     static {
 
@@ -46,6 +47,7 @@ public class SystemReference {
         groupColumns.clear();
         apiFieldColumns.clear();
         projectApplicationColumns.clear();
+        workspaceRepositoryColumns.clear();
 
         userColumns.put("name", "用户名称");
         userColumns.put("createUser", "创建人");
@@ -168,5 +170,9 @@ public class SystemReference {
         apiFieldColumns.put("apiPath", "接口路径");
         apiFieldColumns.put("apiMethod", "请求类型");
         apiFieldColumns.put("description", "描述");
+
+        workspaceRepositoryColumns.put("repositoryName", "存储库名称");
+        workspaceRepositoryColumns.put("repositoryUrl", "存储库地址");
+        workspaceRepositoryColumns.put("workspaceId", "工作空间");
     }
 }
