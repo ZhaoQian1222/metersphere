@@ -7,6 +7,7 @@ import io.metersphere.base.domain.TestPlanReportContent;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 
@@ -35,4 +36,22 @@ public class TestPlanSimpleReportDTO extends TestPlanReportContent {
     List<TestPlanLoadCaseDTO> loadFailureCases;
     List<TestPlanFailureApiDTO> errorReportCases;
     List<TestPlanFailureScenarioDTO> errorReportScenarios;
+
+    public int getPassCount() {
+        if (passCount == 0 && getPassRate() != null && getCaseCount() != null){
+            BigDecimal pr = new BigDecimal(getPassRate());
+            BigDecimal cc = new BigDecimal(getCaseCount());
+            passCount = pr.multiply(cc).setScale(0,BigDecimal.ROUND_HALF_UP).intValue();
+        }
+        return passCount;
+    }
+
+    public int getExecuteCount() {
+        if (executeCount == 0 && getExecuteRate() != null && getCaseCount() != null){
+            BigDecimal pr = new BigDecimal(getExecuteRate());
+            BigDecimal cc = new BigDecimal(getCaseCount());
+            executeCount = pr.multiply(cc).setScale(0,BigDecimal.ROUND_HALF_UP).intValue();
+        }
+        return executeCount;
+    }
 }

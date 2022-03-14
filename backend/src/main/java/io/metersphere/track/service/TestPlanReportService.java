@@ -914,6 +914,9 @@ public class TestPlanReportService {
         testPlanReportDTO.setId(reportId);
         TestPlanReport testPlanReport = testPlanReportMapper.selectByPrimaryKey(testPlanReportContent.getTestPlanReportId());
         testPlanReportDTO.setName(testPlanReport.getName());
+        if(testPlanReportDTO.getCaseCount() == null){
+            testPlanReportDTO.setCaseCount(0L);
+        }
         return testPlanReportDTO;
     }
 
