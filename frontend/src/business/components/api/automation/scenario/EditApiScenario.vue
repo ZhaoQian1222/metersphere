@@ -144,7 +144,7 @@
                                  @setProjectEnvMap="setProjectEnvMap" @setEnvGroup="setEnvGroup"
                                  @showPopover="showPopover" :has-option-group="true"
                                  ref="envPopover" class="ms-message-right"/>
-                    <el-tooltip v-if="!debugLoading" content="Ctrl + R" placement="top">
+                    <el-tooltip v-if="!debugLoading && showDebug" content="Ctrl + R" placement="top">
                       <el-dropdown split-button type="primary" @click="runDebug" class="ms-message-right" size="mini" @command="handleCommand" v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
                         {{ $t('api_test.request.debug') }}
                         <el-dropdown-menu slot="dropdown">
@@ -152,7 +152,7 @@
                         </el-dropdown-menu>
                       </el-dropdown>
                     </el-tooltip>
-                    <el-button size="mini" type="primary" v-else @click="stop">{{ $t('report.stop_btn') }}</el-button>
+                    <el-button size="mini" type="primary" v-else-if="showDebug" @click="stop">{{ $t('report.stop_btn') }}</el-button>
                     <el-tooltip class="item" effect="dark" :content="$t('commons.refresh')" placement="top-start">
                       <el-button :disabled="scenarioDefinition.length < 1" size="mini" icon="el-icon-refresh"
                                  v-prevent-re-click @click="getApiScenario"></el-button>
@@ -482,6 +482,8 @@ export default {
       scenarioDefinition: [],
       scenarioDefinitionOrg: [],
       path: "/api/automation/create",
+      repositoryCreatePath: "/repository/api/automation/create",
+      repositoryUpdatePath: "/repository/api/automation/update",
       debugData: {},
       reportId: "",
       enableCookieShare: false,
@@ -721,8 +723,9 @@ export default {
       this.reqSuccess = 0;
       this.executeType = "";
       this.pluginDelStep = false;
+      this.showDebug = true;
     },
-    clearResult(arr) {
+    clearResult(arr) { this.path = this.repositoryPath;
       if (arr) {
         arr.forEach(item => {
           item.requestResult = [];
@@ -1412,7 +1415,6 @@ export default {
             }
             saveScenario(this.path, this.currentScenario, this.scenarioDefinition, this, (response) => {
               this.$success(this.$t('commons.save_success'));
-              this.$store.state.scenarioMap.delete(this.currentScenario.id);
               if (this.showXpackCompnent) {
                 this.path = "/repository/api/automation/update";
               } else {
