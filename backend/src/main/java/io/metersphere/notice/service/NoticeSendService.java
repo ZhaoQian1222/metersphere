@@ -61,14 +61,20 @@ public class NoticeSendService {
      */
     public void send(String taskType, NoticeModel noticeModel) {
         try {
-            List<MessageDetail> messageDetails = noticeService.searchMessageByType(taskType);
+            String workspaceId = (String) noticeModel.getParamMap().get("workspaceId");
+            List<MessageDetail> messageDetails;
+            if (StringUtils.isEmpty(workspaceId)) {
+                messageDetails = noticeService.searchMessageByType(taskType);
+            } else {
+                messageDetails = noticeService.searchMessageByTypeAndWorkspaceId(taskType, workspaceId);
+            }
 
             // 异步发送通知
             messageDetails.stream()
                     .filter(messageDetail -> StringUtils.equals(messageDetail.getEvent(), noticeModel.getEvent()))
                     .forEach(messageDetail -> {
                         MessageDetail m = SerializationUtils.clone(messageDetail);
-                        NoticeModel n =  SerializationUtils.clone(noticeModel);
+                        NoticeModel n = SerializationUtils.clone(noticeModel);
                         this.getNoticeSender(m).send(m, n);
                     });
 
@@ -106,7 +112,7 @@ public class NoticeSendService {
                     .filter(messageDetail -> StringUtils.equals(messageDetail.getEvent(), noticeModel.getEvent()))
                     .forEach(messageDetail -> {
                         MessageDetail m = SerializationUtils.clone(messageDetail);
-                        NoticeModel n =  SerializationUtils.clone(noticeModel);
+                        NoticeModel n = SerializationUtils.clone(noticeModel);
                         this.getNoticeSender(m).send(m, n);
                     });
 
@@ -132,14 +138,14 @@ public class NoticeSendService {
 //                default:
 //                    break;
 //            }
-            messageDetails = noticeService.searchMessageByTypeAndWorkspaceId(taskType, project.getWorkspaceId());
+            messageDetails = noticeService.searchMessageByTypeAndWorkspaceId(taskType, project.getId());
 
             // 异步发送通知
             messageDetails.stream()
                     .filter(messageDetail -> StringUtils.equals(messageDetail.getEvent(), noticeModel.getEvent()))
                     .forEach(messageDetail -> {
                         MessageDetail m = SerializationUtils.clone(messageDetail);
-                        NoticeModel n =  SerializationUtils.clone(noticeModel);
+                        NoticeModel n = SerializationUtils.clone(noticeModel);
                         this.getNoticeSender(m).send(m, n);
                     });
 

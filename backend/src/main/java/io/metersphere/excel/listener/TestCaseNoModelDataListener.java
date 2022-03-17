@@ -47,6 +47,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     private Map<Integer, String> headMap;
     private Map<String,String> excelHeadToFieldNameDic = new HashMap<>();
 
+
     private static NumberFormat numberFormat = NumberFormat.getNumberInstance();
 
     /**
@@ -577,10 +578,7 @@ public class TestCaseNoModelDataListener extends AnalysisEventListener<Map<Integ
     private RowInfo parseIndexInRow(String row,int rowIndex) {
         RowInfo rowInfo = new RowInfo();
         String parseString = row;
-        if(isNumericzidai(parseString)){
-            Double aDouble = Double.valueOf(parseString);
-            parseString = numberFormat.format(aDouble);
-        }
+
         int index = -1;
         String rowMessage = row;
         if(isNumericzidai(rowMessage)){

@@ -167,8 +167,12 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         sampler.setDoMultipart(this.isDoMultipartPost());
         if (config.getConfig() == null) {
             // 单独接口执行
-            this.setProjectId(config.getProjectId());
-            config.setConfig(ElementUtil.getEnvironmentConfig(this.useEnvironment, this.getProjectId(), this.isMockEnvironment()));
+            if (StringUtils.isNotEmpty(config.getProjectId())) {
+                this.setProjectId(config.getProjectId());
+            }
+            String projectId = this.getProjectId();
+            config.setConfig(ElementUtil.getEnvironmentConfig(this.useEnvironment, projectId, this.isMockEnvironment()));
+            this.setProjectId(projectId);
         }
 
         config.compatible(this);
@@ -186,6 +190,11 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             List<KeyValue> bodyParams = this.body.getBodyParams(sampler, this.getId());
             if (StringUtils.isNotEmpty(this.body.getType()) && "Form Data".equals(this.body.getType())) {
                 sampler.setDoMultipart(true);
+                this.body.getKvs().forEach(files -> {
+                    if (StringUtils.isNotEmpty(files.getName()) && "file".equals(files.getType()) && CollectionUtils.isNotEmpty(files.getFiles())) {
+                        sampler.setDoBrowserCompatibleMultipart(true);
+                    }
+                });
             }
             if (CollectionUtils.isNotEmpty(bodyParams)) {
                 Arguments arguments = httpArguments(bodyParams);
@@ -624,7 +633,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             });
         }
         try {
-            Pattern p = Pattern.compile("(\\{)([\\w]+)(\\})");
+            Pattern p = Pattern.compile("(\\{)([\\w-]+)(\\})");
             Matcher m = p.matcher(path);
             while (m.find()) {
                 String group = m.group(2);

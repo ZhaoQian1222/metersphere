@@ -66,6 +66,8 @@ public class TestPlanTestCaseService {
     private TestCaseCommentService testCaseCommentService;
     @Resource
     private TestCaseService testCaseService;
+    @Resource
+    private TestCaseIssueService testCaseIssueService;
 
     public List<TestPlanTestCaseWithBLOBs> listAll() {
         TestPlanTestCaseExample example = new TestPlanTestCaseExample();

@@ -364,6 +364,7 @@ export default {
     };
   },
   activated() {
+    this.selectNodeIds = [];
     let dataRange = this.$route.params.dataSelectRange;
     if (dataRange && dataRange.length > 0) {
       this.activeDom = 'middle';
@@ -459,6 +460,9 @@ export default {
         if (env) {
           this.$store.state.useEnvironment = env.envId;
           this.useEnvironment = env.envId;
+        } else {
+          this.$store.state.useEnvironment = "";
+          this.useEnvironment = "";
         }
       });
     },

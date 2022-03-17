@@ -1201,7 +1201,7 @@ export default {
       api_path: "路徑",
       api_definition_path: "API路徑",
       api_case_path: "用例路徑",
-      api_principal: "負責人",
+      api_principal: "責任人",
       api_last_time: "最後更新時間",
       api_case_number: "用例數",
       api_case_status: "用例狀態",
@@ -2355,6 +2355,7 @@ export default {
       delete: "刪除缺陷",
       title_description_required: "標題和描述必填",
       close_success: "關閉成功",
+      delete_warning: "解除會影響測試計畫相關統計，是否確認",
       preview: "預覽",
       status_new: '新建',
       status_resolved: '已解決',
@@ -2626,7 +2627,7 @@ export default {
   },
   variables: {
     cvs_info: "只能上傳CSV文件",
-    csv_message: "默認展示2000條，完整的內容可點擊下載查看。",
+    csv_message: "默認展示500條，完整的內容可點擊下載查看。",
     end: "結束",
     start: "開始",
     increment: "增量",
@@ -3097,6 +3098,7 @@ export default {
   error_report_library: {
     name: "誤報庫",
     assertion: "誤報斷言",
+    tips:"注：在\"項目設置-設置環境-全局斷言\"中啟用誤報將進行以下規則匹配",
     use_error_report: "啟用誤報",
     use_desc: "失敗斷言與誤報規則衝突時統一處理為誤報",
     option: {

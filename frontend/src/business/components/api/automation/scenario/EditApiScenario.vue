@@ -5,13 +5,13 @@
 
         <!--操作按钮-->
         <div class="ms-opt-btn">
-          <el-tooltip :content="$t('commons.follow')" placement="bottom" effect="dark" v-if="!showFollow">
+          <el-tooltip :content="$t('commons.follow')" placement="bottom" effect="dark" v-show="!showFollow">
             <i class="el-icon-star-off" style="color: #783987; font-size: 25px; margin-right: 5px;cursor: pointer;position: relative; top: 5px; " @click="saveFollow"/>
           </el-tooltip>
-          <el-tooltip :content="$t('commons.cancel')" placement="bottom" effect="dark" v-if="showFollow">
+          <el-tooltip :content="$t('commons.cancel')" placement="bottom" effect="dark" v-show="showFollow">
             <i class="el-icon-star-on" style="color: #783987; font-size: 28px; margin-right: 5px;cursor: pointer;position: relative; top: 5px; " @click="saveFollow"/>
           </el-tooltip>
-          <el-link type="primary" style="margin-right: 5px" @click="openHis" v-if="path === '/api/automation/update'">{{ $t('operating_log.change_history') }}</el-link>
+          <el-link type="primary" style="margin-right: 5px" @click="openHis" v-show="path === '/api/automation/update'">{{ $t('operating_log.change_history') }}</el-link>
           <!--  版本历史 -->
           <ms-version-history v-xpack
                               ref="versionHistory"
@@ -144,7 +144,7 @@
                                  @setProjectEnvMap="setProjectEnvMap" @setEnvGroup="setEnvGroup"
                                  @showPopover="showPopover" :has-option-group="true"
                                  ref="envPopover" class="ms-message-right"/>
-                    <el-tooltip v-if="!debugLoading && showDebug" content="Ctrl + R" placement="top">
+                    <el-tooltip v-if="!debugLoading" content="Ctrl + R" placement="top">
                       <el-dropdown split-button type="primary" @click="runDebug" class="ms-message-right" size="mini" @command="handleCommand" v-permission="['PROJECT_API_SCENARIO:READ+EDIT', 'PROJECT_API_SCENARIO:READ+CREATE']">
                         {{ $t('api_test.request.debug') }}
                         <el-dropdown-menu slot="dropdown">
@@ -152,7 +152,7 @@
                         </el-dropdown-menu>
                       </el-dropdown>
                     </el-tooltip>
-                    <el-button size="mini" type="primary" v-else-if="showDebug" @click="stop">{{ $t('report.stop_btn') }}</el-button>
+                    <el-button size="mini" type="primary" v-else @click="stop">{{ $t('report.stop_btn') }}</el-button>
                     <el-tooltip class="item" effect="dark" :content="$t('commons.refresh')" placement="top-start">
                       <el-button :disabled="scenarioDefinition.length < 1" size="mini" icon="el-icon-refresh"
                                  v-prevent-re-click @click="getApiScenario"></el-button>
@@ -195,7 +195,7 @@
                        highlight-current
                        @node-expand="nodeExpand"
                        @node-collapse="nodeCollapse"
-                       :allow-drop="allowDrop" @node-drag-end="allowDrag" @node-click="nodeClick" draggable ref="stepTree" v-if="showHideTree">
+                       :allow-drop="allowDrop" @node-drag-end="allowDrag" @node-click="nodeClick" draggable :key="reloadKey" ref="stepTree">
                     <span class="custom-tree-node father" slot-scope="{node, data}" style="width: 96%">
                       <!-- 步骤组件-->
                        <ms-component-config
@@ -388,7 +388,10 @@ import {
 } from "@/common/js/utils";
 import "@/common/css/material-icons.css";
 import OutsideClick from "@/common/js/outside-click";
-import {savePreciseEnvProjectIds, saveScenario} from "@/business/components/api/automation/api-automation";
+import {
+  savePreciseEnvProjectIds,
+  saveScenario
+} from "@/business/components/api/automation/api-automation";
 import MsComponentConfig from "./component/ComponentConfig";
 import {ENV_TYPE} from "@/common/js/constants";
 
@@ -406,7 +409,7 @@ export default {
     customNum: {
       type: Boolean,
       default: false
-    }
+    },
   },
   components: {
     'MsVersionHistory': versionHistory.default,
@@ -435,6 +438,7 @@ export default {
       onSampleError: true,
       newOnSampleError: true,
       showConfigButtonWithOutPermission: false,
+      reloadKey: "",
       props: {
         label: "label",
         children: "hashTree"
@@ -465,7 +469,6 @@ export default {
       levels: PRIORITY,
       scenario: {},
       loading: false,
-      showHideTree: true,
       apiListVisible: false,
       customizeVisible: false,
       isBtnHide: false,
@@ -477,9 +480,8 @@ export default {
       selectedNode: undefined,
       expandedNode: [],
       scenarioDefinition: [],
+      scenarioDefinitionOrg: [],
       path: "/api/automation/create",
-      repositoryCreatePath: "/repository/api/automation/create",
-      repositoryUpdatePath: "/repository/api/automation/update",
       debugData: {},
       reportId: "",
       enableCookieShare: false,
@@ -536,24 +538,12 @@ export default {
     }
   },
   watch: {
-    currentScenario: {
-      handler(val) {
-        if (val && this.$store.state.scenarioMap) {
-          let change = this.$store.state.scenarioMap.get(this.currentScenario.id);
-          change = change + 1;
-          this.$store.state.scenarioMap.set(this.currentScenario.id, change);
-        }
+    scenarioDefinition: {
+      handler(v) {
+        this.currentScenario.scenarioDefinition = v;
       },
       deep: true
     },
-    'currentScenario.tags'() {
-      if (this.$store.state.scenarioMap) {
-        let change = this.$store.state.scenarioMap.get(this.currentScenario.id);
-        change = change + 1;
-        this.$store.state.scenarioMap.set(this.currentScenario.id, change);
-      }
-    },
-
   },
   created() {
     if (!this.currentScenario.apiScenarioModuleId) {
@@ -582,15 +572,10 @@ export default {
   mounted() {
     this.$nextTick(() => {
       this.addListener();
-      this.$store.state.scenarioMap.set(this.currentScenario.id, 0);
     });
     if (!this.currentScenario.name) {
       this.$refs.refFab.openMenu();
     }
-    if (!(this.$store.state.scenarioMap instanceof Map)) {
-      this.$store.state.scenarioMap = new Map();
-    }
-    this.$store.state.scenarioMap.set(this.currentScenario.id, 0);
   },
   directives: {OutsideClick},
   computed: {
@@ -633,7 +618,9 @@ export default {
             let data = JSON.parse(res.data);
             if (data.hashTree) {
               this.sort(data.hashTree);
-              this.scenarioDefinition = data.hashTree;
+              let domainMap = new Map();
+              this.getEnvDomain(data.hashTree, domainMap);
+              this.margeDomain(this.scenarioDefinition, domainMap);
               if (this.$store.state.currentApiCase) {
                 this.$store.state.currentApiCase.resetDataSource = getUUID();
               } else {
@@ -643,6 +630,27 @@ export default {
           }
         })
       }
+    },
+    margeDomain(array, map) {
+      array.forEach(item => {
+        if (item && map.has(item.resourceId)) {
+          item.domain = map.get(item.resourceId);
+          item.resourceId = getUUID();
+        }
+        if (item && item.hashTree && item.hashTree.length > 0) {
+          this.margeDomain(item.hashTree, map);
+        }
+      })
+    },
+    getEnvDomain(array, map) {
+      array.forEach(item => {
+        if (item && item.resourceId && item.domain) {
+          map.set(item.resourceId, item.domain);
+        }
+        if (item && item.hashTree && item.hashTree.length > 0) {
+          this.getEnvDomain(item.hashTree, map);
+        }
+      })
     },
     initPlugins() {
       if (this.plugins) {
@@ -686,25 +694,24 @@ export default {
     },
     stop() {
       if (this.reportId) {
+        this.debugLoading = false;
+        try {
+          if (this.messageWebSocket) {
+            this.messageWebSocket.close();
+          }
+          if (this.websocket) {
+            this.websocket.close();
+          }
+        } catch (e) {
+          this.debugLoading = false;
+        }
+        this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
+        this.clearDebug();
+        this.runScenario = undefined;
+        this.$success(this.$t('report.test_stop_success'));
         let url = "/api/automation/stop/" + this.reportId;
         this.$get(url, response => {
-          this.debugLoading = false;
-          try {
-            if (this.websocket) {
-              this.websocket.close();
-            }
-            if (this.messageWebSocket) {
-              this.messageWebSocket.close();
-            }
-            this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
-            this.clearDebug();
-            this.$success(this.$t('report.test_stop_success'));
-            this.showHide();
-          } catch (e) {
-            this.debugLoading = false;
-          }
         });
-        this.runScenario = undefined;
       }
     },
     clearDebug() {
@@ -1244,9 +1251,8 @@ export default {
       });
     },
     showHide() {
-      this.showHideTree = false
       this.$nextTick(() => {
-        this.showHideTree = true
+        this.$store.state.forceRerenderIndex = getUUID();
       });
     },
     runDebug(runScenario) {
@@ -1503,6 +1509,18 @@ export default {
                 }
                 this.dataProcessing(obj.hashTree);
                 this.scenarioDefinition = obj.hashTree;
+                this.scenarioDefinitionOrg = obj.hashTree;
+                let v1 = {
+                  apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
+                  name: this.currentScenario.name,
+                  status: this.currentScenario.status,
+                  principal: this.currentScenario.principal,
+                  level: this.currentScenario.level,
+                  tags: this.currentScenario.tags,
+                  description: this.currentScenario.description,
+                  scenarioDefinition: this.scenarioDefinitionOrg
+                };
+                this.currentScenario.scenarioDefinitionOrg = v1
                 this.oldScenarioDefinition = obj.hashTree;
               }
             }
@@ -1520,13 +1538,11 @@ export default {
             });
           }
           this.loading = false;
-          this.setDomain();
           this.sort();
           // 初始化resourceId
           if (this.scenarioDefinition) {
             this.resetResourceId(this.scenarioDefinition);
           }
-          this.$store.state.scenarioMap.set(this.currentScenario.id, 0);
         })
       }
     },
@@ -1711,7 +1727,7 @@ export default {
       this.expandedStatus = false;
       this.expandedNode = [];
       this.changeNodeStatus(this.scenarioDefinition);
-      this.showHide();
+      this.reloadKey = getUUID();
     },
     stepStatus(nodes) {
       for (let i in nodes) {

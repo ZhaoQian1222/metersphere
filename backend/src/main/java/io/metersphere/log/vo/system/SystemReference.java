@@ -22,8 +22,8 @@ public class SystemReference {
     public static Map<String, String> mailColumns = new LinkedHashMap<>();
     public static Map<String, String> baseColumns = new LinkedHashMap<>();
     public static Map<String, String> groupColumns = new LinkedHashMap<>();
-    public static Map<String, String> apiFieldColumns = new LinkedHashMap<>();
     public static Map<String, String> projectApplicationColumns = new LinkedHashMap<>();
+    public static Map<String, String> apiFieldColumns = new LinkedHashMap<>();
     public static Map<String, String> workspaceRepositoryColumns = new LinkedHashMap<>();
 
     static {

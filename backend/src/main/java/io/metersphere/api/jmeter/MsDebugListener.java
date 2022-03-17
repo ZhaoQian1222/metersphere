@@ -98,7 +98,7 @@ public class MsDebugListener extends AbstractListenerElement implements SampleLi
 
     @Override
     public void testEnded(String host) {
-        LoggerUtil.debug("TestEnded " + this.getName());
+        LoggerUtil.info("Debug TestEnded " + this.getName());
         MsgDto dto = new MsgDto();
         dto.setExecEnd(false);
         dto.setContent(TEST_END);
@@ -135,7 +135,7 @@ public class MsDebugListener extends AbstractListenerElement implements SampleLi
             LoggerUtil.debug("send. " + this.getName());
             WebSocketUtils.sendMessageSingle(dto);
         } catch (Exception ex) {
-            LoggerUtil.error("消息推送失败：" + ex.getMessage());
+            LoggerUtil.error("消息推送失败：" , ex);
         }
     }
 

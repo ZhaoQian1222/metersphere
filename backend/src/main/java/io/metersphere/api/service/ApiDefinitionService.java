@@ -304,8 +304,13 @@ public class ApiDefinitionService {
         if (StringUtils.equals(request.getProtocol(), "DUBBO")) {
             request.setMethod("dubbo://");
         }
+        if (StringUtils.isNotEmpty(request.getSourceId())) {
+            // 检查附件复制出附件
+            FileUtils.copyBodyFiles(request.getSourceId(), request.getId());
+        } else {
+            FileUtils.createBodyFiles(request.getRequest().getId(), bodyFiles);
+        }
         ApiDefinitionWithBLOBs returnModel = createTest(request);
-        FileUtils.createBodyFiles(request.getRequest().getId(), bodyFiles);
         return returnModel;
     }
 
@@ -1139,6 +1144,7 @@ public class ApiDefinitionService {
                 String context = request.getSwaggerUrl() + "导入失败";
                 Map<String, Object> paramMap = new HashMap<>();
                 paramMap.put("url", request.getSwaggerUrl());
+                paramMap.put("projectId", request.getProjectId());
                 NoticeModel noticeModel = NoticeModel.builder()
                         .operator(SessionUtils.getUserId())
                         .context(context)
@@ -1151,29 +1157,34 @@ public class ApiDefinitionService {
                 noticeSendService.send(NoticeConstants.TaskType.SWAGGER_TASK, noticeModel);
             }
         }
-        importApi(request, apiImport);
-        if (CollectionUtils.isNotEmpty(apiImport.getData())) {
-            List<String> names = apiImport.getData().stream().map(ApiDefinitionWithBLOBs::getName).collect(Collectors.toList());
-            request.setName(String.join(",", names));
-            List<String> ids = apiImport.getData().stream().map(ApiDefinitionWithBLOBs::getId).collect(Collectors.toList());
-            request.setId(JSON.toJSONString(ids));
-        }
-        // 发送通知
-        if (StringUtils.equals(request.getType(), "schedule")) {
-            String scheduleId = scheduleService.getScheduleInfo(request.getResourceId());
-            String context = request.getSwaggerUrl() + "导入成功";
-            Map<String, Object> paramMap = new HashMap<>();
-            paramMap.put("url", request.getSwaggerUrl());
-            NoticeModel noticeModel = NoticeModel.builder()
-                    .operator(SessionUtils.getUserId())
-                    .context(context)
-                    .testId(scheduleId)
-                    .subject(Translator.get("swagger_url_scheduled_import_notification"))
-                    .successMailTemplate("SwaggerImport")
-                    .paramMap(paramMap)
-                    .event(NoticeConstants.Event.EXECUTE_SUCCESSFUL)
-                    .build();
-            noticeSendService.send(NoticeConstants.Mode.SCHEDULE, "", noticeModel);
+        try {
+            importApi(request, apiImport);
+            if (CollectionUtils.isNotEmpty(apiImport.getData())) {
+                List<String> names = apiImport.getData().stream().map(ApiDefinitionWithBLOBs::getName).collect(Collectors.toList());
+                request.setName(String.join(",", names));
+                List<String> ids = apiImport.getData().stream().map(ApiDefinitionWithBLOBs::getId).collect(Collectors.toList());
+                request.setId(JSON.toJSONString(ids));
+            }
+            // 发送通知
+            if (StringUtils.equals(request.getType(), "schedule")) {
+                String scheduleId = scheduleService.getScheduleInfo(request.getResourceId());
+                String context = request.getSwaggerUrl() + "导入成功";
+                Map<String, Object> paramMap = new HashMap<>();
+                paramMap.put("url", request.getSwaggerUrl());
+                NoticeModel noticeModel = NoticeModel.builder()
+                        .operator(SessionUtils.getUserId())
+                        .context(context)
+                        .testId(scheduleId)
+                        .subject(Translator.get("swagger_url_scheduled_import_notification"))
+                        .successMailTemplate("SwaggerImport")
+                        .paramMap(paramMap)
+                        .event(NoticeConstants.Event.EXECUTE_SUCCESSFUL)
+                        .build();
+                noticeSendService.send(NoticeConstants.Mode.SCHEDULE, "", noticeModel);
+            }
+        } catch (Exception e) {
+            LogUtil.error(e);
+            MSException.throwException(Translator.get("user_import_format_wrong"));
         }
         return apiImport;
     }
@@ -1808,12 +1819,13 @@ public class ApiDefinitionService {
     public ApiDefinitionResult getById(String id) {
         ApiDefinitionRequest request = new ApiDefinitionRequest();
         request.setId(id);
-        List<ApiDefinitionResult> list = list(request);
+        List<ApiDefinitionResult> list = extApiDefinitionMapper.list(request);
         if (CollectionUtils.isNotEmpty(list)) {
             return list.get(0);
         }
         return null;
     }
+
 
     public long countEffectiveByProjectId(String projectId) {
         if (StringUtils.isEmpty(projectId)) {
@@ -1984,6 +1996,7 @@ public class ApiDefinitionService {
         try {
             for (int i = 0; i < apis.size(); i++) {
                 ApiDefinitionWithBLOBs api = apis.get(i);
+                String sourceId = api.getId();
                 api.setId(UUID.randomUUID().toString());
                 api.setName(ServiceUtils.getCopyName(api.getName()));
                 api.setModuleId(request.getModuleId());
@@ -1993,6 +2006,9 @@ public class ApiDefinitionService {
                 api.setCreateTime(System.currentTimeMillis());
                 api.setUpdateTime(System.currentTimeMillis());
                 api.setRefId(api.getId());
+                // 检查附件复制出附件
+                FileUtils.copyBodyFiles(sourceId, api.getId());
+
                 mapper.insert(api);
                 if (i % 50 == 0)
                     sqlSession.flushStatements();

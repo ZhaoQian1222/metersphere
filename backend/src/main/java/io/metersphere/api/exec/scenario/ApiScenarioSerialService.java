@@ -134,7 +134,7 @@ public class ApiScenarioSerialService {
             ResultDTO dto = new ResultDTO();
             BeanUtils.copyBean(dto, runRequest);
             CommonBeanFactory.getBean(ApiExecutionQueueService.class).queueNext(dto);
-            LoggerUtil.error("执行终止：" + e.getMessage());
+            LoggerUtil.error("执行终止：", e);
         }
     }
 
@@ -166,7 +166,7 @@ public class ApiScenarioSerialService {
 
                 MsThreadGroup group = new MsThreadGroup();
                 group.setLabel(caseWithBLOBs.getName());
-                group.setName(caseWithBLOBs.getName());
+                group.setName(runRequest.getReportId());
                 group.setProjectId(caseWithBLOBs.getProjectId());
 
                 MsTestElement testElement = parse(caseWithBLOBs, testId, envId);

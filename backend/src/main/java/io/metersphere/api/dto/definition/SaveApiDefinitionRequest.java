@@ -68,4 +68,6 @@ public class SaveApiDefinitionRequest {
     //自定义字段
     private String customFields;
 
+    // 复制的请求Id
+    private String sourceId;
 }

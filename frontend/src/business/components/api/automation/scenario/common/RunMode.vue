@@ -3,6 +3,7 @@
     destroy-on-close
     :title="$t('load_test.runtime_config')"
     width="550px"
+    @close="close"
     :visible.sync="runModeVisible"
   >
     <div style="margin-bottom: 10px;">
@@ -64,7 +65,7 @@
     </div>
 
     <div class="ms-mode-div" v-if="runConfig.reportType === 'setReport'">
-      <span class="ms-mode-span">{{ $t("run_mode.report_name") }}：</span>
+      <span class="ms-mode-span-label">{{ $t("run_mode.report_name") }}：</span>
       <el-input
         v-model="runConfig.reportName"
         :placeholder="$t('commons.input_content')"
@@ -145,6 +146,7 @@ export default {
         resourcePoolId: null,
       };
       this.runModeVisible = false;
+      this.$emit('close');
     },
     getWsProjects() {
       this.$get("/project/listAll", res => {
@@ -152,7 +154,7 @@ export default {
       })
     },
     handleRunBatch() {
-      if (this.runConfig.mode === 'serial' && this.runConfig.reportType === 'setReport' && this.runConfig.reportName.trim() === "") {
+      if ((this.runConfig.mode === 'serial' || this.runConfig.mode === 'parallel') && this.runConfig.reportType === 'setReport' && this.runConfig.reportName.trim() === "") {
         this.$warning(this.$t('commons.input_name'));
         return;
       }
@@ -195,4 +197,12 @@ export default {
 .ms-mode-div {
   margin-top: 20px;
 }
+
+.ms-mode-span-label:before {
+  content: '*';
+  color: #F56C6C;
+  margin-right: 4px;
+  margin-left: 10px;
+}
+
 </style>

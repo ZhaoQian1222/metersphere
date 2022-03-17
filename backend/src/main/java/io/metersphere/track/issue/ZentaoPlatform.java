@@ -338,11 +338,14 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
     }
 
     public List<ZentaoBuild> getBuilds() {
-        Map<String, String> builds = zentaoClient.getBuilds(getProjectId(projectId));
+        Map<String, Object> builds = zentaoClient.getBuildsByCreateMetaData(getProjectId(projectId));
+        if (builds == null || builds.isEmpty()) {
+            builds = zentaoClient.getBuilds(getProjectId(projectId));
+        }
         List<ZentaoBuild> res = new ArrayList<>();
         builds.forEach((k, v) -> {
             if (StringUtils.isNotBlank(k)) {
-                res.add(new ZentaoBuild(k, v));
+                res.add(new ZentaoBuild(k, v.toString()));
             }
         });
         return res;
@@ -389,10 +392,12 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
             String id = uploadFile(mdImage.getBody());
             // todo delete local file
             int index = fileName.lastIndexOf(".");
+            String suffix = "";
             if (index != -1) {
-                // replace id
-                zentaoSteps = zentaoSteps.replaceAll(Pattern.quote(originSubUrl), id);
+                suffix = fileName.substring(index);
             }
+            // replace id
+            zentaoSteps = zentaoSteps.replaceAll(Pattern.quote(originSubUrl), id + suffix);
         }
         // image link
         String netImgRegex = "!\\[(.*?)]\\((http.*?)\\)";

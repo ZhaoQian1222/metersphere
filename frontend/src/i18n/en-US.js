@@ -2351,6 +2351,7 @@ export default {
       delete: "Delete",
       title_description_required: "Title and description are required",
       close_success: "Closed successfully",
+      delete_warning: "The cancellation will affect the statistics related to the test plan. Confirm whether to confirm or not",
       preview: "Preview",
       status_new: 'new',
       status_resolved: 'resolved',
@@ -2624,7 +2625,7 @@ export default {
   },
   variables: {
     ƒ: "Only CSV files can be uploaded",
-    csv_message: "2000 items are displayed by default, and the complete content can be downloaded and viewed.",
+    csv_message: "500 items are displayed by default, and the complete content can be downloaded and viewed.",
     end: "end",
     start: "start",
     increment: "increment",
@@ -3094,6 +3095,7 @@ export default {
   error_report_library: {
     name: "Error report",
     assertion: "Error code assertion",
+    tips:"Tips: Use error report in \"Project Settings - Project environment-Assertions\"",
     use_error_report: "Use error code",
     use_desc: "In case of conflict between error code and error assertions, it is treated as error code",
     option: {

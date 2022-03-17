@@ -3,7 +3,7 @@
     <div class="header" @click="active(data)">
       <slot name="beforeHeaderLeft">
         <div v-if="data.index" class="el-step__icon is-text enable-switch" :style="{'color': color, 'background-color': backgroundColor}">
-          <div class="el-step__icon-inner">{{ data.index }}</div>
+          <div class="el-step__icon-inner" :key="$store.state.forceRerenderIndex">{{ data.index }}</div>
         </div>
         <slot name="behindHeaderLeft" v-if="!isMax"></slot>
         <el-tag class="ms-left-btn" size="small" :style="{'color': color, 'background-color': backgroundColor}">{{ title }}</el-tag>
@@ -32,11 +32,11 @@
         <slot name="message"></slot>
         <slot name="debugStepCode"></slot>
         <el-tooltip :content="$t('test_resource_pool.enable_disable')" placement="top" v-if="showBtn">
-          <el-switch v-model="data.enable" class="enable-switch" size="mini" :disabled="data.disabled && !data.root&&!showVersion" style="width: 30px"/>
+          <el-switch v-model="data.enable" class="enable-switch" size="mini" :disabled="(data.disabled && !data.root) || !showVersion" style="width: 30px"/>
         </el-tooltip>
         <slot name="button" v-if="showVersion"></slot>
-        <el-tooltip content="Copy" placement="top" v-if="showVersion">
-          <el-button size="mini" icon="el-icon-copy-document" circle @click="copyRow" style="padding: 5px" :disabled="data.disabled && !data.root"/>
+        <el-tooltip content="Copy" placement="top">
+          <el-button size="mini" icon="el-icon-copy-document" circle @click="copyRow" style="padding: 5px" :disabled="(data.disabled && !data.root) || !showVersion"/>
         </el-tooltip>
         <step-extend-btns style="display: contents"
                           :data="data"
@@ -53,7 +53,8 @@
     <!--最大化不显示具体内容-->
     <div class="header" v-if="!isMax">
       <el-collapse-transition>
-        <div v-show="data.active && showCollapse" :draggable="draggable">
+        <!-- 这里的组件默认不展开时不加载 -->
+        <div v-if="data.active && showCollapse" :draggable="draggable">
           <el-divider></el-divider>
           <fieldset :disabled="data.disabled" class="ms-fieldset">
             <!--四种协议请求内容-->
