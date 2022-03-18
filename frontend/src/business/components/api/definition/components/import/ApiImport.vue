@@ -470,7 +470,10 @@ export default {
             this.authConfig.authManager.clazzName = TYPE_TO_C.get("AuthManager");
             param.authManager = this.authConfig.authManager;
           }
-        }this.checkCustomFields(param);
+        }
+         if (param.platform === 'Swagger2'){
+           this.checkCustomFields(param);
+         }
         return param;
       },
        checkCustomFields(param){
