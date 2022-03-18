@@ -725,7 +725,7 @@ export default {
       this.pluginDelStep = false;
       this.showDebug = true;
     },
-    clearResult(arr) { this.path = this.repositoryPath;
+    clearResult(arr) {
       if (arr) {
         arr.forEach(item => {
           item.requestResult = [];
@@ -1407,6 +1407,7 @@ export default {
                 this.currentScenario.versionId = this.$refs.versionHistory.currentVersion.id;
               }
             }
+            console.log('this.path:', this.path);
             if (this.path.endsWith("/update") && this.showXpackCompnent) {
               this.path = this.repositoryUpdatePath;
             }
