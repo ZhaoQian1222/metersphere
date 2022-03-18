@@ -1053,6 +1053,66 @@ public class IssuesExample {
             addCriterion("platform_id not between", value1, value2, "platformId");
             return (Criteria) this;
         }
+
+        public Criteria andIsLinkParentIsNull() {
+            addCriterion("is_link_parent is null");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentIsNotNull() {
+            addCriterion("is_link_parent is not null");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentEqualTo(Boolean value) {
+            addCriterion("is_link_parent =", value, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentNotEqualTo(Boolean value) {
+            addCriterion("is_link_parent <>", value, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentGreaterThan(Boolean value) {
+            addCriterion("is_link_parent >", value, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentGreaterThanOrEqualTo(Boolean value) {
+            addCriterion("is_link_parent >=", value, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentLessThan(Boolean value) {
+            addCriterion("is_link_parent <", value, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentLessThanOrEqualTo(Boolean value) {
+            addCriterion("is_link_parent <=", value, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentIn(List<Boolean> values) {
+            addCriterion("is_link_parent in", values, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentNotIn(List<Boolean> values) {
+            addCriterion("is_link_parent not in", values, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentBetween(Boolean value1, Boolean value2) {
+            addCriterion("is_link_parent between", value1, value2, "isLinkParent");
+            return (Criteria) this;
+        }
+
+        public Criteria andIsLinkParentNotBetween(Boolean value1, Boolean value2) {
+            addCriterion("is_link_parent not between", value1, value2, "isLinkParent");
+            return (Criteria) this;
+        }
     }
 
     public static class Criteria extends GeneratedCriteria {

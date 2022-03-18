@@ -33,5 +33,7 @@ public class Issues implements Serializable {
 
     private String platformId;
 
+    private Boolean isLinkParent;
+
     private static final long serialVersionUID = 1L;
 }

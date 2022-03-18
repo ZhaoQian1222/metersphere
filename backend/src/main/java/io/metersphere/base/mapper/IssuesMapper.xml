@@ -16,6 +16,7 @@
     <result column="num" jdbcType="INTEGER" property="num" />
     <result column="platform_status" jdbcType="VARCHAR" property="platformStatus" />
     <result column="platform_id" jdbcType="VARCHAR" property="platformId" />
+    <result column="is_link_parent" jdbcType="BIT" property="isLinkParent" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="io.metersphere.base.domain.IssuesWithBLOBs">
     <result column="description" jdbcType="LONGVARCHAR" property="description" />
@@ -81,7 +82,7 @@
   </sql>
   <sql id="Base_Column_List">
     id, title, `status`, create_time, update_time, reporter, lastmodify, platform, project_id, 
-    creator, resource_id, num, platform_status, platform_id
+    creator, resource_id, num, platform_status, platform_id, is_link_parent
   </sql>
   <sql id="Blob_Column_List">
     description, custom_fields
@@ -139,14 +140,14 @@
       create_time, update_time, reporter, 
       lastmodify, platform, project_id, 
       creator, resource_id, num, 
-      platform_status, platform_id, description, 
-      custom_fields)
+      platform_status, platform_id, is_link_parent, 
+      description, custom_fields)
     values (#{id,jdbcType=VARCHAR}, #{title,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, 
       #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}, #{reporter,jdbcType=VARCHAR}, 
       #{lastmodify,jdbcType=VARCHAR}, #{platform,jdbcType=VARCHAR}, #{projectId,jdbcType=VARCHAR}, 
       #{creator,jdbcType=VARCHAR}, #{resourceId,jdbcType=VARCHAR}, #{num,jdbcType=INTEGER}, 
-      #{platformStatus,jdbcType=VARCHAR}, #{platformId,jdbcType=VARCHAR}, #{description,jdbcType=LONGVARCHAR}, 
-      #{customFields,jdbcType=LONGVARCHAR})
+      #{platformStatus,jdbcType=VARCHAR}, #{platformId,jdbcType=VARCHAR}, #{isLinkParent,jdbcType=BIT}, 
+      #{description,jdbcType=LONGVARCHAR}, #{customFields,jdbcType=LONGVARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="io.metersphere.base.domain.IssuesWithBLOBs">
     insert into issues
@@ -192,6 +193,9 @@
       </if>
       <if test="platformId != null">
         platform_id,
+      </if>
+      <if test="isLinkParent != null">
+        is_link_parent,
       </if>
       <if test="description != null">
         description,
@@ -242,6 +246,9 @@
       </if>
       <if test="platformId != null">
         #{platformId,jdbcType=VARCHAR},
+      </if>
+      <if test="isLinkParent != null">
+        #{isLinkParent,jdbcType=BIT},
       </if>
       <if test="description != null">
         #{description,jdbcType=LONGVARCHAR},
@@ -302,6 +309,9 @@
       <if test="record.platformId != null">
         platform_id = #{record.platformId,jdbcType=VARCHAR},
       </if>
+      <if test="record.isLinkParent != null">
+        is_link_parent = #{record.isLinkParent,jdbcType=BIT},
+      </if>
       <if test="record.description != null">
         description = #{record.description,jdbcType=LONGVARCHAR},
       </if>
@@ -329,6 +339,7 @@
       num = #{record.num,jdbcType=INTEGER},
       platform_status = #{record.platformStatus,jdbcType=VARCHAR},
       platform_id = #{record.platformId,jdbcType=VARCHAR},
+      is_link_parent = #{record.isLinkParent,jdbcType=BIT},
       description = #{record.description,jdbcType=LONGVARCHAR},
       custom_fields = #{record.customFields,jdbcType=LONGVARCHAR}
     <if test="_parameter != null">
@@ -350,7 +361,8 @@
       resource_id = #{record.resourceId,jdbcType=VARCHAR},
       num = #{record.num,jdbcType=INTEGER},
       platform_status = #{record.platformStatus,jdbcType=VARCHAR},
-      platform_id = #{record.platformId,jdbcType=VARCHAR}
+      platform_id = #{record.platformId,jdbcType=VARCHAR},
+      is_link_parent = #{record.isLinkParent,jdbcType=BIT}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -397,6 +409,9 @@
       <if test="platformId != null">
         platform_id = #{platformId,jdbcType=VARCHAR},
       </if>
+      <if test="isLinkParent != null">
+        is_link_parent = #{isLinkParent,jdbcType=BIT},
+      </if>
       <if test="description != null">
         description = #{description,jdbcType=LONGVARCHAR},
       </if>
@@ -421,6 +436,7 @@
       num = #{num,jdbcType=INTEGER},
       platform_status = #{platformStatus,jdbcType=VARCHAR},
       platform_id = #{platformId,jdbcType=VARCHAR},
+      is_link_parent = #{isLinkParent,jdbcType=BIT},
       description = #{description,jdbcType=LONGVARCHAR},
       custom_fields = #{customFields,jdbcType=LONGVARCHAR}
     where id = #{id,jdbcType=VARCHAR}
@@ -439,7 +455,8 @@
       resource_id = #{resourceId,jdbcType=VARCHAR},
       num = #{num,jdbcType=INTEGER},
       platform_status = #{platformStatus,jdbcType=VARCHAR},
-      platform_id = #{platformId,jdbcType=VARCHAR}
+      platform_id = #{platformId,jdbcType=VARCHAR},
+      is_link_parent = #{isLinkParent,jdbcType=BIT}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

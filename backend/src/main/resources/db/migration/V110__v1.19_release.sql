@@ -667,3 +667,7 @@ from api_scenario_report where execute_type = 'Saved' and report_type = 'API_INT
 delete from api_scenario_report where report_type = 'API_INTEGRATED';
 
 ALTER TABLE api_definition MODIFY COLUMN path varchar(1000);
+
+-- azure devops 缺陷关联需求标识
+ALTER TABLE `issues`
+    MODIFY COLUMN `is_link_parent` tinyint(1) NULL DEFAULT NULL COMMENT '是否关联父级' AFTER `platform_id`;
