@@ -527,4 +527,8 @@ public abstract class AbstractIssuePlatform implements IssuesPlatform {
     public Boolean checkProjectExist(String relateId) {
         return null;
     }
+
+    @Override
+    public void updateIssueLink(IssuesUpdateRequest request) {
+    }
 }

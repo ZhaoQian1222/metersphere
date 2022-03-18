@@ -85,4 +85,10 @@ public interface IssuesPlatform {
      * @return Boolean
      */
     Boolean checkProjectExist(String relateId);
+
+    /**
+     * 更新缺陷关联关系
+     * @param request
+     */
+    void updateIssueLink(IssuesUpdateRequest request);
 }
