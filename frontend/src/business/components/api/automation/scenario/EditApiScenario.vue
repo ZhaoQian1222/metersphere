@@ -1407,7 +1407,6 @@ export default {
                 this.currentScenario.versionId = this.$refs.versionHistory.currentVersion.id;
               }
             }
-            console.log('this.path:', this.path);
             if (this.path.endsWith("/update") && this.showXpackCompnent) {
               this.path = this.repositoryUpdatePath;
             }
