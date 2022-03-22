@@ -295,7 +295,7 @@ public class IssuesService {
             updateRequest.setWorkspaceId(request.getWorkspaceId());
             List<AbstractIssuePlatform> platformList = getUpdatePlatforms(updateRequest);
             platformList.forEach(platform -> {
-                platform.updateIssueLink(updateRequest);
+                platform.removeIssueParentLink(updateRequest);
             });
 
             extIssuesMapper.deleteIssues(id, caseResourceId);

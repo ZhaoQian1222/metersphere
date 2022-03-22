@@ -45,6 +45,7 @@ import io.metersphere.log.vo.DetailColumn;
 import io.metersphere.log.vo.OperatingLogDetails;
 import io.metersphere.log.vo.track.TestCaseReference;
 import io.metersphere.performance.service.PerformanceTestService;
+import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.service.*;
 import io.metersphere.track.dto.TestCaseCommentDTO;
 import io.metersphere.track.dto.TestCaseDTO;
@@ -71,6 +72,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -288,6 +290,7 @@ public class TestCaseService {
         if (StringUtils.isNotBlank(testCase.getVersionId())) {
             example.getOredCriteria().get(0).andVersionIdEqualTo(testCase.getVersionId());
         }
+        updateThirdPartyIssuesLink(testCase);
         createNewVersionOrNot(testCase, example);
 
         if (StringUtils.isNotBlank(testCase.getCustomNum()) && StringUtils.isNotBlank(testCase.getId())) {
@@ -307,13 +310,29 @@ public class TestCaseService {
     }
 
     /**
+     * 判断azure devops用例关联的需求是否发生变更，若发生变更，则重新建立需求与缺陷的关联关系
+     * @param testCase
+     */
+    private void updateThirdPartyIssuesLink(EditTestCaseRequest testCase) {
+        try {
+            if (Class.forName("io.metersphere.xpack.issue.service.XpackIssueService") != null) {
+                Class clazz = Class.forName("io.metersphere.xpack.issue.service.XpackIssueService");
+                Method method = clazz.getMethod("updateThirdPartyIssuesLink", EditTestCaseRequest.class);
+                method.invoke(CommonBeanFactory.getBean("xpackIssueService"), testCase);
+            }
+        } catch (Exception exception) {
+            LogUtil.error("不存在XpackIssueService类");
+        }
+    }
+
+    /**
      * 根据前后端 verionId 判定是编辑旧数据还是创建新版本
      *
      * @param testCase
      * @param example
      */
     private void createNewVersionOrNot(EditTestCaseRequest testCase, TestCaseExample example) {
-        if (testCaseMapper.updateByExampleSelective(testCase, example) == 0) {
+        if (testCaseMapper.updateByExample(testCase, example) == 0) {
             // 插入新版本的数据
             TestCaseWithBLOBs oldTestCase = testCaseMapper.selectByPrimaryKey(testCase.getId());
             testCase.setId(UUID.randomUUID().toString());

@@ -7,6 +7,7 @@ import io.metersphere.dto.IssueTemplateDao;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.track.dto.DemandDTO;
 import io.metersphere.track.issue.domain.PlatformUser;
+import io.metersphere.track.request.testcase.EditTestCaseRequest;
 import io.metersphere.track.request.testcase.IssuesRequest;
 import io.metersphere.track.request.testcase.IssuesUpdateRequest;
 
@@ -90,5 +91,12 @@ public interface IssuesPlatform {
      * 更新缺陷关联关系
      * @param request
      */
-    void updateIssueLink(IssuesUpdateRequest request);
+    void removeIssueParentLink(IssuesUpdateRequest request);
+
+    /**
+     * 更新需求与缺陷关联关系
+     *
+     * @param testCase
+     */
+    void updateDemandIssueLink(EditTestCaseRequest testCase, Project project);
 }

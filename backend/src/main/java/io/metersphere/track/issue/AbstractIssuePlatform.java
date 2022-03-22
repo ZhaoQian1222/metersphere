@@ -18,6 +18,7 @@ import io.metersphere.dto.IssueTemplateDao;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.service.*;
 import io.metersphere.track.issue.domain.ProjectIssueConfig;
+import io.metersphere.track.request.testcase.EditTestCaseRequest;
 import io.metersphere.track.request.testcase.IssuesRequest;
 import io.metersphere.track.request.testcase.IssuesUpdateRequest;
 import io.metersphere.track.service.IssuesService;
@@ -529,6 +530,10 @@ public abstract class AbstractIssuePlatform implements IssuesPlatform {
     }
 
     @Override
-    public void updateIssueLink(IssuesUpdateRequest request) {
-    }
+    public void removeIssueParentLink(IssuesUpdateRequest request) {}
+
+    @Override
+    public void updateDemandIssueLink(EditTestCaseRequest testCase, Project project) {}
+
+
 }
