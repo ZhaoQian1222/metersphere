@@ -361,7 +361,7 @@
           return;
         }
         if (hasLicense()) {
-          // todo：校验并拉取git仓库中的文件，并复制文件到本地路径下，返回文件的ID和文件的名称,以及文件的commitId
+          // 校验并拉取git仓库中的文件，并复制文件到本地路径下，返回文件的ID和文件的名称,以及文件的commitId
           this.validateRepository(res => {
             if (res) {
               // 更新场景，修改左边数据
@@ -403,7 +403,7 @@
               this.$error(response.data.message);
               callback(false);
             } else {
-              // todo:将文件ID和文件名称保存至当前场景变量的files中
+              // 将文件ID和文件名称保存至当前场景变量的files中
               this.editData.files = [
                 {
                   id: response.data.fileId,

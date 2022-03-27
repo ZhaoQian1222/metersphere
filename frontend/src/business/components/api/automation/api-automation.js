@@ -72,7 +72,7 @@ function getScenarioFiles(obj) {
 }
 
 function getRepositoryFiles(obj) {
-  // todo：组织repositoryFiles数据，将 this.editData.files 即 obj.variables.files的数据封装进去，后端只需要存数据即可，无需再次拉取git仓库
+  // 组织repositoryFiles数据
   let repositoryFiles = [];
   // 场景变量csv 文件
   if (obj.variables) {

@@ -15,7 +15,7 @@
     </el-form-item>
     <el-tabs v-model="activeName" @tab-click="handleClick" style="margin-left: 40px">
       <el-tab-pane :label="$t('variables.config')" name="config">
-        <el-row style="margin-top: 10px" v-xpack v-if="hasLicense()">
+        <el-row style="margin-top: 10px" v-xpack v-if="hasLicense() && (repositoryOptions.length>0 || editData.id)">
           <el-col :span="5" style="margin-top: 5px">
             <span>{{$t('variables.file_resource')}}</span>
           </el-col>
@@ -145,7 +145,7 @@
         rules: {
           name: [
             {required: true, message: this.$t('test_track.case.input_name'), trigger: 'blur'},
-          ],
+          ]
         },
         repositoryOptions: [],
         queryRepositoryPath: "/repository/list",
