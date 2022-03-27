@@ -45,6 +45,8 @@ import io.metersphere.track.request.testcase.ApiCaseRelevanceRequest;
 import io.metersphere.track.request.testcase.QueryTestPlanRequest;
 import io.metersphere.track.request.testplan.FileOperationRequest;
 import io.metersphere.track.service.TestPlanScenarioCaseService;
+import io.metersphere.utils.LoggerUtil;
+import io.metersphere.xpack.repository.dto.SaveApiScenarioRepositoryFile;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.EnumUtils;
@@ -64,6 +66,7 @@ import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -232,7 +235,7 @@ public class ApiAutomationService {
         extApiScenarioMapper.removeToGcByExample(example);
     }
 
-    public ApiScenario create(SaveApiScenarioRequest request, List<MultipartFile> bodyFiles, List<MultipartFile> scenarioFiles) {
+    public ApiScenario create(SaveApiScenarioRequest request, List<MultipartFile> bodyFiles, List<MultipartFile> scenarioFiles, List<SaveApiScenarioRepositoryFile> repositoryFiles) {
         checkQuota();
         request.setId(UUID.randomUUID().toString());
         checkNameExist(request);
@@ -262,8 +265,22 @@ public class ApiAutomationService {
             relationshipEdgeService.initRelationshipEdge(null, scenario);
         }
         uploadFiles(request, bodyFiles, scenarioFiles);
+        // 处理git仓库文件
+        dealwithCsvGitFile(request, repositoryFiles);
 
         return scenario;
+    }
+
+    private void dealwithCsvGitFile(SaveApiScenarioRequest request, List<SaveApiScenarioRepositoryFile> repositoryFiles) {
+        try {
+            if (Class.forName("io.metersphere.xpack.repository.service.RepositoryApiAutomationService") != null) {
+                Class clazz = Class.forName("io.metersphere.xpack.repository.service.RepositoryApiAutomationService");
+                Method method = clazz.getMethod("dealwithRepositoryFile", SaveApiScenarioRequest.class, List.class);
+                method.invoke(CommonBeanFactory.getBean("repositoryApiAutomationService"), request, repositoryFiles);
+            }
+        } catch (Exception exception) {
+            LoggerUtil.error("不存在GitRepositoryService类");
+        }
     }
 
     private void checkQuota() {
@@ -338,7 +355,7 @@ public class ApiAutomationService {
         }
     }
 
-    public ApiScenario update(SaveApiScenarioRequest request, List<MultipartFile> bodyFiles, List<MultipartFile> scenarioFiles) {
+    public ApiScenario update(SaveApiScenarioRequest request, List<MultipartFile> bodyFiles, List<MultipartFile> scenarioFiles, List<SaveApiScenarioRepositoryFile> repositoryFiles) {
         checkQuota();
         checkNameExist(request);
         checkScenarioNum(request);
@@ -388,6 +405,8 @@ public class ApiAutomationService {
         extScheduleMapper.updateNameByResourceID(request.getId(), request.getName());//  修改场景name，同步到修改首页定时任务
         uploadFiles(request, bodyFiles, scenarioFiles);
 
+        // 处理git仓库文件
+        dealwithCsvGitFile(request, repositoryFiles);
 
         // 存储依赖关系
         ApiAutomationRelationshipEdgeService relationshipEdgeService = CommonBeanFactory.getBean(ApiAutomationRelationshipEdgeService.class);
