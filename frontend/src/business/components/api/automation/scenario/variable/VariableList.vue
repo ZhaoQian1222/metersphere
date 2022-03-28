@@ -7,7 +7,7 @@
 
         <el-tabs v-model="activeName">
           <el-tab-pane :label="$t('api_test.scenario.variables')" name="variable">
-            <div>
+            <div v-loading="result.loading">
               <el-row style="margin-bottom: 10px">
                 <div style="float: left">
                   <el-input :placeholder="$t('commons.search_by_name')" v-model="selectVariable" size="small"
@@ -216,6 +216,7 @@
           },
         ],
         validateRepositoryPath: "/repository/validate/exist",
+        result: {},
       };
     },
     methods: {
@@ -398,7 +399,7 @@
             repositoryFilePath: this.editData.repositoryFilePath,
             fileId: getUUID().substring(0, 12)
           };
-          this.$post(this.validateRepositoryPath, param, response => {
+          this.result = this.$post(this.validateRepositoryPath, param, response => {
             if (!response.data.success) {
               this.$error(response.data.message);
               callback(false);
@@ -520,6 +521,9 @@
         // 做深拷贝
         this.editData = JSON.parse(JSON.stringify(row));
         this.updateFiles();
+        if (!hasLicense() && this.editData.type === 'CSV' && this.editData.fileResource === "repository") {
+          this.editData.fileResource = "local";
+        }
         this.showDelete = true;
       },
       updateFiles(){

@@ -4,7 +4,7 @@
       <el-tab-pane :label="$t('organization.defect_manage')" name="defect">
         <bug-management/>
       </el-tab-pane>
-      <el-tab-pane :label="$t('organization.git_repository')" name="repository" v-xpack>
+      <el-tab-pane :label="$t('organization.git_repository')" name="repository" v-if="hasLicense()">
         <workspace-repository/>
       </el-tab-pane>
     </el-tabs>
@@ -15,6 +15,7 @@
 
   import BugManagement from "./BugManagement";
   import WorkspaceRepository from "@/business/components/xpack/repository/WorkspaceRepository";
+  import {hasLicense} from "@/common/js/utils";
 
   export default {
     name: "ServiceIntegration",
@@ -26,6 +27,9 @@
       return {
         activeName: 'defect'
       }
+    },
+    methods: {
+      hasLicense,
     }
   }
 </script>
