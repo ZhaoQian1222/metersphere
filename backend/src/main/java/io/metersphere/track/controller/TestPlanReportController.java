@@ -7,6 +7,7 @@ import io.metersphere.commons.constants.NoticeConstants;
 import io.metersphere.commons.constants.OperLogConstants;
 import io.metersphere.commons.constants.OperLogModule;
 import io.metersphere.commons.constants.ReportTriggerMode;
+import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.commons.utils.PageUtils;
 import io.metersphere.commons.utils.Pager;
 import io.metersphere.commons.utils.SessionUtils;
@@ -21,6 +22,7 @@ import io.metersphere.track.service.TestPlanReportService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,6 +51,8 @@ public class TestPlanReportController {
 
     @GetMapping("/db/{reportId}")
     public TestPlanSimpleReportDTO getReport(@PathVariable String reportId) {
+        Timestamp timeStamp = new Timestamp(System.currentTimeMillis());
+        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 start: " + reportId + " , time:" + timeStamp);
         return testPlanReportService.getReport(reportId);
     }
 
