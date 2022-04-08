@@ -75,6 +75,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1671,9 +1672,20 @@ public class TestPlanService {
                 config = JSONObject.parseObject(reportConfig);
             }
             TestPlanExecuteReportDTO testPlanExecuteReportDTO = testPlanReportService.genTestPlanExecuteReportDTOByTestPlanReportContent(testPlanReportContentWithBLOBs);
+            Timestamp timeStamp = new Timestamp(System.currentTimeMillis());
+            LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3.1  getReport: testPlanReport.getTestPlanId()--" + testPlanReport.getTestPlanId() + " , time:" + timeStamp);
+            LogUtil.info("================>>>>>>>>>>>>>>>>>> testPlanExecuteReportDTO:" + JSONObject.toJSONString(testPlanExecuteReportDTO));
             TestPlanSimpleReportDTO report = getReport(testPlanReport.getTestPlanId(), testPlanExecuteReportDTO);
+            Timestamp timeStamp1 = new Timestamp(System.currentTimeMillis());
+            LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3.2 getReport: testPlanReport.getTestPlanId()--" + testPlanReport.getTestPlanId() + " , time:" + timeStamp1);
+            LogUtil.info("================>>>>>>>>>>>>>>>>>> getReport result : " + JSONObject.toJSONString(report));
+            LogUtil.info("================>>>>>>>>>>>>>>>>>> buildFunctionalReport start, config: " + config.toJSONString());
             buildFunctionalReport(report, config, testPlanReport.getTestPlanId());
+            Timestamp timeStamp2 = new Timestamp(System.currentTimeMillis());
+            LogUtil.info("================>>>>>>>>>>>>>>>>>> 查询报告 timeStamp3.1.3.3 buildApiReport start , time:" + timeStamp2);
             buildApiReport(report, config, testPlanExecuteReportDTO);
+            Timestamp timeStamp3 = new Timestamp(System.currentTimeMillis());
+            LogUtil.info("================>>>>>>>>>>>>>>>>>> 查询报告 timeStamp3.1.3.4 buildLoadReport start, time:" + timeStamp3);
             buildLoadReport(report, config, testPlanExecuteReportDTO.getTestPlanLoadCaseIdAndReportIdMap(), false);
             return report;
         } else {
