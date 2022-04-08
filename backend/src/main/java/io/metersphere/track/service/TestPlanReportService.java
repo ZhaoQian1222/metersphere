@@ -411,8 +411,12 @@ public class TestPlanReportService {
             return null;
         }
         TestPlanService testPlanService = CommonBeanFactory.getBean(TestPlanService.class);
+        Timestamp timeStamp32 = new Timestamp(System.currentTimeMillis());
+        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3: TestPlanReportId--" +  " , time:" + timeStamp32);
         TestPlanSimpleReportDTO reportDTO = testPlanService.buildPlanReport(testPlanReport, reportContent);
         reportDTO.setStartTime(testPlanReport.getStartTime());
+        Timestamp timeStamp34 = new Timestamp(System.currentTimeMillis());
+        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.4: TestPlanReportId--" +  " , time:" + timeStamp34);
         reportContent = parseReportDaoToReportContent(reportDTO, reportContent);
         return reportContent;
     }
@@ -982,7 +986,11 @@ public class TestPlanReportService {
     }
 
     private TestPlanReportContentWithBLOBs dynamicallyGenerateReports(TestPlanReportContentWithBLOBs testPlanReportContent) {
+        Timestamp timeStamp31 = new Timestamp(System.currentTimeMillis());
+        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.1: TestPlanReportId--" + testPlanReportContent.getTestPlanReportId() + " , time:" + timeStamp31);
         TestPlanReport report = testPlanReportMapper.selectByPrimaryKey(testPlanReportContent.getTestPlanReportId());
+        Timestamp timeStamp32 = new Timestamp(System.currentTimeMillis());
+        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.2: TestPlanReportId--" + testPlanReportContent.getTestPlanReportId() + " , time:" + timeStamp32);
         testPlanReportContent = this.updateReport(report, testPlanReportContent);
         return testPlanReportContent;
     }
