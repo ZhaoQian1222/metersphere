@@ -105,9 +105,10 @@ public class ApiTemplateService extends TemplateBaseService {
      * @param customField
      */
     public void handleSystemFieldCreate(CustomField customField) {
-        ApiTemplate workspaceSystemTemplate = getWorkspaceSystemTemplate(customField.getWorkspaceId());
+        Project project = projectService.getProjectById(customField.getProjectId());
+        ApiTemplate workspaceSystemTemplate = getWorkspaceSystemTemplate(project.getWorkspaceId());
         if (workspaceSystemTemplate == null) {
-            createTemplateWithUpdateField(customField.getWorkspaceId(), customField);
+            createTemplateWithUpdateField(project.getWorkspaceId(), customField);
         } else {
             updateRelateWithUpdateField(workspaceSystemTemplate, customField);
         }
