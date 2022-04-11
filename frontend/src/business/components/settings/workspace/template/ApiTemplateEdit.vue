@@ -60,9 +60,9 @@ import TemplateComponentEditHeader
   from "@/business/components/track/plan/view/comonents/report/TemplateComponentEditHeader";
 import MsFormDivider from "@/business/components/common/components/MsFormDivider";
 import {API_TYPE_OPTION} from "@/common/js/table-constants";
-import CustomFieldFormList from "@/business/components/settings/workspace/template/CustomFieldFormList";
-import CustomFieldRelateList from "@/business/components/settings/workspace/template/CustomFieldRelateList";
-import FieldTemplateEdit from "@/business/components/settings/workspace/template/FieldTemplateEdit";
+import CustomFieldFormList from "@/business/components/project/template/CustomFieldFormList";
+import CustomFieldRelateList from "@/business/components/project/template/CustomFieldRelateList";
+import FieldTemplateEdit from "@/business/components/project/template/FieldTemplateEdit";
 import FormRichTextItem from "@/business/components/track/case/components/FormRichTextItem";
 import TestCaseStepItem from "@/business/components/track/case/components/TestCaseStepItem";
 import StepChangeItem from "@/business/components/track/case/components/StepChangeItem";

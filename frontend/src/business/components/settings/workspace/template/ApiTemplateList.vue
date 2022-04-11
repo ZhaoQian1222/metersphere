@@ -97,8 +97,8 @@ import MsTableButton from "@/business/components/common/components/MsTableButton
 import MsTableOperators from "@/business/components/common/components/MsTableOperators";
 import MsTableColumn from "@/business/components/common/components/table/MsTableColumn";
 import MsTable from "@/business/components/common/components/table/MsTable";
-import TestCaseReportTemplate from "@/business/components/settings/workspace/template/TestCaseReportTemplate";
-import TestCaseTemplateEdit from "@/business/components/settings/workspace/template/TestCaseTemplateEdit";
+import TestCaseReportTemplate from "@/business/components/project/template/TestCaseReportTemplate";
+import TestCaseTemplateEdit from "@/business/components/project/template/TestCaseTemplateEdit";
 import ApiTemplateEdit from "@/business/components/settings/workspace/template/ApiTemplateEdit";
 
 export default {
