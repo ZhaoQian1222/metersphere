@@ -549,6 +549,7 @@ export default {
     system_template: 'System Template',
     option_check: 'Please add option values',
     option_value_check: 'Please fill in the full option values',
+    api_template:'API Template'
   },
   workspace: {
     id: 'Workspace ID',
@@ -570,6 +571,7 @@ export default {
     case_template_manage: "Case Template",
     issue_template_manage: "Issue Template",
     system_setting_git_repository: 'MS sets up git repositories at the system level',
+    api_template_manage: "API Template",
     custom_filed: {
       input: 'Input',
       textarea: 'Textarea',
@@ -2119,6 +2121,7 @@ export default {
         import_tip1: "The ID is required when the \"Test Case Custom ID\" switch is turned on in the project settings",
         import_tip2: "ID is required when importing and updating",
         import_file_tips: "Please upload the file first!",
+        more_fields: "More Fields",
       },
       export: {
         export: "Export cases",
@@ -2730,6 +2733,7 @@ export default {
     workspace_template_settings: "Workspace template settings",
     workspace_template_settings_case: "Workspace template settings case",
     workspace_template_settings_issue: "Workspace template settings issue",
+    workspace_template_settings_api: "Workspace template settings api",
     project_project_manager: "Project project manager",
     project_project_jar: "Project project jar",
     project_environment_setting: "Project environment setting",
@@ -2874,7 +2878,8 @@ export default {
       read: "READ",
       case_template: "CASE TEMPLATE",
       issue_template: "ISSUE TEMPLATE",
-      custom: "CUSTOM FIELDS"
+      custom: "CUSTOM FIELDS",
+      api_template:"API TEMPLATE"
     },
     workspace_project_manager: {
       name: "Manage",

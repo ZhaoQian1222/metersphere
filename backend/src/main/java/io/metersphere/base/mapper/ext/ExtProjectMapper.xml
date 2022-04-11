@@ -50,7 +50,8 @@
                user.name          AS createUserName,
                p.platform,
                p.third_part_template,
-               p.issue_config
+               p.issue_config,
+               p.api_template_id
         FROM project p
                      JOIN workspace w ON p.workspace_id = w.id
                      LEFT JOIN user ON user.id = p.create_user

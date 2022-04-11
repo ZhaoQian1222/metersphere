@@ -43,5 +43,7 @@ public class Project implements Serializable {
 
     private String issueConfig;
 
+    private String apiTemplateId;
+
     private static final long serialVersionUID = 1L;
 }

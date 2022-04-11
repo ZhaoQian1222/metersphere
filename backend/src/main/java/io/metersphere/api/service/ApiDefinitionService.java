@@ -590,6 +590,7 @@ public class ApiDefinitionService {
         test.setEnvironmentId(request.getEnvironmentId());
         test.setUserId(request.getUserId());
         test.setRemark(request.getRemark());
+        test.setCustomFields(request.getCustomFields());
         if (StringUtils.isNotEmpty(request.getTags()) && !StringUtils.equals(request.getTags(), "[]")) {
             test.setTags(request.getTags());
         } else {
@@ -697,6 +698,7 @@ public class ApiDefinitionService {
         test.setRefId(request.getId());
         test.setVersionId(request.getVersionId());
         test.setLatest(true); // 新建一定是最新的
+        test.setCustomFields(request.getCustomFields());
         if (StringUtils.isEmpty(request.getModuleId()) || "default-module".equals(request.getModuleId())) {
             initModulePathAndId(test.getProjectId(), test);
         }
@@ -738,6 +740,7 @@ public class ApiDefinitionService {
         BeanUtils.copyBean(saveReq, apiDefinition);
         apiDefinition.setCreateTime(System.currentTimeMillis());
         apiDefinition.setUpdateTime(System.currentTimeMillis());
+        apiDefinition.setCustomFields(apiDefinition.getCustomFields());
         if (StringUtils.isEmpty(apiDefinition.getStatus())) {
             apiDefinition.setStatus(APITestStatus.Underway.name());
         }
@@ -1228,6 +1231,7 @@ public class ApiDefinitionService {
                 item.setName(item.getName().substring(0, 255));
             }
             item.setNum(num++);
+            item.setCustomFields(request.getCustomFields());
             //如果EsbData需要存储,则需要进行接口是否更新的判断
             if (apiImport.getEsbApiParamsMap() != null) {
                 String apiId = item.getId();
@@ -1497,9 +1501,10 @@ public class ApiDefinitionService {
     /*swagger定时导入*/
     public void createSchedule(ScheduleRequest request) {
         /*保存swaggerUrl*/
-        SwaggerUrlProject swaggerUrlProject = new SwaggerUrlProject();
+        SwaggerUrlProjectWithBLOBs swaggerUrlProject = new SwaggerUrlProjectWithBLOBs();
         BeanUtils.copyBean(swaggerUrlProject, request);
         swaggerUrlProject.setId(UUID.randomUUID().toString());
+        swaggerUrlProject.setCustomFields(request.getCustomFields());
         // 设置鉴权信息
         if (request.getHeaders() != null || request.getArguments() != null || request.getAuthManager() != null) {
             String config = setAuthParams(request);
@@ -1525,7 +1530,7 @@ public class ApiDefinitionService {
     }
 
     public void updateSchedule(ScheduleRequest request) {
-        SwaggerUrlProject swaggerUrlProject = new SwaggerUrlProject();
+        SwaggerUrlProjectWithBLOBs swaggerUrlProject = new SwaggerUrlProjectWithBLOBs();
         BeanUtils.copyBean(swaggerUrlProject, request);
         // 设置鉴权信息
         if (request.getHeaders() != null || request.getArguments() != null || request.getAuthManager() != null) {
@@ -1585,7 +1590,7 @@ public class ApiDefinitionService {
     }
 
     //查询swaggerUrl详情
-    public SwaggerUrlProject getSwaggerInfo(String resourceId) {
+    public SwaggerUrlProjectWithBLOBs getSwaggerInfo(String resourceId) {
         return swaggerUrlProjectMapper.selectByPrimaryKey(resourceId);
     }
 

@@ -343,6 +343,17 @@ public class ProjectService {
         projectMapper.updateByExampleSelective(project, example);
     }
 
+
+    public void updateApiTemplate(String originId, String templateId, String workspaceId) {
+        Project project = new Project();
+        project.setApiTemplateId(templateId);
+        ProjectExample example = new ProjectExample();
+        example.createCriteria()
+                .andApiTemplateIdEqualTo(originId)
+                .andWorkspaceIdEqualTo(workspaceId);
+        projectMapper.updateByExampleSelective(project, example);
+    }
+
     private void deleteLoadTestResourcesByProjectId(String projectId) {
         LoadTestExample loadTestExample = new LoadTestExample();
         loadTestExample.createCriteria().andProjectIdEqualTo(projectId);
@@ -603,6 +614,13 @@ public class ProjectService {
         ProjectExample example = new ProjectExample();
         example.createCriteria()
                 .andIssueTemplateIdEqualTo(templateId);
+        return projectMapper.selectByExample(example);
+    }
+
+    public List<Project> getByApiTemplateId(String templateId) {
+        ProjectExample example = new ProjectExample();
+        example.createCriteria()
+                .andApiTemplateIdEqualTo(templateId);
         return projectMapper.selectByExample(example);
     }
 

@@ -20,6 +20,7 @@
     <result column="platform" jdbcType="VARCHAR" property="platform" />
     <result column="third_part_template" jdbcType="BIT" property="thirdPartTemplate" />
     <result column="version_enable" jdbcType="BIT" property="versionEnable" />
+    <result column="api_template_id" jdbcType="VARCHAR" property="apiTemplateId" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="io.metersphere.base.domain.Project">
     <result column="issue_config" jdbcType="LONGVARCHAR" property="issueConfig" />
@@ -84,8 +85,8 @@
   </sql>
   <sql id="Base_Column_List">
     id, workspace_id, `name`, description, create_time, update_time, tapd_id, jira_key, 
-    zentao_id, azure_devops_id, case_template_id, issue_template_id, create_user, system_id, 
-    azure_filter_id, platform, third_part_template, version_enable
+    zentao_id, azure_devops_id, case_template_id, issue_template_id, create_user, system_id,
+    azure_filter_id, platform, third_part_template, version_enable,api_template_id
   </sql>
   <sql id="Blob_Column_List">
     issue_config
@@ -142,17 +143,17 @@
     insert into project (id, workspace_id, `name`, 
       description, create_time, update_time, 
       tapd_id, jira_key, zentao_id, 
-      azure_devops_id, case_template_id, issue_template_id, 
-      create_user, system_id, azure_filter_id, 
-      platform, third_part_template, version_enable, 
+      azure_devops_id, case_template_id, issue_template_id,
+      create_user, system_id, azure_filter_id, api_template_id,
+      platform, third_part_template, version_enable,
       issue_config)
     values (#{id,jdbcType=VARCHAR}, #{workspaceId,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
       #{description,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}, 
       #{tapdId,jdbcType=VARCHAR}, #{jiraKey,jdbcType=VARCHAR}, #{zentaoId,jdbcType=VARCHAR}, 
-      #{azureDevopsId,jdbcType=VARCHAR}, #{caseTemplateId,jdbcType=VARCHAR}, #{issueTemplateId,jdbcType=VARCHAR}, 
-      #{createUser,jdbcType=VARCHAR}, #{systemId,jdbcType=VARCHAR}, #{azureFilterId,jdbcType=VARCHAR}, 
-      #{platform,jdbcType=VARCHAR}, #{thirdPartTemplate,jdbcType=BIT}, #{versionEnable,jdbcType=BIT}, 
-      #{issueConfig,jdbcType=LONGVARCHAR})
+      #{azureDevopsId,jdbcType=VARCHAR}, #{caseTemplateId,jdbcType=VARCHAR}, #{issueTemplateId,jdbcType=VARCHAR},
+      #{createUser,jdbcType=VARCHAR}, #{systemId,jdbcType=VARCHAR}, #{azureFilterId,jdbcType=VARCHAR},
+      #{platform,jdbcType=VARCHAR}, #{thirdPartTemplate,jdbcType=BIT}, #{versionEnable,jdbcType=BIT},
+      #{issueConfig,jdbcType=LONGVARCHAR},#{apiTemplateId,jdbcType=VARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="io.metersphere.base.domain.Project">
     insert into project
@@ -210,6 +211,9 @@
       </if>
       <if test="versionEnable != null">
         version_enable,
+      </if>
+      <if test="apiTemplateId != null">
+        api_template_id,
       </if>
       <if test="issueConfig != null">
         issue_config,
@@ -269,6 +273,9 @@
       </if>
       <if test="versionEnable != null">
         #{versionEnable,jdbcType=BIT},
+      </if>
+      <if test="apiTemplateId != null">
+        #{apiTemplateId,jdbcType=VARCHAR},
       </if>
       <if test="issueConfig != null">
         #{issueConfig,jdbcType=LONGVARCHAR},
@@ -338,6 +345,9 @@
       <if test="record.versionEnable != null">
         version_enable = #{record.versionEnable,jdbcType=BIT},
       </if>
+      <if test="record.apiTemplateId != null">
+        api_template_id = #{record.apiTemplateId,jdbcType=VARCHAR},
+      </if>
       <if test="record.issueConfig != null">
         issue_config = #{record.issueConfig,jdbcType=LONGVARCHAR},
       </if>
@@ -366,6 +376,7 @@
       platform = #{record.platform,jdbcType=VARCHAR},
       third_part_template = #{record.thirdPartTemplate,jdbcType=BIT},
       version_enable = #{record.versionEnable,jdbcType=BIT},
+      api_template_id = #{record.apiTemplateId,jdbcType=VARCHAR},
       issue_config = #{record.issueConfig,jdbcType=LONGVARCHAR}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
@@ -390,7 +401,8 @@
       azure_filter_id = #{record.azureFilterId,jdbcType=VARCHAR},
       platform = #{record.platform,jdbcType=VARCHAR},
       third_part_template = #{record.thirdPartTemplate,jdbcType=BIT},
-      version_enable = #{record.versionEnable,jdbcType=BIT}
+      version_enable = #{record.versionEnable,jdbcType=BIT},
+      api_template_id = #{record.apiTemplateId,jdbcType=VARCHAR}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -449,6 +461,9 @@
       <if test="versionEnable != null">
         version_enable = #{versionEnable,jdbcType=BIT},
       </if>
+      <if test="apiTemplateId != null">
+        api_template_id = #{apiTemplateId,jdbcType=VARCHAR},
+      </if>
       <if test="issueConfig != null">
         issue_config = #{issueConfig,jdbcType=LONGVARCHAR},
       </if>
@@ -474,6 +489,7 @@
       platform = #{platform,jdbcType=VARCHAR},
       third_part_template = #{thirdPartTemplate,jdbcType=BIT},
       version_enable = #{versionEnable,jdbcType=BIT},
+      api_template_id = #{apiTemplateId,jdbcType=VARCHAR},
       issue_config = #{issueConfig,jdbcType=LONGVARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -495,7 +511,8 @@
       azure_filter_id = #{azureFilterId,jdbcType=VARCHAR},
       platform = #{platform,jdbcType=VARCHAR},
       third_part_template = #{thirdPartTemplate,jdbcType=BIT},
-      version_enable = #{versionEnable,jdbcType=BIT}
+      version_enable = #{versionEnable,jdbcType=BIT},
+      api_template_id = #{apiTemplateId,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

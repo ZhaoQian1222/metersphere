@@ -66,4 +66,8 @@ public class SaveApiDefinitionRequest {
     private boolean newVersionDeps;
     // 复制的请求Id
     private String sourceId;
+
+    //自定义字段
+    private String customFields;
+
 }
