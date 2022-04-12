@@ -1704,7 +1704,11 @@ public class TestPlanService {
             Timestamp timeStamp1 = new Timestamp(System.currentTimeMillis());
             LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3.2 getReport: testPlanReport.getTestPlanId()--" + testPlanReport.getTestPlanId() + " , time:" + timeStamp1);
             LogUtil.info("================>>>>>>>>>>>>>>>>>> getReport result : " + JSONObject.toJSONString(report));
-            LogUtil.info("================>>>>>>>>>>>>>>>>>> buildFunctionalReport start, config: " + config.toJSONString());
+            try {
+                LogUtil.info("================>>>>>>>>>>>>>>>>>> buildFunctionalReport start, config: " + config.toJSONString());
+            } catch (Exception exception) {
+                LogUtil.info("================>>>>>>>>>>>>>>>>>> buildFunctionalReport start, config is null");
+            }
             buildFunctionalReport(report, config, testPlanReport.getTestPlanId());
             Timestamp timeStamp2 = new Timestamp(System.currentTimeMillis());
             LogUtil.info("================>>>>>>>>>>>>>>>>>> 查询报告 timeStamp3.1.3.3 buildApiReport start , time:" + timeStamp2);
