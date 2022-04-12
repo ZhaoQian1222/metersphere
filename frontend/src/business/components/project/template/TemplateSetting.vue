@@ -10,6 +10,9 @@
       <el-tab-pane :label="$t('workspace.issue_template_manage')" name="issueTemplate" v-if="issueTemplateEnable">
         <issues-template-list v-if="activeName === 'issueTemplate'"/>
       </el-tab-pane>
+      <el-tab-pane :label="$t('workspace.api_template_manage')" name="apiTemplate" v-if="apiTemplateEnable">
+        <api-template-list v-if="activeName === 'apiTemplate'"/>
+      </el-tab-pane>
     </el-tabs>
   </el-card>
 </template>
@@ -19,16 +22,18 @@ import CustomFieldList from "@/business/components/project/template/CustomFieldL
 import TestCaseTemplateList from "@/business/components/project/template/TestCaseTemplateList";
 import IssuesTemplateList from "@/business/components/project/template/IssuesTemplateList";
 import {hasPermissions} from "@/common/js/utils";
+import ApiTemplateList from "@/business/components/project/template/ApiTemplateList";
 
 export default {
   name: "TemplateSetting",
-  components: {IssuesTemplateList, TestCaseTemplateList, CustomFieldList},
+  components: {IssuesTemplateList, TestCaseTemplateList, CustomFieldList,ApiTemplateList},
   data() {
     return {
       activeName: 'field',
       fieldEnable: false,
       caseTemplateEnable: false,
       issueTemplateEnable: false,
+      apiTemplateEnable: false,
     };
   },
   created() {
@@ -53,6 +58,12 @@ export default {
       if (hasPermissions('PROJECT_TEMPLATE:READ+CUSTOM')) {
         this.activeName = 'field';
         this.fieldEnable = true;
+      }
+
+      // 4
+      if (hasPermissions('PROJECT_TEMPLATE:READ+API_TEMPLATE')) {
+        this.activeName = 'apiTemplate';
+        this.apiTemplateEnable = true;
       }
     }
   }

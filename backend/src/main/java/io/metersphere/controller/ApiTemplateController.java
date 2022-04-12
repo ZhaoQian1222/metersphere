@@ -52,9 +52,9 @@ public class ApiTemplateController {
         apiTemplateService.update(request);
     }
 
-    @GetMapping("/option/{workspaceId}")
-    public List<ApiTemplate> list(@PathVariable String workspaceId) {
-        return apiTemplateService.getOption(workspaceId);
+    @GetMapping({"/option/{projectId}", "/option/"})
+    public List<ApiTemplate> list(@PathVariable(required = false) String projectId) {
+        return apiTemplateService.getOption(projectId);
     }
 
     @GetMapping("/get/relate/{projectId}")

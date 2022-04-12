@@ -29,11 +29,6 @@ export default {
       meta: {system: true, title: 'group.group_permission', permissions: ['SYSTEM_GROUP:READ', 'ORGANIZATION_GROUP:READ']}
     },
     {
-      path: 'workspace/template/api',
-      component: () => import('@/business/components/settings/workspace/template/ApiTemplateList'),
-      meta: {workspaceTemplate: true, title: 'workspace.api_template_manage', permissions: ['WORKSPACE_TEMPLATE:READ+API_TEMPLATE']},
-    },
-    {
       path: 'testresourcepool',
       component: () => import('@/business/components/settings/system/TestResourcePool'),
       meta: {system: true, title: 'commons.test_resource_pool', permissions: ['SYSTEM_TEST_POOL:READ']}

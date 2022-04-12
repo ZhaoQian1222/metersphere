@@ -8,13 +8,13 @@
     <result column="description" jdbcType="VARCHAR" property="description" />
     <result column="system" jdbcType="BIT" property="system" />
     <result column="global" jdbcType="BIT" property="global" />
-    <result column="workspace_id" jdbcType="VARCHAR" property="workspaceId" />
     <result column="create_user" jdbcType="VARCHAR" property="createUser" />
     <result column="api_name" jdbcType="VARCHAR" property="apiName" />
     <result column="api_method" jdbcType="VARCHAR" property="apiMethod" />
     <result column="api_path" jdbcType="VARCHAR" property="apiPath" />
     <result column="create_time" jdbcType="BIGINT" property="createTime" />
     <result column="update_time" jdbcType="BIGINT" property="updateTime" />
+    <result column="project_id" jdbcType="VARCHAR" property="projectId" />
   </resultMap>
   <sql id="Example_Where_Clause">
     <where>
@@ -75,8 +75,8 @@
     </where>
   </sql>
   <sql id="Base_Column_List">
-    id, `name`, `type`, description, `system`, `global`, workspace_id, create_user, api_name, 
-    api_method, api_path, create_time, update_time
+    id, `name`, `type`, description, `system`, `global`, create_user, api_name, api_method, 
+    api_path, create_time, update_time, project_id
   </sql>
   <select id="selectByExample" parameterType="io.metersphere.base.domain.ApiTemplateExample" resultMap="BaseResultMap">
     select
@@ -111,14 +111,14 @@
   <insert id="insert" parameterType="io.metersphere.base.domain.ApiTemplate">
     insert into api_template (id, `name`, `type`, 
       description, `system`, `global`, 
-      workspace_id, create_user, api_name, 
-      api_method, api_path, create_time, 
-      update_time)
+      create_user, api_name, api_method, 
+      api_path, create_time, update_time, 
+      project_id)
     values (#{id,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{type,jdbcType=VARCHAR}, 
       #{description,jdbcType=VARCHAR}, #{system,jdbcType=BIT}, #{global,jdbcType=BIT}, 
-      #{workspaceId,jdbcType=VARCHAR}, #{createUser,jdbcType=VARCHAR}, #{apiName,jdbcType=VARCHAR}, 
-      #{apiMethod,jdbcType=VARCHAR}, #{apiPath,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, 
-      #{updateTime,jdbcType=BIGINT})
+      #{createUser,jdbcType=VARCHAR}, #{apiName,jdbcType=VARCHAR}, #{apiMethod,jdbcType=VARCHAR}, 
+      #{apiPath,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}, 
+      #{projectId,jdbcType=VARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="io.metersphere.base.domain.ApiTemplate">
     insert into api_template
@@ -141,9 +141,6 @@
       <if test="global != null">
         `global`,
       </if>
-      <if test="workspaceId != null">
-        workspace_id,
-      </if>
       <if test="createUser != null">
         create_user,
       </if>
@@ -161,6 +158,9 @@
       </if>
       <if test="updateTime != null">
         update_time,
+      </if>
+      <if test="projectId != null">
+        project_id,
       </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
@@ -182,9 +182,6 @@
       <if test="global != null">
         #{global,jdbcType=BIT},
       </if>
-      <if test="workspaceId != null">
-        #{workspaceId,jdbcType=VARCHAR},
-      </if>
       <if test="createUser != null">
         #{createUser,jdbcType=VARCHAR},
       </if>
@@ -202,6 +199,9 @@
       </if>
       <if test="updateTime != null">
         #{updateTime,jdbcType=BIGINT},
+      </if>
+      <if test="projectId != null">
+        #{projectId,jdbcType=VARCHAR},
       </if>
     </trim>
   </insert>
@@ -232,9 +232,6 @@
       <if test="record.global != null">
         `global` = #{record.global,jdbcType=BIT},
       </if>
-      <if test="record.workspaceId != null">
-        workspace_id = #{record.workspaceId,jdbcType=VARCHAR},
-      </if>
       <if test="record.createUser != null">
         create_user = #{record.createUser,jdbcType=VARCHAR},
       </if>
@@ -253,6 +250,9 @@
       <if test="record.updateTime != null">
         update_time = #{record.updateTime,jdbcType=BIGINT},
       </if>
+      <if test="record.projectId != null">
+        project_id = #{record.projectId,jdbcType=VARCHAR},
+      </if>
     </set>
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
@@ -266,13 +266,13 @@
       description = #{record.description,jdbcType=VARCHAR},
       `system` = #{record.system,jdbcType=BIT},
       `global` = #{record.global,jdbcType=BIT},
-      workspace_id = #{record.workspaceId,jdbcType=VARCHAR},
       create_user = #{record.createUser,jdbcType=VARCHAR},
       api_name = #{record.apiName,jdbcType=VARCHAR},
       api_method = #{record.apiMethod,jdbcType=VARCHAR},
       api_path = #{record.apiPath,jdbcType=VARCHAR},
       create_time = #{record.createTime,jdbcType=BIGINT},
-      update_time = #{record.updateTime,jdbcType=BIGINT}
+      update_time = #{record.updateTime,jdbcType=BIGINT},
+      project_id = #{record.projectId,jdbcType=VARCHAR}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -295,9 +295,6 @@
       <if test="global != null">
         `global` = #{global,jdbcType=BIT},
       </if>
-      <if test="workspaceId != null">
-        workspace_id = #{workspaceId,jdbcType=VARCHAR},
-      </if>
       <if test="createUser != null">
         create_user = #{createUser,jdbcType=VARCHAR},
       </if>
@@ -316,6 +313,9 @@
       <if test="updateTime != null">
         update_time = #{updateTime,jdbcType=BIGINT},
       </if>
+      <if test="projectId != null">
+        project_id = #{projectId,jdbcType=VARCHAR},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -326,13 +326,13 @@
       description = #{description,jdbcType=VARCHAR},
       `system` = #{system,jdbcType=BIT},
       `global` = #{global,jdbcType=BIT},
-      workspace_id = #{workspaceId,jdbcType=VARCHAR},
       create_user = #{createUser,jdbcType=VARCHAR},
       api_name = #{apiName,jdbcType=VARCHAR},
       api_method = #{apiMethod,jdbcType=VARCHAR},
       api_path = #{apiPath,jdbcType=VARCHAR},
       create_time = #{createTime,jdbcType=BIGINT},
-      update_time = #{updateTime,jdbcType=BIGINT}
+      update_time = #{updateTime,jdbcType=BIGINT},
+      project_id = #{projectId,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

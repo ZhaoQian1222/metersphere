@@ -35,7 +35,7 @@
         </el-form-item>
 
         <el-form-item :label-width="labelWidth" :label="$t('workspace.api_template_manage')" prop="apiTemplateId">
-          <template-select :data="form" scene="API" prop="apiTemplateId" ref="apiTemplate"/>
+          <template-select :data="form" scene="API" prop="apiTemplateId" ref="apiTemplate" :project-id="form.id"/>
         </el-form-item>
 
         <el-form-item :label-width="labelWidth" label="TCP Mock Port">

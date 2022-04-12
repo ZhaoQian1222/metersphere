@@ -29,6 +29,19 @@
                     )
                 )
             </if>
+            <if test="request.projectId != null">
+                and (
+                tat.project_id = #{request.projectId}
+                    or (
+                        tat.global = 1 and
+                        not exists (
+                            select id
+                            from api_template tat_child
+                            where tat_child.name = tat.name and tat_child.global != 1 and tat_child.project_id = #{request.projectId}
+                        )
+                    )
+                )
+            </if>
 
             <if test="request.filters != null and request.filters.size() > 0">
                 <foreach collection="request.filters.entrySet()" index="key" item="values">

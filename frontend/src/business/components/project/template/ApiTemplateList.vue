@@ -90,7 +90,7 @@
 <script>
 import {CUSTOM_FIELD_LIST} from "@/common/js/default-table-header";
 import {API_TYPE_OPTION} from "@/common/js/table-constants";
-import {getCurrentWorkspaceId, getDefaultTableHeight} from "@/common/js/utils";
+import {getCurrentProjectID, getCurrentWorkspaceId, getDefaultTableHeight} from "@/common/js/utils";
 import MsTableHeader from "@/business/components/common/components/MsTableHeader";
 import MsTablePagination from "@/business/components/common/pagination/TablePagination";
 import MsTableButton from "@/business/components/common/components/MsTableButton";
@@ -99,7 +99,7 @@ import MsTableColumn from "@/business/components/common/components/table/MsTable
 import MsTable from "@/business/components/common/components/table/MsTable";
 import TestCaseReportTemplate from "@/business/components/project/template/TestCaseReportTemplate";
 import TestCaseTemplateEdit from "@/business/components/project/template/TestCaseTemplateEdit";
-import ApiTemplateEdit from "@/business/components/settings/workspace/template/ApiTemplateEdit";
+import ApiTemplateEdit from "@/business/components/project/template/ApiTemplateEdit";
 
 export default {
   name: "ApiTemplateList",
@@ -152,7 +152,7 @@ export default {
   },
   methods: {
     initTableData() {
-      this.condition.workspaceId = getCurrentWorkspaceId();
+      this.condition.projectId = getCurrentProjectID();
       this.result = this.$post('field/template/api/list/' + this.currentPage + '/' + this.pageSize,
         this.condition, (response) => {
           let data = response.data;

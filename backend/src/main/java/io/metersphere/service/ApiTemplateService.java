@@ -14,6 +14,7 @@ import io.metersphere.commons.utils.ServiceUtils;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.controller.UpdateApiFieldTemplateRequest;
 import io.metersphere.controller.request.BaseQueryRequest;
+import io.metersphere.controller.request.UpdateIssueTemplateRequest;
 import io.metersphere.dto.ApiTemplateDTO;
 import io.metersphere.dto.CustomFieldDao;
 import io.metersphere.dto.TestCaseTemplateDao;
@@ -84,7 +85,7 @@ public class ApiTemplateService extends TemplateBaseService {
             String originId = request.getId();
             // 如果是全局字段，则创建对应工作空间字段
             String id = add(request);
-            projectService.updateApiTemplate(originId, id, request.getWorkspaceId());
+            projectService.updateApiTemplate(originId, id, request.getProjectId());
         } else {
             checkExist(request);
             customFieldTemplateService.deleteByTemplateId(request.getId());
@@ -105,23 +106,22 @@ public class ApiTemplateService extends TemplateBaseService {
      * @param customField
      */
     public void handleSystemFieldCreate(CustomField customField) {
-        Project project = projectService.getProjectById(customField.getProjectId());
-        ApiTemplate workspaceSystemTemplate = getWorkspaceSystemTemplate(project.getWorkspaceId());
+        ApiTemplate workspaceSystemTemplate = getWorkspaceSystemTemplate(customField.getProjectId());
         if (workspaceSystemTemplate == null) {
-            createTemplateWithUpdateField(project.getWorkspaceId(), customField);
+            createTemplateWithUpdateField(customField.getProjectId(), customField);
         } else {
             updateRelateWithUpdateField(workspaceSystemTemplate, customField);
         }
     }
 
-    private void createTemplateWithUpdateField(String workspaceId, CustomField customField) {
+    private void createTemplateWithUpdateField(String projectId, CustomField customField) {
         UpdateApiFieldTemplateRequest request = new UpdateApiFieldTemplateRequest();
         ApiTemplate apiTemplate = new ApiTemplate();
         apiTemplate.setName("default");
         apiTemplate.setType(TemplateConstants.ApiTemplatePlatform.http.name());
         apiTemplate.setGlobal(false);
         apiTemplate.setSystem(true);
-        apiTemplate.setWorkspaceId(workspaceId);
+        apiTemplate.setProjectId(projectId);
         BeanUtils.copyBean(request, apiTemplate);
         List<CustomFieldTemplate> systemFieldCreateTemplate =
                 customFieldTemplateService.getSystemFieldCreateTemplate(customField, TemplateConstants.FieldTemplateScene.API.name());
@@ -134,10 +134,10 @@ public class ApiTemplateService extends TemplateBaseService {
         customFieldTemplateService.updateFieldIdByTemplate(template.getId(), globalField.getId(), customField.getId());
     }
 
-    private ApiTemplate getWorkspaceSystemTemplate(String workspaceId) {
+    private ApiTemplate getWorkspaceSystemTemplate(String projectId) {
         ApiTemplateExample example = new ApiTemplateExample();
         example.createCriteria()
-                .andWorkspaceIdEqualTo(workspaceId)
+                .andProjectIdEqualTo(projectId)
                 .andSystemEqualTo(true);
         List<ApiTemplate> apiTemplates = apiTemplateMapper.selectByExample(example);
         if (CollectionUtils.isNotEmpty(apiTemplates)) {
@@ -153,7 +153,7 @@ public class ApiTemplateService extends TemplateBaseService {
         ApiTemplateExample example = new ApiTemplateExample();
         ApiTemplateExample.Criteria criteria = example.createCriteria();
         criteria.andNameEqualTo(apiTemplate.getName())
-                .andWorkspaceIdEqualTo(apiTemplate.getWorkspaceId());
+                .andProjectIdEqualTo(apiTemplate.getProjectId());
         if (StringUtils.isNotBlank(apiTemplate.getId())) {
             criteria.andIdNotEqualTo(apiTemplate.getId());
         }
@@ -161,11 +161,31 @@ public class ApiTemplateService extends TemplateBaseService {
             MSException.throwException(Translator.get("template_already") + apiTemplate.getName());
         }
     }
+    public List<ApiTemplate> getSystemTemplates(String projectId) {
+        ApiTemplateExample example = new ApiTemplateExample();
+        example.createCriteria().andProjectIdEqualTo(projectId)
+                .andSystemEqualTo(true);
+        example.or(example.createCriteria().andGlobalEqualTo(true));
+        List<ApiTemplate> apiTemplates = apiTemplateMapper.selectByExample(example);
+        Iterator<ApiTemplate> iterator = apiTemplates.iterator();
+        while (iterator.hasNext()) {
+            ApiTemplate next = iterator.next();
+            for (ApiTemplate item : apiTemplates) {
+                if (next.getGlobal() && !item.getGlobal() && StringUtils.equals(item.getName(), next.getName())) {
+                    // 如果有工作空间的模板则过滤掉全局模板
+                    iterator.remove();
+                    break;
+                }
+            }
+        }
+        return apiTemplates;
+    }
 
-    public ApiTemplate getDefaultTemplate(String workspaceId) {
+
+    public ApiTemplate getDefaultTemplate(String projectId) {
         ApiTemplateExample example = new ApiTemplateExample();
         example.createCriteria()
-                .andWorkspaceIdEqualTo(workspaceId)
+                .andProjectIdEqualTo(projectId)
                 .andSystemEqualTo(true);
         List<ApiTemplate> apiTemplates = apiTemplateMapper.selectByExample(example);
         if (CollectionUtils.isNotEmpty(apiTemplates)) {
@@ -178,13 +198,19 @@ public class ApiTemplateService extends TemplateBaseService {
         }
     }
 
-    public List<ApiTemplate> getOption(String workspaceId) {
+    public List<ApiTemplate> getOption(String projectId) {
         ApiTemplateExample example = new ApiTemplateExample();
+
+        if (StringUtils.isBlank(projectId)) {
+            example.createCriteria().andGlobalEqualTo(true).andSystemEqualTo(true);
+            return apiTemplateMapper.selectByExample(example);
+        }
         example.createCriteria()
-                .andWorkspaceIdEqualTo(workspaceId)
+                .andProjectIdEqualTo(projectId)
                 .andSystemNotEqualTo(true);
+
         List<ApiTemplate> apiTemplates = apiTemplateMapper.selectByExample(example);
-        apiTemplates.add(getDefaultTemplate(workspaceId));
+        apiTemplates.addAll(getSystemTemplates(projectId));
         return apiTemplates;
     }
 

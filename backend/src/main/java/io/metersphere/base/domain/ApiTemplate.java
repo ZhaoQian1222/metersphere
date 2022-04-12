@@ -17,8 +17,6 @@ public class ApiTemplate implements Serializable {
 
     private Boolean global;
 
-    private String workspaceId;
-
     private String createUser;
 
     private String apiName;
@@ -30,6 +28,8 @@ public class ApiTemplate implements Serializable {
     private Long createTime;
 
     private Long updateTime;
+
+    private String projectId;
 
     private static final long serialVersionUID = 1L;
 }
