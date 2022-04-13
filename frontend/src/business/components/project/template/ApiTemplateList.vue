@@ -150,6 +150,9 @@ export default {
       return getDefaultTableHeight();
     }
   },
+  created() {
+    this.initTableData();
+  },
   methods: {
     initTableData() {
       this.condition.projectId = getCurrentProjectID();
