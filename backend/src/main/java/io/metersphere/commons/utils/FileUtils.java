@@ -114,13 +114,16 @@ public class FileUtils {
             String[] oldFilePathSplits = existfilePath.split("/");
             String newFilePath = filePath + "/" + bodyUploadId + "_" + oldFilePathSplits[oldFilePathSplits.length-1];
             File existfile = new File(existfilePath);
+            LogUtil.info("=================FileUtil.copyFile start========existfilePath:" + existfilePath + "=========newFilePath:" + newFilePath);
             if (existfile.exists()) {
                 try {
                     FileUtil.copyFile(existfile, new File(newFilePath));
                 } catch (Exception e) {
+                    LogUtil.info("=================FileUtil.copyFile error=================");
                     LogUtil.error(e.getMessage(), e);
                 }
             }
+            LogUtil.info("=================FileUtil.copyFile end=================");
         }
     }
 
