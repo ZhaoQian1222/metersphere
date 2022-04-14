@@ -367,6 +367,8 @@
               // 更新场景，修改左边数据
               if (this.showDelete) {
                 this.updateParameters(this.editData);
+                // 清空表单
+                this.editData = {};
               } else {
                 // 新增场景，往左边新加
                 this.addParameters(this.editData);
