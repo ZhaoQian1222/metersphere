@@ -975,6 +975,9 @@ public class TestPlanReportService {
         LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp20: " + reportId + " , time:" + timeStamp20);
         testPlanReportDTO.setName(testPlanReport.getName());
         Log.info("----> SELECT REPORT OVER ");
+        if(testPlanReportDTO.getCaseCount() == null){
+            testPlanReportDTO.setCaseCount(0L);
+        }
         Timestamp timeStamp21 = new Timestamp(System.currentTimeMillis());
         LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 end: " + reportId + " , time:" + timeStamp21);
         return testPlanReportDTO;
