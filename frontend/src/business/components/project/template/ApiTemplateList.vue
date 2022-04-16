@@ -161,8 +161,10 @@ export default {
           let data = response.data;
           this.total = data.itemCount;
           this.tableData = data.listObject;
-          this.$refs.table.reloadTable();
-        });
+          if (this.$refs.table) {
+            this.$refs.table.reloadTable();
+          }
+      });
     },
     handleEdit(data) {
       this.$refs.templateEdit.open(data);
