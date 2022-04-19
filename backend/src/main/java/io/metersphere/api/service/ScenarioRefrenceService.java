@@ -48,14 +48,14 @@ public class ScenarioRefrenceService {
                     JSONArray jsonArray = scenario.getHashTree();
                     for (int j = 0; j < jsonArray.size(); j++) {
                         JSONObject jsonObject = jsonArray.getJSONObject(j);
-                        this.checkTestElement(jsonObject, apiScenario.getId());
+                        this.checkTestElement(jsonObject, apiScenario.getId(), apiScenario.getProjectId());
                     }
                 }
             }
         }
     }
 
-    public void checkTestElement(JSONObject testElement, String apiScenarioId) {
+    public void checkTestElement(JSONObject testElement, String apiScenarioId, String projectId) {
         try {
             if (testElement != null) {
                 // 递归判断 场景步骤 中包含的API
@@ -66,6 +66,8 @@ public class ScenarioRefrenceService {
                         // 根据 API 的 path 查询接口数据的最新版本(api_definition)
                         ApiDefinitionExample definitionExample = new ApiDefinitionExample();
                         definitionExample.createCriteria().andMethodEqualTo(method).andPathEqualTo(path)
+                                .andProjectIdEqualTo(projectId)
+                                .andStatusNotEqualTo("Trash")
                                 .andLatestEqualTo(true);
                         List<ApiDefinition> apiDefinitions = apiDefinitionMapper.selectByExample(definitionExample);
                         if (!CollectionUtils.isEmpty(apiDefinitions)) {
@@ -92,7 +94,7 @@ public class ScenarioRefrenceService {
                 if (testElement.getJSONArray("hashTree") != null && testElement.getJSONArray("hashTree").size() > 0) {
                     JSONArray jsonArray = testElement.getJSONArray("hashTree");
                     for (int i = 0; i < jsonArray.size(); i++) {
-                        this.checkTestElement(jsonArray.getJSONObject(i), apiScenarioId);
+                        this.checkTestElement(jsonArray.getJSONObject(i), apiScenarioId, projectId);
                     }
                 }
             }
