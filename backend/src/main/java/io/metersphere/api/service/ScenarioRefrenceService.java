@@ -72,7 +72,9 @@ public class ScenarioRefrenceService {
                             // 若能找到接口数据，且场景与接口的引用关联表中不存在此关联关系，则建立场景与接口的关联关系
                             ApiDefinition apiDefinition = apiDefinitions.get(0);
                             ApiScenarioReferenceIdExample referenceIdExample = new ApiScenarioReferenceIdExample();
-                            referenceIdExample.createCriteria().andReferenceIdEqualTo(apiDefinition.getId()).andDataTypeEqualTo("API");
+                            referenceIdExample.createCriteria().andReferenceIdEqualTo(apiDefinition.getId())
+                                    .andDataTypeEqualTo("API")
+                                    .andApiScenarioIdEqualTo(apiScenarioId);
                             if (apiScenarioReferenceIdMapper.countByExample(referenceIdExample) < 1) {
                                 ApiScenarioReferenceId saveItem = new ApiScenarioReferenceId();
                                 saveItem.setId(UUID.randomUUID().toString());
