@@ -10,7 +10,6 @@ public class JmeterLoggerAppender extends UnsynchronizedAppenderBase<ILoggingEve
     @Override
     public void append(ILoggingEvent event) {
         try {
-            if (!event.getLevel().levelStr.equals(LogUtil.DEBUG)) {
                 StringBuffer message = new StringBuffer();
                 message.append(DateUtils.getTimeStr(event.getTimeStamp())).append(" ")
                         .append(event.getLevel()).append(" ")
@@ -33,7 +32,6 @@ public class JmeterLoggerAppender extends UnsynchronizedAppenderBase<ILoggingEve
                         FixedCapacityUtils.fixedCapacityCache.put(event.getTimeStamp(), message);
                     }
                 }
-            }
         } catch (Exception e) {
             LogUtil.error(e);
         }
