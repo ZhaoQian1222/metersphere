@@ -24,7 +24,7 @@ public class FixedCapacityUtils {
 
 
     static class LRUHashMap<K, V> extends LinkedHashMap<K, V> {
-        private int capacity = 100;
+        private int capacity = 300;
 
         @Override
         protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
