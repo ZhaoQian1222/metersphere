@@ -1,7 +1,7 @@
 <template>
   <ms-container v-if="renderComponent" v-loading="loading">
 
-    <ms-aside-container>
+    <ms-aside-container v-show="isAsideHidden">
       <test-case-node-tree
         @nodeSelectEvent="nodeChange"
         @refreshTable="refresh"
@@ -131,7 +131,7 @@
               :select-node="selectNode"
               :select-condition="condition"
               :public-enable="currentActiveName === 'default' ? false : true"
-              :type="type"
+              :case-type="type"
               @addTab="addTab"
               ref="testCaseEdit">
             </test-case-edit>
@@ -250,7 +250,8 @@ export default {
       tmpPath: null,
       currentVersion: null,
       currentTrashVersion: null,
-      versionEnable: false
+      versionEnable: false,
+      isAsideHidden: true,
     };
   },
   mounted() {
@@ -283,6 +284,7 @@ export default {
       this.init(to);
     },
     activeName(newVal, oldVal) {
+      this.isAsideHidden = this.activeName === 'default';
       if (oldVal !== 'default' && newVal === 'default' && this.$refs.minder) {
         this.$refs.minder.refresh();
       }
@@ -402,6 +404,13 @@ export default {
         this.tabs.push({label: label, name: name, testCaseInfo: tab.testCaseInfo});
       }
 
+      if (tab.name === 'public') {
+        this.publicEnable = false;
+        this.$nextTick(() => {
+          this.publicEnable = true;
+        })
+      }
+
       setCurTabId(this, tab, 'testCaseEdit');
     },
     addTabShow(tab) {
@@ -426,6 +435,12 @@ export default {
         if (t && this.$store.state.testCaseMap.has(t.testCaseInfo.id) && this.$store.state.testCaseMap.get(t.testCaseInfo.id) > 1) {
           message += t.testCaseInfo.name + "，";
         }
+        if (t.label === this.$t('test_track.case.create')) {
+          message += this.$t('test_track.case.create') + "，";
+        }
+        if (t.testCaseInfo.isCopy) {
+          message += t.testCaseInfo.name + "，";
+        }
       })
       if (message !== "") {
         this.$alert(this.$t('commons.track') + " [ " + message.substr(0, message.length - 1) + " ] " + this.$t('commons.confirm_info'), '', {
@@ -448,8 +463,18 @@ export default {
     },
     closeConfirm(targetName) {
       let t = this.tabs.filter(tab => tab.name === targetName);
+      let message = "";
       if (t && this.$store.state.testCaseMap.has(t[0].testCaseInfo.id) && this.$store.state.testCaseMap.get(t[0].testCaseInfo.id) > 0) {
-        this.$alert(this.$t('commons.track') + " [ " + t[0].testCaseInfo.name + " ] " + this.$t('commons.confirm_info'), '', {
+        message += t[0].testCaseInfo.name + "，";
+      }
+      if (t[0].label === this.$t('test_track.case.create')) {
+        message += this.$t('test_track.case.create') + "，";
+      }
+      if (t[0].testCaseInfo.isCopy) {
+        message += t[0].testCaseInfo.name + "，";
+      }
+      if (message !== "") {
+        this.$alert(this.$t('commons.track') + " [ " + message.substr(0, message.length - 1) + " ] " + this.$t('commons.confirm_info'), '', {
           confirmButtonText: this.$t('commons.confirm'),
           cancelButtonText: this.$t('commons.cancel'),
           callback: (action) => {
@@ -644,7 +669,10 @@ export default {
     },
     enablePublic(data) {
       this.initApiTableOpretion = "publicEnable";
-      this.publicEnable = data;
+      this.publicEnable = !data;
+      this.$nextTick(() => {
+        this.publicEnable = data;
+      })
     },
     toPublic(data) {
       if (data === 'public') {

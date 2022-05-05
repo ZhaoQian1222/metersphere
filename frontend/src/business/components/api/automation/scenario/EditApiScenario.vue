@@ -210,7 +210,6 @@
                         :scenario="data"
                         :response="response"
                         :currentScenario="currentScenario"
-                        :currentEnvironmentId="currentEnvironmentId"
                         :node="node"
                         :project-list="projectList"
                         :env-map="projectEnvMap"
@@ -360,6 +359,9 @@
           :old-enable-cookie-share="enableCookieShare"
           :old-on-sample-error="onSampleError"
           :project-list="projectList"
+          :new-create-time="newCreateTime"
+          :old-create-time="oldCreateTime"
+          :old-user-name="oldUserName"
           :type="type"/>
       </el-dialog>
 
@@ -387,6 +389,7 @@ import {
 import "@/common/css/material-icons.css";
 import OutsideClick from "@/common/js/outside-click";
 import {
+  getReportMessageSocket,
   savePreciseEnvProjectIds,
   saveScenario
 } from "@/business/components/api/automation/api-automation";
@@ -462,7 +465,6 @@ export default {
         ],
       },
       environments: [],
-      currentEnvironmentId: "",
       maintainerOptions: [],
       value: API_STATUS[0].id,
       options: API_STATUS,
@@ -509,7 +511,6 @@ export default {
       isTop: false,
       stepSize: 0,
       message: "",
-      websocket: {},
       messageWebSocket: {},
       buttonData: [],
       stepFilter: new STEP,
@@ -557,6 +558,10 @@ export default {
         },
       ],
       reloadTree: "",
+      newCreateTime: 0,
+      oldCreateTime: 0,
+      oldUserName: '',
+      debugReportId: ""
     }
   },
   created() {
@@ -811,9 +816,6 @@ export default {
           if (this.messageWebSocket) {
             this.messageWebSocket.close();
           }
-          if (this.websocket) {
-            this.websocket.close();
-          }
           this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
           this.clearDebug();
           this.$success(this.$t('report.test_stop_success'));
@@ -897,13 +899,11 @@ export default {
       }
     },
     initMessageSocket() {
-      let protocol = "ws://";
-      if (window.location.protocol === 'https:') {
-        protocol = "wss://";
-      }
-      const uri = protocol + window.location.host + "/ws/" + this.reportId;
-      this.messageWebSocket = new WebSocket(uri);
+      this.debugReportId = getUUID().substring(0, 8);
+      this.messageWebSocket = getReportMessageSocket(this.debugReportId);
       this.messageWebSocket.onmessage = this.onDebugMessage;
+      // 开始执行
+      this.messageWebSocket.onopen = this.run();
     },
     runningEditParent(node) {
       if (node.parent && node.parent.data && node.parent.data.id) {
@@ -1361,6 +1361,9 @@ export default {
         this.$store.state.forceRerenderIndex = getUUID();
       });
     },
+    run() {
+      this.reportId = this.debugReportId;
+    },
     runDebug(runScenario) {
       if (this.scenarioDefinition.length < 1) {
         return;
@@ -1412,9 +1415,10 @@ export default {
           } else {
             this.debugLoading = true;
           }
-          this.reportId = getUUID().substring(0, 8);
           this.debug = true;
           this.pluginDelStep = false;
+          // 建立消息链接
+          this.initMessageSocket();
         } else {
           this.clearMessage = getUUID().substring(0, 8);
         }
@@ -1427,16 +1431,6 @@ export default {
           this.environments.forEach(environment => {
             parseEnvironment(environment);
           });
-          let hasEnvironment = false;
-          for (let i in this.environments) {
-            if (this.environments[i].id === this.currentEnvironmentId) {
-              hasEnvironment = true;
-              break;
-            }
-          }
-          if (!hasEnvironment) {
-            this.currentEnvironmentId = '';
-          }
           //检查场景是否需要先进行保存
           this.checkDataIsCopy();
         });
@@ -1514,10 +1508,33 @@ export default {
                 if (this.currentScenario.tags instanceof String) {
                   this.currentScenario.tags = JSON.parse(this.currentScenario.tags);
                 }
+                if (this.currentScenario.copy) {
+                  this.currentScenario.copy = null;
+                }
+                if (this.currentScenario.type) {
+                  this.currentScenario.type = null;
+                }
                 this.pluginDelStep = false;
+                // 记录改变后的数据数据
+                let v1 = {
+                  apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
+                  name: this.currentScenario.name,
+                  status: this.currentScenario.status,
+                  principal: this.currentScenario.principal,
+                  level: this.currentScenario.level,
+                  tags: this.currentScenario.tags,
+                  description: this.currentScenario.description,
+                  scenarioDefinition: JSON.parse(JSON.stringify(this.scenarioDefinition))
+                };
+                this.currentScenario.scenarioDefinitionOrg = v1;
+                this.currentScenario.scenarioDefinition = this.scenarioDefinition;
                 this.$emit('refresh', this.currentScenario);
                 resolve();
               });
+            } else {
+              if (this.$refs.versionHistory) {
+                this.$refs.versionHistory.loading = false;
+              }
             }
           })
         }
@@ -1554,21 +1571,25 @@ export default {
       if (!this.currentScenario.headers) {
         this.currentScenario.headers = [];
       }
-      if (this.currentScenario.id) {
+      if (this.currentScenario && this.currentScenario.id) {
         this.result = this.$get("/api/automation/getApiScenario/" + this.currentScenario.id, response => {
           if (response.data) {
             this.path = "/api/automation/update";
             if (response.data.scenarioDefinition != null) {
               let obj = JSON.parse(response.data.scenarioDefinition);
               if (obj) {
-                this.currentEnvironmentId = obj.environmentId;
                 if (response.data.environmentJson) {
                   this.projectEnvMap = objToStrMap(JSON.parse(response.data.environmentJson));
                 } else {
                   // 兼容历史数据
                   this.projectEnvMap.set(this.projectId, obj.environmentId);
                 }
-                this.$store.state.scenarioEnvMap = this.projectEnvMap;
+                if (!this.$store.state.scenarioEnvMap || !(this.$store.state.scenarioEnvMap instanceof Map)) {
+                  this.$store.state.scenarioEnvMap = new Map();
+                }
+                this.projectEnvMap.forEach((v, k) => {
+                  this.$store.state.scenarioEnvMap.set(this.currentScenario.id + "_" + k, v);
+                })
                 this.envGroupId = response.data.environmentGroupId;
                 if (response.data.environmentType) {
                   this.environmentType = response.data.environmentType;
@@ -1619,10 +1640,10 @@ export default {
           this.sort();
           this.$nextTick(() => {
             this.cancelBatchProcessing();
-            if (isRefresh) {
-              this.reloadTree = getUUID();
-            }
           });
+          if (isRefresh) {
+            this.reloadTree = getUUID();
+          }
           // 记录初始化数据
           let v1 = {
             apiScenarioModuleId: this.currentScenario.apiScenarioModuleId,
@@ -1720,8 +1741,6 @@ export default {
       if (!this.debug) {
         this.debugVisible = true;
         this.loading = false;
-      } else {
-        this.initMessageSocket();
       }
     },
     errorRefresh(error) {
@@ -1762,7 +1781,15 @@ export default {
     },
     setProjectEnvMap(projectEnvMap) {
       this.projectEnvMap = projectEnvMap;
-      this.$store.state.scenarioEnvMap = projectEnvMap;
+      if (!this.$store.state.scenarioEnvMap) {
+        this.$store.state.scenarioEnvMap = new Map();
+      }
+      let map = objToStrMap(JSON.parse(JSON.stringify(this.$store.state.scenarioEnvMap)));
+      this.projectEnvMap.forEach((v, k) => {
+        let key = this.currentScenario.id + "_" + k;
+        map.set(key, v);
+      });
+      this.$store.state.scenarioEnvMap = map;
       this.setDomain(true);
     },
     setEnvGroup(id) {
@@ -1822,19 +1849,15 @@ export default {
       return [];
     },
     checkALevelChecked() {
+      let resourceIds = [];
       if (this.$refs.stepTree) {
-        let resourceIds = [];
         this.$refs.stepTree.root.childNodes.forEach(item => {
           if (item.checked) {
             resourceIds.push(item.data.resourceId);
           }
         })
-        if (resourceIds.length > 20) {
-          this.$warning(this.$t('api_test.automation.open_check_message'));
-          return false;
-        }
       }
-      return true;
+      return resourceIds;
     },
     recursionExpansion(resourceIds, array) {
       if (array) {
@@ -1854,11 +1877,15 @@ export default {
     },
     openExpansion() {
       this.expandedStatus = true;
-      if (this.checkALevelChecked()) {
-        let resourceIds = this.getAllResourceIds();
-        this.changeNodeStatus(resourceIds, this.scenarioDefinition);
-        this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
+      let resourceIds = [];
+      let openResourceIds = this.checkALevelChecked();
+      if (openResourceIds.length > 20) {
+        resourceIds = openResourceIds.slice(0, 20);
+      } else {
+        resourceIds = this.getAllResourceIds();
       }
+      this.changeNodeStatus(resourceIds, this.scenarioDefinition);
+      this.recursionExpansion(resourceIds, this.$refs.stepTree.root.childNodes);
     },
     closeExpansion() {
       this.expandedStatus = false;
@@ -1962,6 +1989,9 @@ export default {
     compare(row) {
       this.scenarioRefId = this.currentScenario.refId;
       this.dffScenarioId = row.id;
+      this.newCreateTime = row.createTime
+      this.oldUserName = this.currentScenario.userName
+      this.oldCreateTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.currentScenario.versionId)[0].createTime;
       this.dialogVisible = true;
     },
     closeDiff() {

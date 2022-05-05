@@ -1,14 +1,14 @@
 <template>
 
   <div class="msDialogHeader">
-    <span style="float: left;font-size: 18px;color: #303133;">{{title}}</span>
+    <span style="float: left;font-size: 18px;color: #303133;">{{ title }}</span>
 
-    <div style="float: right;width: fit-content;">
+    <div v-if="!hideButton" style="float: right;width: fit-content;">
       <div style="float: left; margin-right: 8px;">
         <slot name="other"></slot>
       </div>
       <div class="ms_btn">
-        <el-button @click="cancel" :size="btnSize">{{ $t('commons.cancel') }}</el-button>
+        <el-button v-if="enableCancel" @click="cancel" :size="btnSize">{{ $t('commons.cancel') }}</el-button>
         <el-button type="primary" @click="confirm" @keydown.enter.native.prevent :size="btnSize">
           {{ $t('commons.confirm') }}
         </el-button>
@@ -29,7 +29,9 @@ export default {
       default() {
         return 'small';
       }
-    }
+    },
+    hideButton: Boolean,
+    enableCancel: Boolean
   },
   methods: {
     cancel() {
@@ -43,11 +45,12 @@ export default {
 </script>
 
 <style scoped>
-  .ms_btn {
-    float: right;
-    margin-right: 50px;
-  }
-  .msDialogHeader {
-    margin-bottom: 5px;
-  }
+.ms_btn {
+  float: right;
+  margin-right: 50px;
+}
+
+.msDialogHeader {
+  margin-bottom: 5px;
+}
 </style>

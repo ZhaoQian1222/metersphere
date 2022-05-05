@@ -36,7 +36,7 @@ export default {
     close_schedule: '關閉定時任務',
     open_schedule: '開啟定時任務',
     schedule_switch: '定時任務開關',
-    schedule_cron_title: '定時任務時間運算式',
+    schedule_cron_title: 'Cron運算式',
     review_complete: '評審完成',
     examples: '示例',
     help_documentation: '幫助文檔',
@@ -44,8 +44,8 @@ export default {
     confirm_delete: '是否刪除',
     delete_cancelled: '已取消刪除',
     workspace: '工作空間',
-    space:'空間',
-    current_workspace:"當前工作空間",
+    space: '空間',
+    current_workspace: "當前工作空間",
     organization: '組織',
     setting: '設置',
     project: '項目',
@@ -73,6 +73,7 @@ export default {
     confirm_info: '未保存，是否確認關閉？',
     track: '用例',
     actuator: '執行器',
+    task_center_remark: '調試歷史只展示最近的五條數據',
     from: '由',
     prompt: '提示',
     operating: '操作',
@@ -419,6 +420,7 @@ export default {
     open_source_version: "開源版",
     function_planning: "功能正在規劃中...",
     enterprise_edition_tips: "此功能為企業版功能，<a href='https://metersphere.io/enterprise.html' target='_blank'>詳情請諮詢</a>",
+    ui_edition_tips: "UI自動化為企業版功能，可在官網申請試用",
     system_data: "系統數據",
     system_user: "系統用戶",
     system_workspace: "工作空間",
@@ -447,7 +449,8 @@ export default {
     git_repository: 'Git存儲庫',
     repositoryUrl: 'Git存儲庫地址',
     repositoryName: 'Git存儲庫名稱',
-    repositoryUsername: '用戶名'
+    repositoryUsername: '用戶名',
+    ui: 'UI 測試',
   },
   login: {
     normal_Login: "普通登錄",
@@ -466,6 +469,7 @@ export default {
     status: '授權狀態',
     valid: '有效',
     invalid: '無效',
+    count_warning: '系統用戶數已超過license限制數量，請盡快聯繫工作人員。',
     expired: '已過期',
   },
   workstation: {
@@ -610,6 +614,8 @@ export default {
       env_list: "環境列表",
       confirm: "確 定",
       please_select_env_for_current_scenario: "請為當前場景選擇一個運行環境！",
+      please_select_env_for_current_plan: "請為當前测试计划選擇一個運行環境！",
+      please_select_run_within_resource_pool: "請選擇一個資源池",
       lack_env: "環境組缺少環境！",
       lack_necessary_environment: "此環境組缺少必要的項目環境！",
       available_group: '可用環境組',
@@ -2157,6 +2163,7 @@ export default {
       plan_status_running: "進行中",
       plan_status_finished: "已結束",
       plan_status_completed: "已完成",
+      plan_status_archived: "已歸檔",
       plan_status_trash: "廢棄",
       planned_start_time: "計劃開始",
       planned_end_time: "計劃結束",
@@ -2476,6 +2483,7 @@ export default {
     SMTP_port: 'SMTP端口',
     SMTP_account: 'SMTP賬戶',
     SMTP_password: 'SMTP密碼',
+    SMTP_from: '指定发件人',
     SSL: '開啟SSL(如果SMTP端口是465，通常需要啟用SSL)',
     TLS: '開啟TLS(如果SMTP端口是587，通常需要啟用TLS)',
     SMTP: '是否免密 SMTP',
@@ -2484,6 +2492,7 @@ export default {
     account: '賬戶不能為空',
     test_recipients: '測試收件人',
     tip: '提示：僅用來作為測試郵件收件人',
+    from_tip: '注：必須是郵件服務器驗證通過的郵箱，否則默認為SMTP賬戶發送'
   },
   i18n: {
     home: '首頁',
@@ -2540,7 +2549,7 @@ export default {
     edit_timer_task: "編輯定時任務",
     task_config: "任務配置",
     please_input_cron_expression: "請輸入 Cron 表達式",
-    generate_expression: "生成表達式",
+    generate_expression: "自动生成",
     cron_expression_format_error: "Cron 表達式格式錯誤",
     cron_expression_interval_short_error: "間隔時間小於 3 分鐘, 請避免執行耗時過長的測試",
     cron: {
@@ -2578,13 +2587,13 @@ export default {
   },
   quota: {
     default: {
-      organization: "組織默認配額",
+      project: "項目默認配額",
       workspace: "工作空間默認配額",
     },
     api: "接口測試數量",
     performance: "性能測試數量",
     resource_pool: "可用測試資源池",
-    max_threads: "最大並發數",
+    max_threads: "同一時段最大並發數",
     duration: "壓測時長(秒)",
     use_default: "使用默認配額",
     yes: "是",
@@ -2595,6 +2604,11 @@ export default {
     edit_quota_title: "{0}的配額",
     workspace_quota_list: "{0}的工作空間配額列表",
     unlimited: "無限製",
+    member: "成員數",
+    project: "項目數",
+    vum_total: "總vum數量",
+    vum_used: "消耗vum數量",
+    vum_tip: "vum(並發數 * 持續時間)：一個並髮用戶執行一分鐘消耗1vum",
     clean: "清空"
   },
   schema: {
@@ -2870,6 +2884,11 @@ export default {
       read: "查詢",
       edit: "編輯"
     },
+    workspace_quota: {
+      name: "配額管理",
+      read: "查詢配額",
+      edit: "編輯"
+    },
     project_message: {
       name: "消息設置",
       read: "查詢",
@@ -3049,11 +3068,43 @@ export default {
       create_performance_batch: "批量創建性能測試",
       batch_copy: "批量復製",
     },
+    project_ui_scenario: {
+      name: "UI自動化",
+      read: "查詢場景",
+      create: "創建場景",
+      edit: "編輯場景",
+      delete: "刪除場景",
+      copy: "復製場景",
+      run: "執行場景",
+      debug: "調試場景",
+      schedule: "定時任務",
+      import: "導入場景",
+      export: "導出場景",
+      move_batch: "批量移動",
+      create_performance: "創建性能測試",
+      create_performance_batch: "批量創建性能測試",
+      batch_copy: "批量復製",
+      open_url_content: "根據 URL, 打開指定的操作頁面"
+    },
     project_api_report: {
       name: "測試報告",
       read: "查詢報告",
       delete: "刪除報告",
       export: "導出報告",
+    },
+    project_ui_report: {
+      name: "測試報告",
+      read: "查詢報告",
+      delete: "刪除報告",
+      share: "分享報告",
+    },
+    project_ui_element: {
+      name: "元素庫",
+      read: "查詢元素",
+      create: "創建元素",
+      edit: "編輯元素",
+      delete: "刪除元素",
+      copy: "複製元素",
     },
     project_performance_test: {
       name: "測試",
@@ -3105,6 +3156,7 @@ export default {
     other: {
       track: "測試跟蹤",
       api: "接口測試",
+      ui: "UI測試",
       performance: "性能測試",
       project: "項目設置",
       report: "報表統計"
@@ -3126,6 +3178,8 @@ export default {
     tips:"注：在\"項目設置-設置環境-全局斷言\"中啟用誤報將進行以下規則匹配",
     use_error_report: "啟用誤報",
     use_desc: "失敗斷言與誤報規則衝突時統一處理為誤報",
+    conflict_with_success: "請求同時包含誤報和成功斷言，請求結果處理為：",
+    conflict_with_error: "請求同時包含誤報和失敗斷言，請求結果處理為：",
     option: {
       name: "誤報",
       error_code: "誤報名稱",
@@ -3138,5 +3192,10 @@ export default {
     match_type: {
       text: "文本"
     }
+  },
+  ui: {
+    ui_automation: "UI 自動化",
+    ui_element: "元素庫",
+    report: "測試報告",
   }
 };

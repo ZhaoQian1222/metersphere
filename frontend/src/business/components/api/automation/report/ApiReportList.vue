@@ -167,13 +167,8 @@ export default {
     MsTabButton,
     MsRequestResultTail,
   },
-  computed: {
-    leftActive() {
-      return this.trashActiveDom === 'left';
-    },
-    rightActive() {
-      return this.trashActiveDom === 'right';
-    },
+  props: {
+    reportType: String
   },
   data() {
     return {
@@ -241,7 +236,14 @@ export default {
       this.search();
     }
   },
-
+  computed: {
+    leftActive() {
+      return this.trashActiveDom === 'left';
+    },
+    rightActive() {
+      return this.trashActiveDom === 'right';
+    },
+  },
   methods: {
     search() {
       if (this.testId !== 'all') {
@@ -251,6 +253,9 @@ export default {
       this.selectAll = false;
       this.unSelection = [];
       this.selectDataCounts = 0;
+
+      this.condition.reportType = this.reportType;
+
       let url = ''
       if(this.trashActiveDom==='left'){
         this.reportTypeFilters =this.reportScenarioFilters;
@@ -259,6 +264,7 @@ export default {
         this.reportTypeFilters =this.reportCaseFilters;
         url = "/api/execute/result/list/" + this.currentPage + "/" + this.pageSize;
       }
+
       this.result = this.$post(url, this.condition, response => {
         let data = response.data;
         this.total = data.itemCount;
@@ -297,7 +303,7 @@ export default {
         this.$warning(this.$t('commons.run_warning'))
         return;
       }
-      if (report.reportType.indexOf('SCENARIO') !== -1 || report.reportType === 'API_INTEGRATED') {
+      if (report.reportType.indexOf('SCENARIO') !== -1 || report.reportType.indexOf('UI_') !== -1 || report.reportType === 'API_INTEGRATED') {
         this.currentProjectId = report.projectId;
         this.$router.push({
           path: 'report/view/' + report.id,

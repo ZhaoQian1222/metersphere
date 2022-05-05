@@ -1,11 +1,11 @@
 <template>
-  <div v-loading="isReloadData">
+  <div v-loading="isReloadData || result.loading">
     <el-row>
       <el-col :span="spanNum" style="padding-bottom: 20px">
         <div style="border:1px #DCDFE6 solid; height: 100%;border-radius: 4px ;width: 100% ;">
           <el-form :model="request" :rules="rules" ref="request" label-width="100px" :disabled="isReadOnly" style="margin: 10px">
             <el-row>
-              <el-col :span="8">
+              <el-col :span="7">
                 <el-form-item prop="environmentId" :label="$t('api_test.definition.request.run_env')">
                   <el-select v-model="request.environmentId" size="small" class="ms-htt-width"
                              :placeholder="$t('api_test.definition.request.run_env')"
@@ -34,10 +34,17 @@
                 </el-form-item>
 
               </el-col>
-              <el-col :span="8">
+              <el-col :span="7">
                 <el-form-item :label="$t('api_test.request.sql.timeout')" prop="queryTimeout" style="margin-left: 10px">
                   <el-input-number :disabled="isReadOnly" size="small" v-model="request.queryTimeout" :placeholder="$t('commons.millisecond')" :max="1000*10000000" :min="0"/>
                 </el-form-item>
+              </el-col>
+              <el-col :span="2">
+                <el-checkbox
+                  v-if="request.referenced==='Created' && scenarioId !==''"
+                  v-model="request.isRefEnvironment" :disabled="request.disabled" class="ref_environment" @change="getEnvironments">
+                  {{ $t('api_test.request.refer_to_environment') }}
+                </el-checkbox>
               </el-col>
             </el-row>
 
@@ -56,10 +63,7 @@
                                            :description="$t('api_test.scenario.kv_description')"/>
               </el-tab-pane>
               <el-tab-pane :label="$t('api_test.request.sql.sql_script')" name="sql">
-                <div class="sql-content">
-                  <ms-code-edit mode="sql" :read-only="isReadOnly" :modes="['sql']" :data.sync="request.query"
-                                theme="eclipse" ref="codeEdit"/>
-                </div>
+                <ms-code-edit mode="sql" :read-only="isReadOnly" :modes="['sql']" :data.sync="request.query" :height="200" theme="eclipse" ref="codeEdit"/>
               </el-tab-pane>
               <!-- 脚本步骤/断言步骤 -->
               <el-tab-pane :label="$t('api_test.definition.request.pre_operation')" name="preOperate" v-if="showScript">
@@ -69,7 +73,7 @@
                     <div class="el-step__icon-inner">{{ request.preSize }}</div>
                   </div>
                 </span>
-                <ms-jmx-step :request="request" :apiId="request.id" :response="response" :tab-type="'pre'"
+                <ms-jmx-step :request="request" :scenarioId="scenarioId" :apiId="request.id" :response="response" :tab-type="'pre'"
                              ref="preStep"/>
               </el-tab-pane>
               <el-tab-pane :label="$t('api_test.definition.request.post_operation')" name="postOperate"
@@ -80,7 +84,7 @@
                     <div class="el-step__icon-inner">{{ request.postSize }}</div>
                   </div>
                   </span>
-                <ms-jmx-step :request="request" :apiId="request.id" :response="response" :tab-type="'post'"
+                <ms-jmx-step :request="request" :scenarioId="scenarioId" :apiId="request.id" :response="response" :tab-type="'post'"
                              ref="postStep"/>
               </el-tab-pane>
               <el-tab-pane :label="$t('api_test.definition.request.assertions_rule')" name="assertionsRule"
@@ -91,7 +95,7 @@
                     <div class="el-step__icon-inner">{{ request.ruleSize }}</div>
                   </div>
                   </span>
-                <ms-jmx-step :request="request" :apiId="request.id" :response="response" @reload="reloadBody"
+                <ms-jmx-step :request="request" :apiId="request.id" :response="response" :scenarioId="scenarioId" @reload="reloadBody"
                              :tab-type="'assertionsRule'" ref="assertionsRule"/>
               </el-tab-pane>
 
@@ -116,7 +120,7 @@ import MsCodeEdit from "../../../../../common/components/MsCodeEdit";
 import MsApiScenarioVariables from "../../ApiScenarioVariables";
 import {parseEnvironment} from "../../../model/EnvironmentModel";
 import ApiEnvironmentConfig from "@/business/components/api/test/components/ApiEnvironmentConfig";
-import {getCurrentProjectID} from "@/common/js/utils";
+import {getCurrentProjectID, objToStrMap} from "@/common/js/utils";
 import {getUUID} from "@/common/js/utils";
 import MsJsr233Processor from "../../../../automation/scenario/component/Jsr233Processor";
 import MsJmxStep from "../../step/JmxStep";
@@ -141,6 +145,11 @@ export default {
       type: Boolean,
       default: true,
     },
+    isCase: {
+      type: Boolean,
+      default: false,
+    },
+    scenarioId: String,
     isReadOnly: {
       type: Boolean,
       default: false
@@ -156,6 +165,7 @@ export default {
       isReloadData: false,
       activeName: "variables",
       rules: {},
+      result: {}
     }
   },
   watch: {
@@ -165,12 +175,23 @@ export default {
       },
       deep: true
     },
+    '$store.state.useEnvironment': function () {
+      if (this.scenarioId !== "") {
+        this.getEnvironments(this.$store.state.useEnvironment);
+      }
+    },
     '$store.state.scenarioEnvMap': {
       handler(v) {
         this.getEnvironments();
       },
       deep: true
-    }
+    },
+    'request.refEevMap': {
+      handler(v) {
+        this.getEnvironments();
+      },
+      deep: true
+    },
   },
   created() {
     this.getEnvironments();
@@ -241,55 +262,115 @@ export default {
     runTest() {
 
     },
-    getEnvironments() {
-      this.environments = [];
+    itselfEnvironment(environmentId) {
       let id = this.request.projectId ? this.request.projectId : this.projectId;
-      this.$get('/api/environment/list/' + id, response => {
+      this.result = this.$get('/api/environment/list/' + id, response => {
+        this.environments = response.data;
+        let targetDataSourceName = undefined;
+        let currentEnvironment = undefined;
+        this.environments.forEach(environment => {
+          parseEnvironment(environment);
+          // 找到原始环境和数据源名称
+          if (environment.id === environmentId) {
+            currentEnvironment = environment;
+          }
+          if (environment.id === this.request.environmentId) {
+            if (environment.config && environment.config.databaseConfigs) {
+              environment.config.databaseConfigs.forEach(item => {
+                if (item.id === this.request.dataSourceId) {
+                  targetDataSourceName = item.name;
+                }
+              });
+            }
+          }
+        })
+        this.initDataSource(environmentId, currentEnvironment, targetDataSourceName);
+      });
+    },
+    getEnvironments(environmentId) {
+      let envId = "";
+      let id = this.request.projectId ? this.request.projectId : this.projectId;
+      let scenarioEnvId = this.request.currentScenarioId ? (this.request.currentScenarioId + "_" + id) : id;
+      if (this.$store.state.scenarioEnvMap && this.$store.state.scenarioEnvMap instanceof Map
+        && this.$store.state.scenarioEnvMap.has(scenarioEnvId)) {
+        envId = this.$store.state.scenarioEnvMap.get(scenarioEnvId);
+      }
+      if (this.request.referenced === 'Created' && this.scenarioId !== "" && !this.request.isRefEnvironment) {
+        this.itselfEnvironment(environmentId);
+        return;
+      } else if (!this.scenarioId && !this.request.customizeReq) {
+        this.itselfEnvironment(environmentId);
+        return;
+      }
+      this.environments = [];
+      // 场景开启自身环境
+      if (this.request.environmentEnable && this.request.refEevMap) {
+        let obj = Object.prototype.toString.call(this.request.refEevMap).match(/\[object (\w+)\]/)[1].toLowerCase();
+        if (obj !== 'object' && obj !== "map") {
+          this.request.refEevMap = objToStrMap(JSON.parse(this.request.refEevMap));
+        } else if (obj === 'object' && obj !== "map") {
+          this.request.refEevMap = objToStrMap(this.request.refEevMap);
+        }
+        if (this.request.refEevMap instanceof Map && this.request.refEevMap.has(id)) {
+          envId = this.request.refEevMap.get(id);
+        }
+      }
+      let targetDataSourceName = "";
+      let currentEnvironment = {};
+      this.result = this.$get('/api/environment/list/' + id, response => {
         this.environments = response.data;
         this.environments.forEach(environment => {
           parseEnvironment(environment);
+          // 找到原始环境和数据源名称
+          if (environment.id === this.request.environmentId && environment.id !== envId) {
+            if (environment.config && environment.config.databaseConfigs) {
+              environment.config.databaseConfigs.forEach(item => {
+                if (item.id === this.request.dataSourceId) {
+                  targetDataSourceName = item.name;
+                }
+              });
+            }
+          }
+          if (envId && environment.id === envId) {
+            currentEnvironment = environment;
+            if (!this.isCase) {
+              this.environments = [currentEnvironment];
+            }
+          }
         });
-        let envId = "";
-        if (this.$store.state.scenarioEnvMap && this.$store.state.scenarioEnvMap instanceof Map
-          && this.$store.state.scenarioEnvMap.has(this.projectId)) {
-          envId = this.$store.state.scenarioEnvMap.get(this.projectId);
-        }
-        this.initDataSource(envId);
+        this.initDataSource(envId, currentEnvironment, targetDataSourceName);
       });
     },
     openEnvironmentConfig() {
       this.$refs.environmentConfig.open(getCurrentProjectID());
     },
-    initDataSource(envId) {
-      let flag = false;
-      let environment = {};
+    initDataSource(envId, currentEnvironment, targetDataSourceName) {
+      this.databaseConfigsOptions = [];
       if (envId) {
+        this.request.environmentId = envId;
+      } else {
         for (let i in this.environments) {
-          if (this.environments[i].id === envId && this.environments[i].config && this.environments[i].config.databaseConfigs
-            && this.environments[i].config.databaseConfigs.length > 0) {
-            this.request.environmentId = envId;
-            this.request.dataSourceId = this.environments[i].config.databaseConfigs[0].id;
+          if (this.environments[i].id === this.request.environmentId) {
+            currentEnvironment = this.environments[i];
+            break;
           }
         }
       }
-
-      for (let i in this.environments) {
-        if (this.environments[i].id === this.request.environmentId) {
-          environment = this.environments[i];
-          break;
-        }
-      }
-
-      this.databaseConfigsOptions = [];
-      if (environment.config && environment.config.databaseConfigs) {
-        environment.config.databaseConfigs.forEach(item => {
+      let flag = false;
+      if (currentEnvironment && currentEnvironment.config && currentEnvironment.config.databaseConfigs) {
+        currentEnvironment.config.databaseConfigs.forEach(item => {
           if (item.id === this.request.dataSourceId) {
+            flag = true;
+          }
+          // 按照名称匹配
+          else if (targetDataSourceName && item.name === targetDataSourceName) {
+            this.request.dataSourceId = item.id;
             flag = true;
           }
           this.databaseConfigsOptions.push(item);
         });
-        if (!flag && environment.config.databaseConfigs.length > 0) {
-          this.request.dataSourceId = environment.config.databaseConfigs[0].id;
+        if (!flag && currentEnvironment.config.databaseConfigs.length > 0) {
+          this.request.dataSourceId = currentEnvironment.config.databaseConfigs[0].id;
           flag = true;
         }
       }
@@ -299,7 +380,6 @@ export default {
     },
     setDataSource() {
       this.initDataSource();
-
       for (let item of this.databaseConfigsOptions) {
         if (this.request.dataSourceId === item.id) {
           this.request.dataSource = item;
@@ -316,9 +396,40 @@ export default {
           this.environments[i].config.databaseConfigs.forEach(item => {
             this.databaseConfigsOptions.push(item);
           })
+          if (this.request.hashTree && !this.scenarioId) {
+            this.setOwnEnvironment(this.request.hashTree, value)
+          }
           break;
         }
       }
+    },
+    setOwnEnvironment(scenarioDefinition, env) {
+      for (let i in scenarioDefinition) {
+        let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
+        if (typeArray.indexOf(scenarioDefinition[i].type) !== -1) {
+          // 找到原始数据源名称
+          this.getTargetSource(scenarioDefinition[i])
+          scenarioDefinition[i].environmentId = env;
+        }
+        if (scenarioDefinition[i].hashTree !== undefined && scenarioDefinition[i].hashTree.length > 0) {
+          this.setOwnEnvironment(scenarioDefinition[i].hashTree, env);
+        }
+      }
+    },
+    getTargetSource(obj) {
+      this.environments.forEach(environment => {
+        parseEnvironment(environment);
+        // 找到原始环境和数据源名称
+        if (environment.id === obj.environmentId) {
+          if (environment.config && environment.config.databaseConfigs) {
+            environment.config.databaseConfigs.forEach(item => {
+              if (item.id === obj.dataSourceId) {
+                obj.targetDataSourceName = item.name;
+              }
+            });
+          }
+        }
+      });
     },
     environmentConfigClose() {
       this.getEnvironments();
@@ -356,5 +467,10 @@ export default {
 
 /deep/ .el-form-item {
   margin-bottom: 15px;
+}
+
+.ref_environment {
+  margin-top: 13px;
+  float: right;
 }
 </style>

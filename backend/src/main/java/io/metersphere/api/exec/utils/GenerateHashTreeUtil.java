@@ -2,6 +2,7 @@ package io.metersphere.api.exec.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -13,7 +14,6 @@ import io.metersphere.api.jmeter.ResourcePoolCalculation;
 import io.metersphere.api.service.ApiExecutionQueueService;
 import io.metersphere.api.service.RemakeReportService;
 import io.metersphere.base.domain.ApiScenarioWithBLOBs;
-import io.metersphere.base.domain.TestResource;
 import io.metersphere.base.domain.TestResourcePool;
 import io.metersphere.base.mapper.TestResourcePoolMapper;
 import io.metersphere.commons.constants.ResourcePoolTypeEnum;
@@ -21,9 +21,7 @@ import io.metersphere.commons.utils.BeanUtils;
 import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.constants.RunModeConstants;
-import io.metersphere.dto.JmeterRunRequestDTO;
-import io.metersphere.dto.ResultDTO;
-import io.metersphere.dto.RunModeConfigDTO;
+import io.metersphere.dto.*;
 import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.service.EnvironmentGroupProjectService;
 import io.metersphere.vo.BooleanPool;
@@ -38,7 +36,7 @@ public class GenerateHashTreeUtil {
 
     public static MsScenario parseScenarioDefinition(String scenarioDefinition) {
         if (StringUtils.isNotEmpty(scenarioDefinition)) {
-            MsScenario scenario = JSONObject.parseObject(scenarioDefinition, MsScenario.class);
+            MsScenario scenario = JSONObject.parseObject(scenarioDefinition, MsScenario.class, Feature.DisableSpecialKeyDetect);
             if (scenario != null) {
                 parse(scenarioDefinition, scenario);
             }
@@ -51,7 +49,7 @@ public class GenerateHashTreeUtil {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
-            JSONObject element = JSON.parseObject(scenarioDefinition);
+            JSONObject element = JSON.parseObject(scenarioDefinition, Feature.DisableSpecialKeyDetect);
             ElementUtil.dataFormatting(element);
             // 多态JSON普通转换会丢失内容，需要通过 ObjectMapper 获取
             if (element != null && StringUtils.isNotEmpty(element.getString("hashTree"))) {
@@ -74,7 +72,7 @@ public class GenerateHashTreeUtil {
     public static LinkedList<MsTestElement> getScenarioHashTree(String definition) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        JSONObject element = JSON.parseObject(definition);
+        JSONObject element = JSON.parseObject(definition, Feature.DisableSpecialKeyDetect);
         try {
             if (element != null) {
                 ElementUtil.dataFormatting(element);
@@ -97,7 +95,7 @@ public class GenerateHashTreeUtil {
         return pool;
     }
 
-    public static List<TestResource> setPoolResource(String id) {
+    public static List<JvmInfoDTO> setPoolResource(String id) {
         if (GenerateHashTreeUtil.isResourcePool(id).isPool() && !GenerateHashTreeUtil.isResourcePool(id).isK8s()) {
             ResourcePoolCalculation resourcePoolCalculation = CommonBeanFactory.getBean(ResourcePoolCalculation.class);
             return resourcePoolCalculation.getPools(id);
@@ -128,7 +126,7 @@ public class GenerateHashTreeUtil {
             MsThreadGroup group = new MsThreadGroup();
             group.setLabel(item.getName());
             group.setName(runRequest.getReportId());
-            MsScenario scenario = JSONObject.parseObject(item.getScenarioDefinition(), MsScenario.class);
+            MsScenario scenario = JSONObject.parseObject(item.getScenarioDefinition(), MsScenario.class, Feature.DisableSpecialKeyDetect);
             group.setOnSampleError(scenario.getOnSampleError());
             if (planEnvMap != null && planEnvMap.size() > 0) {
                 scenario.setEnvironmentMap(planEnvMap);
@@ -159,5 +157,21 @@ public class GenerateHashTreeUtil {
 
     public static boolean isSetReport(RunModeConfigDTO config) {
         return config != null && StringUtils.equals(config.getReportType(), RunModeConstants.SET_REPORT.toString()) && StringUtils.isNotEmpty(config.getReportName());
+    }
+
+    public static String getPlatformUrl(BaseSystemConfigDTO baseInfo, JmeterRunRequestDTO request, String queueDetailId) {
+        // 占位符
+        String platformUrl = "http://localhost:8081";
+        if (baseInfo != null) {
+            platformUrl = baseInfo.getUrl();
+        }
+
+        platformUrl += "/api/jmeter/download?testId="
+                + request.getTestId()
+                + "&reportId=" + request.getReportId()
+                + "&runMode=" + request.getRunMode()
+                + "&reportType=" + request.getReportType()
+                + "&queueId=" + queueDetailId;
+        return platformUrl;
     }
 }

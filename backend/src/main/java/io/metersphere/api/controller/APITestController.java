@@ -28,10 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 import static io.metersphere.commons.utils.JsonPathUtils.getListJson;
 
@@ -294,11 +291,10 @@ public class APITestController {
          * 接口覆盖率
          * 复制的接口定义/复制或引用的单接口用例/ 添加的自定义请求 url 路径与现有的接口定义一致的请求
          */
-        List<ApiScenarioWithBLOBs> allScenarioInfoList = apiAutomationService.selectIdAndUseUrlByProjectId(projectId);
+        Map<String,List<String>> scenarioUrlList = apiAutomationService.selectScenarioUseUrlByProjectId(projectId);
         List<ApiDefinition> allEffectiveApiIdList = apiDefinitionService.selectEffectiveIdByProjectId(projectId);
-//        List<ApiTestCase> allEffectiveApiCaseList = apiTestCaseService.selectEffectiveTestCaseByProjectId(projectId);
         try {
-            float intetfaceCoverageRageNumber = apiAutomationService.countInterfaceCoverage(allScenarioInfoList, allEffectiveApiIdList);
+            float intetfaceCoverageRageNumber = apiAutomationService.countInterfaceCoverage(scenarioUrlList, allEffectiveApiIdList);
             DecimalFormat df = new DecimalFormat("0.0");
             returnStr = df.format(intetfaceCoverageRageNumber) + "%";
         }catch (Exception e){
@@ -388,7 +384,7 @@ public class APITestController {
     }
 
     @PostMapping(value = "/schedule/updateEnableByPrimyKey/disable")
-    @SendNotice(taskType = NoticeConstants.TaskType.API_HOME_TASK, event = NoticeConstants.Event.CLOSE_SCHEDULE, mailTemplate = "api/ScheduleClose", subject = "接口测试通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.API_HOME_TASK, event = NoticeConstants.Event.CLOSE_SCHEDULE, subject = "接口测试通知")
     public Schedule disableSchedule(@RequestBody ScheduleInfoRequest request) {
         Schedule schedule = scheduleService.getSchedule(request.getTaskID());
         schedule.setEnable(false);

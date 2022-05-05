@@ -49,6 +49,7 @@
             @remove="remove"
             :title="$t('api_test.definition.request.pre_sql')"
             :is-read-only="false"
+            :scenarioId="scenarioId"
             :request="data"
             :jdbc-processor="data"
             color="#B8741A"
@@ -79,6 +80,7 @@
             :title="$t('api_test.definition.request.post_sql')"
             :is-read-only="false"
             :request="data"
+            :scenarioId="scenarioId"
             :jdbc-processor="data"
             color="#783887"
             background-color="#F2ECF3"/>
@@ -137,6 +139,7 @@ export default {
     tabType: String,
     response: {},
     apiId: String,
+    scenarioId: String,
     showScript: {
       type: Boolean,
       default: true,
@@ -246,8 +249,24 @@ export default {
       } else {
         this.addAssertions();
       }
+      // 继承请求中的环境和数据源
+      if (this.request.hashTree && this.request.hashTree.length > 0) {
+        this.setOwnEnvironment(this.request.hashTree);
+      }
       this.sort();
       this.reload();
+    },
+    setOwnEnvironment(scenarioDefinition) {
+      for (let i in scenarioDefinition) {
+        let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
+        if (typeArray.indexOf(scenarioDefinition[i].type) !== -1
+          && this.request.environmentId && !scenarioDefinition[i].environmentId) {
+          scenarioDefinition[i].environmentId = this.request.environmentId;
+          if (this.request.dataSourceId && !scenarioDefinition[i].dataSourceId) {
+            scenarioDefinition[i].dataSourceId = this.request.dataSourceId;
+          }
+        }
+      }
     },
     filterNode(value, data) {
       if (data.type && value.indexOf(data.type) !== -1) {

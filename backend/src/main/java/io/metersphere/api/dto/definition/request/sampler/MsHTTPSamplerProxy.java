@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.annotation.JSONType;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -134,6 +135,8 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         // 非导出操作，且不是启用状态则跳过执行Ms
         if (!config.isOperating() && !this.isEnable()) {
             return;
+        }else if(config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())){
+            this.setName(config.getOperatingSampleTestName());
         }
         if (this.getReferenced() != null && MsTestElementConstants.REF.name().equals(this.getReferenced())) {
             boolean ref = this.setRefElement();
@@ -185,7 +188,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         setSamplerPath(config, httpConfig, sampler);
 
         // 请求体处理
-        if (this.body != null) {
+        if (this.body != null && StringUtils.equalsAnyIgnoreCase(method,"POST","PUT","PATCH")) {
             List<KeyValue> bodyParams = this.body.getBodyParams(sampler, this.getId());
             if (StringUtils.isNotEmpty(this.body.getType()) && "Form Data".equals(this.body.getType())) {
                 AtomicBoolean kvIsEmpty = new AtomicBoolean(true);
@@ -289,7 +292,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 ApiTestCaseWithBLOBs bloBs = CommonBeanFactory.getBean(ApiTestCaseService.class).get(this.getId());
                 if (bloBs != null) {
                     this.setProjectId(bloBs.getProjectId());
-                    JSONObject element = JSON.parseObject(bloBs.getRequest());
+                    JSONObject element = JSON.parseObject(bloBs.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(element);
                     proxy = mapper.readValue(element.toJSONString(), new TypeReference<MsHTTPSamplerProxy>() {
                     });
@@ -367,7 +370,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 httpConfig.setGlobalScriptConfig(environmentConfig.getGlobalScriptConfig());
                 httpConfig.setAssertions(environmentConfig.getAssertions());
                 if (environmentConfig.isUseErrorCode()) {
-                    httpConfig.setErrorReportAssertions(HashTreeUtil.getErrorReportByProjectId(this.getProjectId()));
+                    httpConfig.setErrorReportAssertions(HashTreeUtil.getErrorReportByProjectId(this.getProjectId(),environmentConfig.isHigherThanSuccess(),environmentConfig.isHigherThanError()));
                 }
                 return httpConfig;
             }

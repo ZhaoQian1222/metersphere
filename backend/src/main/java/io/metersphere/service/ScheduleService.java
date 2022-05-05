@@ -179,6 +179,7 @@ public class ScheduleService {
         schedule.setUserId(SessionUtils.getUser().getId());
         schedule.setProjectId(request.getProjectId());
         schedule.setWorkspaceId(request.getWorkspaceId());
+        schedule.setConfig(request.getConfig());
         return schedule;
     }
 
@@ -316,6 +317,7 @@ public class ScheduleService {
             triggerKey = ApiScenarioTestJob.getTriggerKey(request.getResourceId());
             clazz = ApiScenarioTestJob.class;
             request.setJob(ApiScenarioTestJob.class.getName());
+            needResetJob = true;
         }
         this.editSchedule(request);
 

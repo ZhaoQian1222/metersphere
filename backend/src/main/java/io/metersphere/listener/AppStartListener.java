@@ -137,8 +137,7 @@ public class AppStartListener implements ApplicationListener<ApplicationReadyEve
     }
 
     private void initOnceOperate() {
-        initOnceOperate(apiAutomationService::checkApiScenarioUseUrl, "init.scenario.url");
-        initOnceOperate(apiAutomationService::checkApiScenarioReferenceId, "init.scenario.referenceId");
+        initOnceOperate(apiAutomationService::resetApiScenarioReferenceId, "init.scenario.referenceId.reset");
         initOnceOperate(apiAutomationService::initExecuteTimes, "init.scenario.executeTimes");
         initOnceOperate(issuesService::syncThirdPartyIssues, "init.issue");
         initOnceOperate(issuesService::issuesCount, "init.issueCount");

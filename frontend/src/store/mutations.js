@@ -19,6 +19,17 @@ const mutations = {
   setTestCaseTemplate: (state, value) => state.testCaseTemplate = value,
   setCurTabId: (state, value) => state.curTabId = value,
   setTestCaseDefaultValue: (state, value) => state.testCaseDefaultValue = value,
+  setSelectCommand: (state, value) => state.selectCommand = value,
+  setSelectStep: (state, value) => state.selectStep = value,
+  setLibrarySelectElement: (state, value) => state.librarySelectElement = value,
+  setCurrentScenario: (state, value) => state.currentScenario = value,
+  setScenarioDefinition: (state, value) => state.scenarioDefinition = value,
+  setGroupedCmd: (state, value) => state.groupedCmd = value,
+  setUiElementLibraryModuleIds: (state, value) => state.uiElementLibraryModuleIds = value,
+  setUiElementLibraryElements: (state, value) => state.uiElementLibraryElements = value,
+  setRefreshUiScenario: (state, value) => state.refreshUiScenario = value,
+  setSelectUiGroup: (state, value) => state.selectUiGroup = value,
+  setShowLicenseCountWarning: (state, value) => state.showLicenseCountWarning = value,
 }
 
 export default mutations;

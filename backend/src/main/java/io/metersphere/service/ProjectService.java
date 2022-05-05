@@ -6,7 +6,6 @@ import io.metersphere.api.dto.QueryAPITestRequest;
 import io.metersphere.api.service.APITestService;
 import io.metersphere.api.service.ApiScenarioReportService;
 import io.metersphere.api.service.ApiTestDelService;
-import io.metersphere.api.service.ApiTestEnvironmentService;
 import io.metersphere.api.tcp.TCPPool;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
@@ -127,6 +126,11 @@ public class ProjectService {
             MSException.throwException(Translator.get("project_name_already_exists"));
         }
 
+        QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
+        if (quotaService != null) {
+            quotaService.checkWorkspaceProject(project.getWorkspaceId());
+        }
+
         if (project.getMockTcpPort() != null && project.getMockTcpPort().intValue() > 0) {
             this.checkMockTcpPort(project.getMockTcpPort().intValue());
         }
@@ -138,7 +142,8 @@ public class ProjectService {
         if (StringUtils.isBlank(project.getPlatform())) {
             project.setPlatform(IssuesManagePlatform.Local.name());
         }
-        project.setId(UUID.randomUUID().toString());
+        String pjId = UUID.randomUUID().toString();
+        project.setId(pjId);
 
         String systemId = this.genSystemId();
         long createTime = System.currentTimeMillis();
@@ -162,6 +167,10 @@ public class ProjectService {
 
         // 设置默认的通知
         extProjectMapper.setDefaultMessageTask(project.getId());
+
+        if (quotaService != null) {
+            quotaService.projectUseDefaultQuota(pjId);
+        }
 
         ProjectVersionService projectVersionService = CommonBeanFactory.getBean(ProjectVersionService.class);
         if (projectVersionService != null) {
@@ -334,15 +343,8 @@ public class ProjectService {
      * @param projectId
      */
     public void updateCaseTemplate(String originId, String templateId, String projectId) {
-        Project project = new Project();
-        project.setCaseTemplateId(templateId);
-        ProjectExample example = new ProjectExample();
-        example.createCriteria()
-                .andCaseTemplateIdEqualTo(originId)
-                .andIdEqualTo(projectId);
-        projectMapper.updateByExampleSelective(project, example);
+        extProjectMapper.updateUseDefaultCaseTemplateProject(originId, templateId, projectId);
     }
-
 
     public void updateApiTemplate(String originId, String templateId, String workspaceId) {
         Project project = new Project();

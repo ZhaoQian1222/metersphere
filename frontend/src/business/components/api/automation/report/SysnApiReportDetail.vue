@@ -23,6 +23,7 @@
                 <el-tab-pane :label="$t('api_report.total')" name="total">
                   <ms-scenario-results
                     :treeData="fullTreeNodes"
+                    :report="report"
                     :default-expand="true"
                     :console="content.console"
                     v-on:requestResult="requestResult"
@@ -36,6 +37,7 @@
                   </template>
                   <ms-scenario-results
                     :console="content.console"
+                    :report="report"
                     :treeData="fullTreeNodes"
                     v-on:requestResult="requestResult"
                     ref="failsTree"
@@ -52,8 +54,11 @@
                   <template slot="label">
                     <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
-                                       :treeData="fullTreeNodes" ref="unExecuteTree"/>
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :report="report"
+                                       :console="content.console"
+                                       :treeData="fullTreeNodes"
+                                       ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
                   <template slot="label">
@@ -88,9 +93,9 @@ import MsContainer from "@/business/components/common/components/MsContainer";
 import MsMainContainer from "@/business/components/common/components/MsMainContainer";
 import MsApiReportExport from "./ApiReportExport";
 import MsApiReportViewHeader from "./ApiReportViewHeader";
-import {RequestFactory} from "../../definition/model/ApiTestModel";
+import {KeyValue, RequestFactory} from "../../definition/model/ApiTestModel";
 import {windowPrint, getCurrentProjectID, getUUID} from "@/common/js/utils";
-import {STEP} from "../scenario/Setting";
+import {ELEMENT_TYPE, STEP, TYPE_TO_C} from "../scenario/Setting";
 
 export default {
   name: "SysnApiReportDetail",
@@ -142,7 +147,6 @@ export default {
   },
   props: {
     reportId: String,
-    currentProjectId: String,
     infoDb: Boolean,
     debug: Boolean,
     scenario: {},
@@ -310,6 +314,9 @@ export default {
           this.recursiveSorting(this.fullTreeNodes);
           this.reload();
         }
+        if ("Running" !== this.report.status) {
+          this.$emit('finish');
+        }
       });
     },
     runningNodeChild(arr, resourceId) {
@@ -377,12 +384,21 @@ export default {
     onMessage(e) {
       if (e.data) {
         this.runningEvaluation(e.data);
+        this.sort(this.fullTreeNodes);
       }
       if (e.data && e.data.indexOf("MS_TEST_END") !== -1) {
         this.getReport();
         this.messageWebSocket.close();
         this.$EventBus.$emit('hide', this.scenarioId);
         this.$emit('refresh', this.debugResult);
+      }
+    },
+    sort(stepArray) {
+      for (let i in stepArray) {
+        stepArray[i].index = Number(i) + 1;
+        if (stepArray[i].children && stepArray[i].children.length > 0) {
+          this.sort(stepArray[i].children);
+        }
       }
     },
   },

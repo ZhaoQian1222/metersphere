@@ -31,19 +31,11 @@ public interface ExtApiScenarioMapper {
 
     List<ApiScenario> selectReference(@Param("request") ApiScenarioRequest request);
 
-//    int removeToGc(@Param("ids") List<String> ids);
-//    int removeToGc(ApiScenarioRequest request);
-
-
     int removeToGcByExample(ApiScenarioExampleWithOperation example);
 
     int reduction(@Param("ids") List<String> ids);
 
     long countByProjectID(String projectId);
-
-    List<ApiScenarioWithBLOBs> selectIdAndScenarioByProjectId(String projectId);
-
-    List<ApiScenarioWithBLOBs> selectIdAndUseUrlByProjectId(String projectId);
 
     long countByProjectIDAndCreatInThisWeek(@Param("projectId") String projectId, @Param("firstDayTimestamp") long firstDayTimestamp, @Param("lastDayTimestamp") long lastDayTimestamp);
 
@@ -55,13 +47,15 @@ public interface ExtApiScenarioMapper {
 
     List<String> selectIdsByQuery(@Param("request") BaseQueryRequest request);
 
+    List<String> selectIdsByProjectId(String projectId);
+
     void updateCustomNumByProjectId(@Param("projectId") String projectId);
 
     List<ApiScenarioWithBLOBs> listWithIds(@Param("ids") List<String> ids);
 
-    List<Map<String, Object>> listModuleByCollection(@Param("request") ApiScenarioRequest request);
+    List<ApiScenarioWithBLOBs> listWithRefIds(@Param("ids") List<String> ids);
 
-    List<String> selectIdsByUseUrlIsNull();
+    List<Map<String, Object>> listModuleByCollection(@Param("request") ApiScenarioRequest request);
 
     String selectNameById(String id);
 
@@ -94,4 +88,6 @@ public interface ExtApiScenarioMapper {
     void addLatestVersion(String refId);
 
     List<String> selectRefIdsForVersionChange(@Param("versionId") String versionId, @Param("projectId") String projectId);
+
+    List<ApiScenarioWithBLOBs> selectByStatusIsNotTrash();
 }

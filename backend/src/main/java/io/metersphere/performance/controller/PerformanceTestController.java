@@ -22,6 +22,7 @@ import io.metersphere.dto.ScheduleDao;
 import io.metersphere.log.annotation.MsAuditLog;
 import io.metersphere.notice.annotation.SendNotice;
 import io.metersphere.performance.dto.LoadModuleDTO;
+import io.metersphere.performance.dto.LoadTestBatchRequest;
 import io.metersphere.performance.dto.LoadTestExportJmx;
 import io.metersphere.performance.request.*;
 import io.metersphere.performance.service.PerformanceTestService;
@@ -69,6 +70,11 @@ public class PerformanceTestController {
         return performanceTestService.getLoadTestByProjectId(projectId);
     }
 
+    @PostMapping("/list/batch")
+    @RequiresPermissions("PROJECT_PERFORMANCE_TEST:READ")
+    public List<LoadTestDTO> listBatch(@RequestBody LoadTestBatchRequest request) {
+        return performanceTestService.listBatch(request);
+    }
 
     @GetMapping("/state/get/{testId}")
     @RequiresPermissions("PROJECT_PERFORMANCE_TEST:READ")
@@ -82,7 +88,7 @@ public class PerformanceTestController {
     @RequiresPermissions(PermissionConstants.PROJECT_PERFORMANCE_TEST_READ_CREATE)
     @CacheNode // 把监控节点缓存起来
     @SendNotice(taskType = NoticeConstants.TaskType.PERFORMANCE_TEST_TASK, event = NoticeConstants.Event.CREATE,
-            mailTemplate = "performance/TestCreate", subject = "性能测试通知")
+            subject = "性能测试通知")
     public LoadTest save(
             @RequestPart("request") SaveTestPlanRequest request,
             @RequestPart(value = "file", required = false) List<MultipartFile> files
@@ -102,7 +108,7 @@ public class PerformanceTestController {
     @MsAuditLog(module = OperLogModule.PERFORMANCE_TEST, type = OperLogConstants.UPDATE, beforeEvent = "#msClass.getLogDetails(#request.id)", title = "#request.name", content = "#msClass.getLogDetails(#request.id)", msClass = PerformanceTestService.class)
     @RequiresPermissions(PermissionConstants.PROJECT_PERFORMANCE_TEST_READ_EDIT)
     @CacheNode // 把监控节点缓存起来
-    @SendNotice(taskType = NoticeConstants.TaskType.PERFORMANCE_TEST_TASK, event = NoticeConstants.Event.UPDATE, mailTemplate = "performance/TestUpdate", subject = "性能测试通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.PERFORMANCE_TEST_TASK, event = NoticeConstants.Event.UPDATE, subject = "性能测试通知")
     public LoadTest edit(
             @RequestPart("request") EditTestPlanRequest request,
             @RequestPart(value = "file", required = false) List<MultipartFile> files
@@ -160,7 +166,7 @@ public class PerformanceTestController {
     @RequiresPermissions(PermissionConstants.PROJECT_PERFORMANCE_TEST_READ_DELETE)
     @CacheNode // 把监控节点缓存起来
     @SendNotice(taskType = NoticeConstants.TaskType.PERFORMANCE_TEST_TASK, event = NoticeConstants.Event.DELETE,
-            target = "#targetClass.get(#request.id)", targetClass = PerformanceTestService.class, mailTemplate = "performance/TestDelete", subject = "性能测试通知")
+            target = "#targetClass.get(#request.id)", targetClass = PerformanceTestService.class, subject = "性能测试通知")
     public void delete(@RequestBody DeleteTestPlanRequest request) {
         checkPermissionService.checkPerformanceTestOwner(request.getId());
         performanceTestService.delete(request);

@@ -8,10 +8,7 @@
            @select="handleSelect"
            :key="menuKey"
            router>
-    <el-menu-item index="/workstation" v-if="hasLicense() && check('workstation')">
-      {{ $t('commons.my_workstation') }}
-    </el-menu-item>
-    <el-menu-item v-if="!hasLicense()" @click="clickPlanMenu">
+    <el-menu-item index="/workstation" v-xpack v-if="check('workstation')">
       {{ $t('commons.my_workstation') }}
     </el-menu-item>
     <el-menu-item index="/track" v-if="check('testTrack')" onselectstart="return false"
@@ -21,6 +18,13 @@
     <el-menu-item index="/api" @click="active()" v-if="check('api')" onselectstart="return false"
                   v-permission="['PROJECT_API_DEFINITION:READ','PROJECT_API_SCENARIO:READ','PROJECT_API_REPORT:READ']">
       {{ $t('commons.api') }}
+    </el-menu-item>
+    <el-menu-item index="/ui" @click="active()" v-if="hasLicense() && check('ui')" onselectstart="return false"
+                  v-permission="['PROJECT_UI_SCENARIO:READ','PROJECT_UI_REPORT:READ']">
+      {{ $t('commons.ui') }}
+    </el-menu-item>
+    <el-menu-item v-if="!hasLicense()" @click="clickPlanMenu">
+      {{ $t('commons.ui') }}
     </el-menu-item>
     <el-menu-item index="/performance" v-if="check('performance')"
                   onselectstart="return false"
@@ -40,7 +44,7 @@
 
     <el-menu-item index="/setting" onselectstart="return false"
                   v-permission="['SYSTEM_USER:READ', 'SYSTEM_WORKSPACE:READ', 'SYSTEM_GROUP:READ', 'SYSTEM_TEST_POOL:READ', 'SYSTEM_SETTING:READ', 'SYSTEM_AUTH:READ', 'SYSTEM_QUOTA:READ','SYSTEM_OPERATING_LOG:READ',
-                  'WORKSPACE_SERVICE:READ', 'PROJECT_MESSAGE:READ', 'WORKSPACE_USER:READ', 'WORKSPACE_PROJECT_MANAGER:READ', 'WORKSPACE_PROJECT_ENVIRONMENT:READ', 'WORKSPACE_OPERATING_LOG:READ']">
+                  'WORKSPACE_SERVICE:READ', 'WORKSPACE_USER:READ', 'WORKSPACE_PROJECT_MANAGER:READ', 'WORKSPACE_PROJECT_ENVIRONMENT:READ', 'WORKSPACE_OPERATING_LOG:READ']">
       {{ $t('commons.system_setting') }}
     </el-menu-item>
   </el-menu>
@@ -134,7 +138,7 @@ export default {
       this.$message({
         dangerouslyUseHTMLString: true,
         showClose: true,
-        message: this.$t('commons.enterprise_edition_tips'),
+        message: this.$t('commons.ui_edition_tips'),
       });
       return false;
     },
@@ -146,6 +150,10 @@ export default {
 .el-menu >>> .el-menu-item {
   box-sizing: border-box;
   height: 40px;
+}
+
+.el-menu-item {
+  padding: 0 10px;
 }
 
 </style>

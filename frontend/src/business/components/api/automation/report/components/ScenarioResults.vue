@@ -33,6 +33,7 @@ export default {
     treeData: Array,
     console: String,
     errorReport: Number,
+    report: Object,
     defaultExpand: {
       default: false,
       type: Boolean,
@@ -48,6 +49,11 @@ export default {
       this.$refs.resultsTree.root.expanded = true;
     }
   },
+  computed: {
+    isUi() {
+      return this.report && this.report.reportType && this.report.reportType.startsWith("UI");
+    },
+  },
   methods: {
     filterNode(value, data) {
       if (!data.value && !data.children && data.children.length === 0) {
@@ -56,7 +62,7 @@ export default {
       if (!value) return true;
       if (data.value) {
         if (value === 'errorReport') {
-          if (data.errorCode && data.errorCode !== "") {
+          if (data.errorCode && data.errorCode !== "" && data.value.status === "errorReportResult") {
             return true;
           }
         }else if (value === 'unexecute') {
@@ -64,7 +70,9 @@ export default {
             return true;
           }
         }else {
-          if (!data.errorCode || data.errorCode === "") {
+          if (this.isUi) {
+            return data.value.success === false && data.value.startTime > 0;
+          } else {
             return data.value.error > 0;
           }
         }
@@ -83,7 +91,7 @@ export default {
       node.expanded = !node.expanded;
     },
     // 改变节点的状态
-    changeTreeNodeStatus(node) {
+    changeTreeNodeStatus(node,expandCount) {
       node.expanded = this.expandAll
       for (let i = 0; i < node.childNodes.length; i++) {
         // 改变节点的自身expanded状态
@@ -97,13 +105,13 @@ export default {
     closeExpansion() {
       this.isActive = false;
       this.expandAll = false;
-      this.changeTreeNodeStatus(this.$refs.resultsTree.store.root);
+      this.changeTreeNodeStatus(this.$refs.resultsTree.store.root,0);
     },
     openExpansion() {
       this.isActive = true;
       this.expandAll = true;
       // 改变每个节点的状态
-      this.changeTreeNodeStatus(this.$refs.resultsTree.store.root)
+      this.changeTreeNodeStatus(this.$refs.resultsTree.store.root,0)
     },
   }
 }

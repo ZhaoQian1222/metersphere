@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.annotation.JSONType;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -148,9 +149,10 @@ public class MsScenario extends MsTestElement {
         if (arguments != null && (this.variableEnable == null || this.variableEnable)) {
             Arguments valueSupposeMock = ParameterConfig.valueSupposeMock(arguments);
             // 这里加入自定义变量解决ForEach循环控制器取值问题，循环控制器无法从vars中取值
-            scenarioTree.add(valueSupposeMock);
             if (this.variableEnable != null && this.variableEnable) {
                 scenarioTree.add(ElementUtil.argumentsToUserParameters(valueSupposeMock));
+            } else {
+                scenarioTree.add(valueSupposeMock);
             }
         }
         if (this.variableEnable == null || this.variableEnable) {
@@ -216,7 +218,7 @@ public class MsScenario extends MsTestElement {
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             ApiScenarioWithBLOBs scenario = apiAutomationService.selectByPrimaryKey(this.getId());
             if (scenario != null && StringUtils.isNotEmpty(scenario.getScenarioDefinition())) {
-                JSONObject element = JSON.parseObject(scenario.getScenarioDefinition());
+                JSONObject element = JSON.parseObject(scenario.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
                 // 历史数据处理
                 ElementUtil.dataFormatting(element.getJSONArray("hashTree"));
                 this.setName(scenario.getName());
@@ -260,7 +262,7 @@ public class MsScenario extends MsTestElement {
                 if (StringUtils.equals(environmentType, EnvironmentType.GROUP.name())) {
                     this.environmentMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
                 } else if (StringUtils.equals(environmentType, EnvironmentType.JSON.name())) {
-                    this.environmentMap = JSON.parseObject(environmentJson, Map.class);
+                    this.environmentMap = JSON.parseObject(environmentJson, Map.class, Feature.DisableSpecialKeyDetect);
                 }
             } else {
                 this.setEnvironmentEnable(false);

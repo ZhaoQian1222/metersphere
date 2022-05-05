@@ -29,8 +29,9 @@
       :condition="page.condition"
       :total="page.total"
       :page-size.sync="page.pageSize"
-      :screen-height="null"
+      :screen-height="screenHeight"
       @handlePageChange="getTestCases"
+      @selectCountChange="setSelectCounts"
       @refresh="getTestCases"
       ref="table">
 
@@ -99,7 +100,8 @@
 
     </ms-table>
 
-    <ms-table-pagination :change="getTestCases" :current-page.sync="page.currentPage" :page-size.sync="page.pageSize" :total="page.total"/>
+    <ms-table-pagination :change="getTestCases" :current-page.sync="page.currentPage" :page-size.sync="page.pageSize"
+                         :total="page.total"/>
   </test-case-relevance-base>
 
 </template>
@@ -117,7 +119,8 @@ import MsTableColumn from "@/business/components/common/components/table/MsTable
 import MsTable from "@/business/components/common/components/table/MsTable";
 import MsTablePagination from "@/business/components/common/pagination/TablePagination";
 import MsTag from "@/business/components/common/components/MsTag";
-import {hasLicense, getCurrentProjectID} from "@/common/js/utils";
+import {getCurrentProjectID, hasLicense} from "@/common/js/utils";
+
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const VersionSelect = requireComponent.keys().length > 0 ? requireComponent("./version/VersionSelect.vue") : {};
 
@@ -137,14 +140,14 @@ export default {
     MsTableHeader,
     'VersionSelect': VersionSelect.default,
   },
-  mounted(){
+  mounted() {
     this.getVersionOptions();
   },
   data() {
     return {
       openType: 'relevance',
       result: {},
-      isSaving:false,
+      isSaving: false,
       treeNodes: [],
       selectNodeIds: [],
       selectNodeNames: [],
@@ -152,6 +155,7 @@ export default {
       projectName: '',
       projects: [],
       customNum: false,
+      screenHeight: '400',
       priorityFilters: [
         {text: 'P0', value: 'P0'},
         {text: 'P1', value: 'P1'},
@@ -217,7 +221,7 @@ export default {
         if (data) {
           this.customNum = data.customNum;
         }
-      })
+      });
     },
     getTestCases() {
       let condition = this.page.condition;
@@ -261,7 +265,7 @@ export default {
     getVersionOptions() {
       if (hasLicense()) {
         this.$get('/project/version/get-project-versions/' + getCurrentProjectID(), response => {
-          this.versionOptions= response.data;
+          this.versionOptions = response.data;
           this.versionFilters = response.data.map(u => {
             return {text: u.name, value: u.id};
           });
@@ -271,9 +275,12 @@ export default {
     changeVersion(currentVersion) {
       this.page.condition.versionId = currentVersion || null;
       this.getTestCases();
+    },
+    setSelectCounts(data) {
+      this.$refs.baseRelevance.selectCounts = data;
     }
   }
-}
+};
 </script>
 
 <style scoped>

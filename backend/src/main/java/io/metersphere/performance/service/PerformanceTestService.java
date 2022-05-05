@@ -33,7 +33,9 @@ import io.metersphere.log.vo.DetailColumn;
 import io.metersphere.log.vo.OperatingLogDetails;
 import io.metersphere.log.vo.performance.PerformanceReference;
 import io.metersphere.performance.base.GranularityData;
+import io.metersphere.performance.base.VumProcessedStatus;
 import io.metersphere.performance.dto.LoadModuleDTO;
+import io.metersphere.performance.dto.LoadTestBatchRequest;
 import io.metersphere.performance.dto.LoadTestExportJmx;
 import io.metersphere.performance.engine.Engine;
 import io.metersphere.performance.engine.EngineFactory;
@@ -53,6 +55,8 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.aspectj.util.FileUtil;
 import org.mybatis.spring.SqlSessionUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,6 +66,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -123,6 +128,8 @@ public class PerformanceTestService {
     private ProjectMapper projectMapper;
     @Resource
     private ExtProjectVersionMapper extProjectVersionMapper;
+    @Resource
+    private RedissonClient redissonClient;
 
     public List<LoadTestDTO> list(QueryTestPlanRequest request) {
         request.setOrders(ServiceUtils.getDefaultSortOrder(request.getOrders()));
@@ -291,7 +298,6 @@ public class PerformanceTestService {
     }
 
     public LoadTest edit(EditTestPlanRequest request, List<MultipartFile> files) {
-        checkQuota(request, false);
         checkExist(request);
         String testId = request.getId();
         LoadTestWithBLOBs loadTest = loadTestMapper.selectByPrimaryKey(testId);
@@ -472,6 +478,8 @@ public class PerformanceTestService {
                     testReport.setTestResourcePoolId(testPlanLoadCase.getTestResourcePoolId());
                 }
             }
+
+
             testReport.setStatus(PerformanceTestStatus.Starting.name());
             testReport.setProjectId(loadTest.getProjectId());
             testReport.setTestName(loadTest.getName());
@@ -500,8 +508,15 @@ public class PerformanceTestService {
             reportResult.setReportKey(ReportKeys.ResultStatus.name());
             reportResult.setReportValue("Ready"); // 初始化一个 result_status, 这个值用在data-streaming中
             loadTestReportResultMapper.insertSelective(reportResult);
-            // 启动测试
-            engine.start();
+            // 保存标记
+            LoadTestReportResult  rr = new LoadTestReportResult();
+            rr.setId(UUID.randomUUID().toString());
+            rr.setReportId(testReport.getId());
+            rr.setReportKey(ReportKeys.VumProcessedStatus.name());
+            rr.setReportValue(VumProcessedStatus.NOT_PROCESSED); // 避免测试运行出错时，对报告重复处理vum_used值
+            loadTestReportResultMapper.insertSelective(rr);
+            // 检查配额
+            this.checkLoadQuota(testReport, engine);
             return testReport.getId();
         } catch (MSException e) {
             // 启动失败之后清理任务
@@ -514,6 +529,34 @@ public class PerformanceTestService {
             loadTestMapper.updateByPrimaryKeySelective(updateTest);
             loadTestReportMapper.deleteByPrimaryKey(testReport.getId());
             throw e;
+        }
+    }
+
+    private void checkLoadQuota(LoadTestReportWithBLOBs testReport, Engine engine) {
+        RunTestPlanRequest checkRequest = new RunTestPlanRequest();
+        QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
+        checkRequest.setLoadConfiguration(testReport.getLoadConfiguration());
+        checkRequest.setProjectId(testReport.getProjectId());
+        if (quotaService != null) {
+            quotaService.checkLoadTestQuota(checkRequest, false);
+            String projectId = testReport.getProjectId();
+            Project project = projectMapper.selectByPrimaryKey(projectId);
+            if (project == null || StringUtils.isBlank(project.getWorkspaceId())) {
+                MSException.throwException("project is null or workspace_id of project is null. project id: " + projectId);
+            }
+            RLock lock = redissonClient.getLock(project.getWorkspaceId());
+            try {
+                lock.lock();
+                BigDecimal toUsed = quotaService.checkVumUsed(checkRequest, projectId);
+                engine.start();
+                if (toUsed.compareTo(BigDecimal.ZERO) != 0) {
+                    quotaService.updateVumUsed(projectId, toUsed);
+                }
+            } finally {
+                lock.unlock();
+            }
+        } else {
+            LogUtil.error("check load test quota fail, quotaService is null.");
         }
     }
 
@@ -641,7 +684,7 @@ public class PerformanceTestService {
         if (forceStop) {
             performanceReportService.deleteReport(reportId);
         } else {
-            stopEngine(reportId);
+            stopEngineHandleVum(reportId);
             // 停止测试之后设置报告的状态
             performanceReportService.updateStatus(reportId, PerformanceTestStatus.Completed.name());
         }
@@ -661,6 +704,15 @@ public class PerformanceTestService {
             MSException.throwException(String.format("Stop report fail. create engine fail，report ID：%s", reportId));
         }
         performanceReportService.stopEngine(loadTest, engine);
+    }
+
+    private void stopEngineHandleVum(String reportId) {
+        LoadTestReportWithBLOBs loadTestReport = loadTestReportMapper.selectByPrimaryKey(reportId);
+        final Engine engine = EngineFactory.createEngine(loadTestReport);
+        if (engine == null) {
+            MSException.throwException(String.format("Stop report fail. create engine fail，report ID：%s", reportId));
+        }
+        performanceReportService.stopEngineHandleVum(loadTestReport, engine);
     }
 
     public List<ScheduleDao> listSchedule(QueryScheduleRequest request) {
@@ -1078,4 +1130,17 @@ public class PerformanceTestService {
     }
 
 
+    public List<LoadTestDTO> listBatch(LoadTestBatchRequest request) {
+        ServiceUtils.getSelectAllIds(request, request.getCondition(),
+                (query) -> extLoadTestMapper.selectIds(query));
+        if (org.apache.commons.collections.CollectionUtils.isEmpty(request.getIds())) {
+            return new ArrayList<>();
+        }
+
+        QueryTestPlanRequest request2 = new QueryTestPlanRequest();
+        Map<String, List<String>> param = new HashMap<>();
+        param.put("id", request.getIds());
+        request2.setFilters(param);
+        return this.list(request2);
+    }
 }

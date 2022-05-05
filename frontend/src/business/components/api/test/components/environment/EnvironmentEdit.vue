@@ -1,11 +1,26 @@
 <template>
   <el-main v-loading="result.loading" class="environment-edit" style="margin-left: 0px">
     <el-form :model="environment" :rules="rules" ref="environment" label-width="80px">
-      <el-form-item prop="name" :label="$t('api_test.environment.name')">
-        <el-input v-model="environment.name" :disabled="isReadOnly" :placeholder="this.$t('commons.input_name')"
-                  clearable/>
-      </el-form-item>
-
+      <el-row>
+        <el-col :span="20">
+          <el-form-item prop="name" :label="$t('api_test.environment.name')">
+            <el-input v-model="environment.name" :disabled="isReadOnly" :placeholder="this.$t('commons.input_name')"
+                      clearable/>
+          </el-form-item>
+        </el-col>
+        <el-col :span="4" v-if="!hideButton">
+          <div style="float: right;width: fit-content;">
+            <div style="float: left; margin-right: 8px;">
+              <slot name="other"></slot>
+            </div>
+            <div class="ms_btn">
+              <el-button type="primary" @click="confirm" @keydown.enter.native.prevent>
+                {{ $t('commons.confirm') }}
+              </el-button>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
 
       <el-tabs v-model="activeName">
 
@@ -76,24 +91,48 @@
                       placement="top-start" slot="label">
             <span>{{ $t('env_options.all_assertions') }}</span>
           </el-tooltip>
-          <el-row type="flex" :gutter="20" v-if="hasLicense">
-            <el-col :span="12">
-              <el-form-item
-                :label="$t('error_report_library.use_error_report')"
-                prop="status">
-                <el-switch v-model="environment.config.useErrorCode" style="margin-right: 10px" :disabled="isReadOnly"/>
-                {{$t('error_report_library.use_desc')}}
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <global-assertions :is-read-only="isReadOnly" :assertions="environment.config.assertions" :is-show-json-path-suggest="false"/>
+          <div v-if="hasLicense" style="margin-bottom: 15px">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item style="margin-bottom: 0px;"
+                  :label="$t('error_report_library.use_error_report')"
+                  prop="status">
+                  <el-switch v-model="environment.config.useErrorCode" style="margin-right: 10px" :disabled="isReadOnly"/>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row v-show="environment.config.useErrorCode" :gutter="20">
+              <el-col style="margin-left: 30px">
+                {{ $t('error_report_library.conflict_with_success') }}
+                <el-switch
+                  class="errorReportConfigSwitch"
+                  v-model="environment.config.higherThanSuccess"
+                  :active-text="$t('error_report_library.option.name')"
+                  :inactive-text="$t('api_test.automation.request_success')">
+                </el-switch>
+              </el-col>
+            </el-row>
+            <el-row v-show="environment.config.useErrorCode" :gutter="20">
+              <el-col style="margin-left: 30px">
+                {{ $t('error_report_library.conflict_with_error') }}
+                <el-switch
+                  class="errorReportConfigSwitch"
+                  v-model="environment.config.higherThanError"
+                  :active-text="$t('error_report_library.option.name')"
+                  :inactive-text="$t('api_test.automation.request_error')">
+                </el-switch>
+              </el-col>
+            </el-row>
+          </div>
+          <global-assertions :is-read-only="isReadOnly" :assertions="environment.config.assertions"
+                             :is-show-json-path-suggest="false"/>
         </el-tab-pane>
       </el-tabs>
-<!--      <div class="environment-footer">-->
-<!--        <ms-dialog-footer-->
-<!--          @cancel="cancel"-->
-<!--          @confirm="save()"/>-->
-<!--      </div>-->
+      <!--      <div class="environment-footer">-->
+      <!--        <ms-dialog-footer-->
+      <!--          @cancel="cancel"-->
+      <!--          @confirm="save()"/>-->
+      <!--      </div>-->
     </el-form>
     <ms-change-history ref="changeHistory"/>
   </el-main>
@@ -112,7 +151,7 @@ import MsEnvironmentCommonConfig from "./EnvironmentCommonConfig";
 import MsEnvironmentSSLConfig from "./EnvironmentSSLConfig";
 import MsApiAuthConfig from "@/business/components/api/definition/components/auth/ApiAuthConfig";
 import MsTcpConfig from "@/business/components/api/test/components/request/tcp/TcpConfig";
-import {getUUID,hasLicense} from "@/common/js/utils";
+import {getUUID, hasLicense} from "@/common/js/utils";
 import Jsr233ProcessorContent from "@/business/components/api/automation/scenario/common/Jsr233ProcessorContent";
 import {createComponent} from "@/business/components/api/definition/components/jmeter/components";
 import EnvironmentGlobalScript from "@/business/components/api/test/components/environment/EnvironmentGlobalScript";
@@ -141,6 +180,7 @@ export default {
       type: Boolean,
       default: false
     },
+    hideButton: Boolean,
     ifCreate: {
       type: Boolean,
       default: false
@@ -192,12 +232,12 @@ export default {
     }
     if (!this.environment.config.assertions) {
       this.environment.config.assertions = {
-        duration:{duration:0},
-        regex:[],
-        jsonPath:[],
-        xpath2:[],
-        jsr223:[],
-        document:{type:"json",data:{json:[],xml:[]}},
+        duration: {duration: 0},
+        regex: [],
+        jsonPath: [],
+        xpath2: [],
+        jsr223: [],
+        document: {type: "json", data: {json: [], xml: []}},
       };
     }
   },
@@ -241,12 +281,12 @@ export default {
       }
       if (!this.environment.config.assertions) {
         this.environment.config.assertions = {
-          duration:{duration:0},
-          regex:[],
-          jsonPath:[],
-          xpath2:[],
-          jsr223:[],
-          document:{type:"json",data:{json:[],xml:[]}},
+          duration: {duration: 0},
+          regex: [],
+          jsonPath: [],
+          xpath2: [],
+          jsr223: [],
+          document: {type: "json", data: {json: [], xml: []}},
         };
       }
 
@@ -258,8 +298,8 @@ export default {
     }
   },
   computed: {
-    hasLicense(){
-      let license= hasLicense();
+    hasLicense() {
+      let license = hasLicense();
       return license;
     },
   },
@@ -344,6 +384,27 @@ export default {
           return;
         }
       }
+      let message = '';
+      if (environment && environment.config && environment.config.httpConfig && environment.config.httpConfig.conditions) {
+        environment.config.httpConfig.conditions.forEach(env => {
+          if (env.type === "MODULE" && env.details.length === 0) {
+            message += this.$t('load_test.domain') + ":" + env.socket + ":" + this.$t('api_test.environment.module_warning');
+            return;
+          }
+          if (env.type === "PATH" && env.details) {
+            env.details.forEach(item => {
+              if (!item.name) {
+                message += this.$t('load_test.domain') + ":" + env.socket + ":" + this.$t('api_test.environment.path_warning');
+                return;
+              }
+            })
+          }
+        })
+      }
+      if (message) {
+        this.$warning(message);
+        return;
+      }
       let bodyFiles = this.geFiles(environment);
       let param = this.buildParam(environment);
       let url = '/api/environment/add';
@@ -380,6 +441,9 @@ export default {
     cancel() {
       this.$emit('close');
     },
+    confirm() {
+      this.$emit("confirm");
+    },
     clearValidate() {
       this.$refs["environment"].clearValidate();
     },
@@ -404,4 +468,10 @@ span:not(:first-child) {
   margin-top: 15px;
 }
 
+.errorReportConfigSwitch /deep/ .el-switch__label{
+  color: #D8DAE2;
+}
+.errorReportConfigSwitch /deep/ .is-active{
+  color: var(--count_number);
+}
 </style>

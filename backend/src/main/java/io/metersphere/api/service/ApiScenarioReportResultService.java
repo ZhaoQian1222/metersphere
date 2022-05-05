@@ -1,8 +1,10 @@
 package io.metersphere.api.service;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import io.metersphere.api.dto.ApiScenarioReportBaseInfoDTO;
 import io.metersphere.api.dto.ErrorReportLibraryParseDTO;
-import io.metersphere.base.domain.ApiScenarioReportResult;
+import io.metersphere.base.domain.ApiScenarioReportResultWithBLOBs;
 import io.metersphere.base.mapper.ApiScenarioReportResultMapper;
 import io.metersphere.commons.constants.ExecuteResult;
 import io.metersphere.commons.utils.ErrorReportLibraryUtil;
@@ -33,14 +35,28 @@ public class ApiScenarioReportResultService {
 
     public void save(String reportId, List<RequestResult> queue) {
         if (CollectionUtils.isNotEmpty(queue)) {
-            queue.forEach(item -> {
-                // 事物控制器出来的结果特殊处理
-                if (StringUtils.isNotEmpty(item.getName()) && item.getName().startsWith("Transaction=") && CollectionUtils.isEmpty(item.getSubRequestResults())) {
-                    LoggerUtil.debug("合并事物请求暂不入库");
-                } else {
-                    apiScenarioReportResultMapper.insert(this.newApiScenarioReportResult(reportId, item));
+            if (queue.size() == 1) {
+                queue.forEach(item -> {
+                    // 事物控制器出来的结果特殊处理
+                    if (StringUtils.isNotEmpty(item.getName()) && item.getName().startsWith("Transaction=") && CollectionUtils.isEmpty(item.getSubRequestResults())) {
+                        LoggerUtil.debug("合并事物请求暂不入库");
+                    } else {
+                        apiScenarioReportResultMapper.insert(this.newApiScenarioReportResult(reportId, item));
+                    }
+                });
+            } else {
+                SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
+                ApiScenarioReportResultMapper batchMapper = sqlSession.getMapper(ApiScenarioReportResultMapper.class);
+                queue.forEach(item -> {
+                    if (StringUtils.isEmpty(item.getName()) || !item.getName().startsWith("Transaction=") || !CollectionUtils.isEmpty(item.getSubRequestResults())) {
+                        batchMapper.insert(this.newApiScenarioReportResult(reportId, item));
+                    }
+                });
+                sqlSession.flushStatements();
+                if (sqlSession != null && sqlSessionFactory != null) {
+                    SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
                 }
-            });
+            }
         }
     }
 
@@ -72,25 +88,51 @@ public class ApiScenarioReportResultService {
         }
     }
 
-    private ApiScenarioReportResult newApiScenarioReportResult(String reportId, RequestResult baseResult) {
-        ApiScenarioReportResult report = new ApiScenarioReportResult();
+    public ApiScenarioReportResultWithBLOBs newScenarioReportResult(String reportId, String resourceId) {
+        ApiScenarioReportResultWithBLOBs report = new ApiScenarioReportResultWithBLOBs();
+        report.setId(UUID.randomUUID().toString());
+        report.setResourceId(resourceId);
+        report.setReportId(reportId);
+        report.setTotalAssertions(0L);
+        report.setPassAssertions(0L);
+        report.setCreateTime(System.currentTimeMillis());
+        return report;
+    }
+
+    //记录基础信息
+    private ApiScenarioReportBaseInfoDTO getBaseInfo(RequestResult result) {
+        ApiScenarioReportBaseInfoDTO baseInfoDTO = new ApiScenarioReportBaseInfoDTO();
+        baseInfoDTO.setReqName(result.getName());
+        baseInfoDTO.setReqSuccess(result.isSuccess());
+        baseInfoDTO.setReqError(result.getError());
+        baseInfoDTO.setReqStartTime(result.getStartTime());
+        if (result.getResponseResult() != null) {
+            baseInfoDTO.setRspCode(result.getResponseResult().getResponseCode());
+            baseInfoDTO.setRspTime(result.getResponseResult().getResponseTime());
+        }
+        return baseInfoDTO;
+    }
+
+    private ApiScenarioReportResultWithBLOBs newApiScenarioReportResult(String reportId, RequestResult baseResult) {
         //解析误报内容
         ErrorReportLibraryParseDTO errorCodeDTO = ErrorReportLibraryUtil.parseAssertions(baseResult);
         RequestResult result = errorCodeDTO.getResult();
-        report.setId(UUID.randomUUID().toString());
         String resourceId = result.getResourceId();
-        report.setResourceId(resourceId);
-        report.setReportId(reportId);
+
+        ApiScenarioReportResultWithBLOBs report = newScenarioReportResult(reportId, resourceId);
         report.setTotalAssertions(Long.parseLong(result.getTotalAssertions() + ""));
         report.setPassAssertions(Long.parseLong(result.getPassAssertions() + ""));
-        report.setCreateTime(System.currentTimeMillis());
         String status = result.getError() == 0 ? ExecuteResult.Success.name() : ExecuteResult.Error.name();
         if (CollectionUtils.isNotEmpty(errorCodeDTO.getErrorCodeList())) {
-            status = ExecuteResult.errorReportResult.name();
             report.setErrorCode(errorCodeDTO.getErrorCodeStr());
+        }
+        if (StringUtils.equalsIgnoreCase(errorCodeDTO.getRequestStatus(), ExecuteResult.errorReportResult.name())) {
+            status = errorCodeDTO.getRequestStatus();
         }
         report.setStatus(status);
         report.setRequestTime(result.getEndTime() - result.getStartTime());
+
+        report.setBaseInfo(JSONObject.toJSONString(getBaseInfo(result)));
         report.setContent(JSON.toJSONString(result).getBytes(StandardCharsets.UTF_8));
         return report;
     }

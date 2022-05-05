@@ -175,6 +175,8 @@
       <div>
         <el-checkbox v-model="httpForm.newVersionRemark">{{ $t('commons.remark') }}</el-checkbox>
         <el-checkbox v-model="httpForm.newVersionDeps">{{ $t('commons.relationship.name') }}</el-checkbox>
+        <el-checkbox v-model="httpForm.newVersionCase">CASE</el-checkbox>
+        <el-checkbox v-model="httpForm.newVersionMock">MOCK</el-checkbox>
       </div>
 
       <template v-slot:footer>
@@ -247,12 +249,12 @@ export default {
         moduleId: [{required: true, message: this.$t('test_track.case.input_module'), trigger: 'change'}],
         status: [{required: true, message: this.$t('commons.please_select'), trigger: 'change'}],
       },
-      httpForm: {name: '', environmentId: "", path: "", tags: []},
-      newData:{environmentId: "", path: "", tags: []},
-      dialogVisible:false,
+      httpForm: {environmentId: "", path: "", tags: []},
+      newData: {environmentId: "", path: "", tags: []},
+      dialogVisible: false,
       isShowEnable: true,
       showFollow: false,
-      newShowFollow:false,
+      newShowFollow: false,
       maintainerOptions: [],
       currentModule: {},
       reqOptions: REQ_METHOD,
@@ -473,22 +475,21 @@ export default {
     saveApi() {
       this.$refs['httpForm'].validate((valid) => {
         if (valid) {
-          this.$refs['customFieldForm'].validate((valid) => {
-            if (valid){
-              this.setParameter();
+          this.setParameter();
 
-              if (!this.httpForm.versionId) {
-                if (this.$refs.versionHistory) {
-                  this.httpForm.versionId = this.$refs.versionHistory.currentVersion.id;
-                }
-              }
-              this.$emit('saveApi', this.httpForm);
-              this.count = 0;
-              this.$store.state.apiMap.delete(this.httpForm.id);
+          if (!this.httpForm.versionId) {
+            if (this.$refs.versionHistory && this.$refs.versionHistory.currentVersion) {
+              this.httpForm.versionId = this.$refs.versionHistory.currentVersion.id;
             }
-          });
-
+          }
+          this.$emit('saveApi', this.httpForm);
+          this.count = 0;
+          this.$store.state.apiStatus.set("fromChange", false);
+          this.$store.state.apiMap.set(this.httpForm.id, this.$store.state.apiStatus);
         } else {
+          if (this.$refs.versionHistory) {
+            this.$refs.versionHistory.loading = false;
+          }
           return false;
         }
       });
@@ -514,11 +515,21 @@ export default {
     getURL(urlStr) {
       try {
         let url = new URL(urlStr);
-        url.searchParams.forEach((value, key) => {
-          if (key) {
-            this.request.arguments.splice(0, 0, new KeyValue({name: key, required: false, value: value}));
-          }
-        });
+        if (url.search && url.search.length > 1) {
+          let params = url.search.substr(1).split("&");
+          params.forEach(param => {
+            if (param) {
+              let keyValues = param.split("=");
+              if (keyValues) {
+                this.request.arguments.splice(0, 0, new KeyValue({
+                  name: keyValues[0],
+                  required: false,
+                  value: keyValues[1]
+                }));
+              }
+            }
+          });
+        }
         return url;
       } catch (e) {
         this.$error(this.$t('api_test.request.url_invalid'), 2000);
@@ -585,17 +596,19 @@ export default {
       });
     },
     compare(row) {
-      this.$get('/api/definition/get/' +  row.id+"/"+this.httpForm.refId, response => {
+      this.httpForm.createTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.httpForm.versionId)[0].createTime;
+      this.$get('/api/definition/get/' + row.id + "/" + this.httpForm.refId, response => {
         this.$get('/api/definition/get/' + response.data.id, res => {
           if (res.data) {
             this.newData = res.data;
+            this.newData.createTime = row.createTime;
             this.dealWithTag(res.data);
-            this.setRequest(res.data)
+            this.setRequest(res.data);
             if (!this.setRequest(res.data)) {
               this.newRequest = createComponent("HTTPSamplerProxy");
               this.dialogVisible = true;
             }
-            this.formatApi(res.data)
+            this.formatApi(res.data);
           }
         });
       });
@@ -615,14 +628,14 @@ export default {
       }
       return false;
     },
-    dealWithTag(api){
-      if(api.tags){
-        if(Object.prototype.toString.call(api.tags)==="[object String]"){
+    dealWithTag(api) {
+      if (api.tags) {
+        if (Object.prototype.toString.call(api.tags) === "[object String]") {
           api.tags = JSON.parse(api.tags);
         }
       }
-      if(this.httpForm.tags){
-        if(Object.prototype.toString.call(this.httpForm.tags)==="[object String]"){
+      if (this.httpForm.tags) {
+        if (Object.prototype.toString.call(this.httpForm.tags) === "[object String]") {
           this.httpForm.tags = JSON.parse(this.httpForm.tags);
         }
       }
@@ -669,7 +682,10 @@ export default {
             stepArray[i].clazzName = TYPE_TO_C.get(stepArray[i].type);
           }
           if (stepArray[i].type === "Assertions" && !stepArray[i].document) {
-            stepArray[i].document = {type: "JSON", data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}};
+            stepArray[i].document = {
+              type: "JSON",
+              data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}
+            };
           }
           if (stepArray[i].hashTree && stepArray[i].hashTree.length > 0) {
             this.sort(stepArray[i].hashTree);
@@ -694,11 +710,25 @@ export default {
       this.httpForm.versionName = row.name;
       this.$set(this.httpForm, 'newVersionRemark', !!this.httpForm.remark);
       this.$set(this.httpForm, 'newVersionDeps', this.$refs.apiOtherInfo.relationshipCount > 0);
-      if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.httpForm.remark) {
-        this.createNewVersionVisible = true;
-      } else {
-        this.saveApi();
-      }
+      this.$set(this.httpForm, 'newVersionCase', this.httpForm.caseTotal > 0);
+
+      this.$post('/mockConfig/genMockConfig', {projectId: this.projectId, apiId: this.httpForm.id}, response => {
+        this.$set(this.httpForm, 'newVersionMock', response.data.mockExpectConfigList.length > 0);
+
+        if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.httpForm.remark ||
+          this.httpForm.newVersionCase || this.httpForm.newVersionMock) {
+          this.createNewVersionVisible = true;
+        } else {
+          this.saveApi();
+          if (this.$refs.versionHistory) {
+            this.$refs.versionHistory.loading = false;
+          }
+        }
+      },error => {
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
+        }
+      });
     },
     del(row) {
       this.$alert(this.$t('api_test.definition.request.delete_confirm') + ' ' + row.name + " ？", '', {

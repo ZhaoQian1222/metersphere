@@ -147,19 +147,6 @@ export default {
   data() {
     return {
       modes: ['text', 'html'],
-      title: "<!DOCTYPE html>\n" +
-        "<html lang=\"en\">\n" +
-        "<head>\n" +
-        "    <meta charset=\"UTF-8\">\n" +
-        "    <title>MeterSphere</title>\n" +
-        "</head>\n" +
-        "<body>\n" +
-        "<div>\n" +
-        "    <p style=\"text-align: left\">${operator} 创建了测试计划: ${name}<br>\n" +
-        "        </p>\n" +
-        "</div>\n" +
-        "</body>\n" +
-        "</html>",
       robotTitle: "${operator} 创建了测试计划:${name} ",
       testCasePlanTask: [{
         taskType: "testPlanTask",
@@ -176,8 +163,8 @@ export default {
         {value: 'UPDATE', label: this.$t('commons.update')},
         {value: 'DELETE', label: this.$t('commons.delete')},
         {value: 'COMPLETE', label: this.$t('commons.run_completed')},
-        // {value: 'SUCCESS_ONE_BY_ONE', label: '逐条成功（接口）'},
-        // {value: 'FAIL_ONE_BY_ONE', label: '逐条失败（接口）'},
+        {value: 'EXECUTE_SUCCESSFUL', label: this.$t('commons.run_success')},
+        {value: 'EXECUTE_FAILED', label: this.$t('commons.run_fail')},
       ],
       variables: [
         {
@@ -355,7 +342,6 @@ export default {
       let testPlanReceivers = JSON.parse(JSON.stringify(this.testPlanReceiverOptions));
       let i = row.userIds.indexOf('FOLLOW_PEOPLE');
       let i2 = row.userIds.indexOf('CREATOR');
-      let i3 = row.userIds.indexOf('EXECUTOR');
       switch (row.event) {
         case  "CREATE":
           testPlanReceivers.unshift({id: 'EXECUTOR', name: this.$t('test_track.plan_view.executor')});
@@ -370,56 +356,62 @@ export default {
         case "DELETE":
         case "COMMENT":
         case "COMPLETE":
-          testPlanReceivers.unshift({id: 'CREATOR', name: this.$t('commons.create_user')});
-          testPlanReceivers.unshift({id: 'FOLLOW_PEOPLE', name: this.$t('api_test.automation.follow_people')});
-          testPlanReceivers.unshift({id: 'EXECUTOR', name: this.$t('test_track.plan_view.executor')});
-
-          if (row.isSet) {
-            if (i2 < 0) {
-              row.userIds.unshift('CREATOR');
-            }
-            if (i < 0) {
-              row.userIds.unshift('FOLLOW_PEOPLE');
-            }
-            if (i3 < 0) {
-              row.userIds.unshift('EXECUTOR');
-            }
-          }
+          this.initExecuteReceivers(testPlanReceivers,row);
+          break;
+        case "EXECUTE_SUCCESSFUL":
+          this.initExecuteReceivers(testPlanReceivers,row);
+          break;
+        case "EXECUTE_FAILED":
+          this.initExecuteReceivers(testPlanReceivers,row);
           break;
         default:
           break;
       }
       row.testPlanReceiverOptions = testPlanReceivers;
     },
+    initExecuteReceivers(testPlanReceivers,row){
+      let i = row.userIds.indexOf('FOLLOW_PEOPLE');
+      let i2 = row.userIds.indexOf('CREATOR');
+      let i3 = row.userIds.indexOf('EXECUTOR');
+      testPlanReceivers.unshift({id: 'CREATOR', name: this.$t('commons.create_user')});
+      testPlanReceivers.unshift({id: 'FOLLOW_PEOPLE', name: this.$t('api_test.automation.follow_people')});
+      testPlanReceivers.unshift({id: 'EXECUTOR', name: this.$t('test_track.plan_view.executor')});
+
+      if (row.isSet) {
+        if (i2 < 0) {
+          row.userIds.unshift('CREATOR');
+        }
+        if (i < 0) {
+          row.userIds.unshift('FOLLOW_PEOPLE');
+        }
+        if (i3 < 0) {
+          row.userIds.unshift('EXECUTOR');
+        }
+      }
+    },
     handleTemplate(index, row) {
       if (hasLicense()) {
-        let htmlTemplate = "";
         let robotTemplate = "";
         switch (row.event) {
           case 'CREATE':
-            htmlTemplate = this.title;
             robotTemplate = this.robotTitle;
             break;
           case 'UPDATE':
-            htmlTemplate = this.title.replace('创建', '更新');
             robotTemplate = this.robotTitle.replace('创建', '更新');
             break;
           case 'DELETE':
-            htmlTemplate = this.title.replace('创建', '删除');
             robotTemplate = this.robotTitle.replace('创建', '删除');
             break;
           case 'COMMENT':
-            htmlTemplate = this.title.replace('创建', '评论');
             robotTemplate = this.robotTitle.replace('创建', '评论');
             break;
           case "COMPLETE":
-            htmlTemplate = this.title.replace('创建', '完成测试计划');
             robotTemplate = this.robotTitle.replace('创建', '完成测试计划');
             break;
           default:
             break;
         }
-        this.$refs.noticeTemplate.open(row, htmlTemplate, robotTemplate);
+        this.$refs.noticeTemplate.open(row, robotTemplate);
       }
     }
   },

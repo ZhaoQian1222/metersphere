@@ -7,10 +7,7 @@ import com.github.pagehelper.PageHelper;
 import io.metersphere.api.dto.datacount.request.ScheduleInfoRequest;
 import io.metersphere.api.service.ApiAutomationService;
 import io.metersphere.base.domain.*;
-import io.metersphere.commons.constants.NoticeConstants;
-import io.metersphere.commons.constants.OperLogConstants;
-import io.metersphere.commons.constants.OperLogModule;
-import io.metersphere.commons.constants.PermissionConstants;
+import io.metersphere.commons.constants.*;
 import io.metersphere.commons.utils.PageUtils;
 import io.metersphere.commons.utils.Pager;
 import io.metersphere.log.annotation.MsAuditLog;
@@ -105,7 +102,7 @@ public class TestPlanController {
     @PostMapping("/add")
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_PLAN_READ_CREATE)
     @MsAuditLog(module = OperLogModule.TRACK_TEST_PLAN, type = OperLogConstants.CREATE, title = "#testPlan.name", content = "#msClass.getLogDetails(#testPlan.id)", msClass = TestPlanService.class)
-    @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, event = NoticeConstants.Event.CREATE, mailTemplate = "track/TestPlanStart", subject = "测试计划通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, event = NoticeConstants.Event.CREATE, subject = "测试计划通知")
     public TestPlan addTestPlan(@RequestBody AddTestPlanRequest testPlan) {
         testPlan.setId(UUID.randomUUID().toString());
         return testPlanService.addTestPlan(testPlan);
@@ -114,7 +111,7 @@ public class TestPlanController {
     @PostMapping("/edit")
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_PLAN_READ_EDIT)
     @MsAuditLog(module = OperLogModule.TRACK_TEST_PLAN, type = OperLogConstants.UPDATE, beforeEvent = "#msClass.getLogDetails(#testPlanDTO.id)", content = "#msClass.getLogDetails(#testPlanDTO.id)", msClass = TestPlanService.class)
-    @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, event = NoticeConstants.Event.UPDATE, mailTemplate = "track/TestPlanUpdate", subject = "测试计划通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, event = NoticeConstants.Event.UPDATE, subject = "测试计划通知")
     public TestPlan editTestPlan(@RequestBody AddTestPlanRequest testPlanDTO) {
         return testPlanService.editTestPlanWithRequest(testPlanDTO);
     }
@@ -144,7 +141,7 @@ public class TestPlanController {
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_PLAN_READ_DELETE)
     @MsAuditLog(module = OperLogModule.TRACK_TEST_PLAN, type = OperLogConstants.DELETE, beforeEvent = "#msClass.getLogDetails(#testPlanId)", msClass = TestPlanService.class)
     @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, target = "#targetClass.get(#testPlanId)", targetClass = TestPlanService.class,
-            event = NoticeConstants.Event.DELETE, mailTemplate = "track/TestPlanDelete", subject = "测试计划通知")
+            event = NoticeConstants.Event.DELETE, subject = "测试计划通知")
     public int deleteTestPlan(@PathVariable String testPlanId) {
         checkPermissionService.checkTestPlanOwner(testPlanId);
         return testPlanService.deleteTestPlan(testPlanId);
@@ -186,19 +183,8 @@ public class TestPlanController {
         return PageUtils.setPageInfo(page, testPlanProjectService.getProjectByPlanId(request));
     }
 
-    @PostMapping("/testplan/jenkins")
-    public String runJenkins(@RequestBody TestplanRunRequest testplanRunRequest) {
-        ApiRunConfigDTO api = new ApiRunConfigDTO();
-        api.setMode(testplanRunRequest.getMode());
-        api.setResourcePoolId(testplanRunRequest.getResourcePoolId());
-        api.setOnSampleError(false);
-        api.setReportType("iddReport");
-        String apiRunConfig = JSONObject.toJSONString(api);
-        return testPlanService.run(testplanRunRequest.getTestPlanId(), testplanRunRequest.getProjectId(), testplanRunRequest.getUserId(), testplanRunRequest.getTriggerMode(), apiRunConfig);
-    }
-
     @PostMapping("/copy/{id}")
-    @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, event = NoticeConstants.Event.CREATE, mailTemplate = "track/TestPlanStart", subject = "测试计划通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.TEST_PLAN_TASK, event = NoticeConstants.Event.CREATE, subject = "测试计划通知")
     public TestPlan copy(@PathVariable String id) {
         return testPlanService.copy(id);
     }
@@ -218,14 +204,27 @@ public class TestPlanController {
         return testPlanService.getPlanCaseEnv(plan.getId());
     }
 
+
+    @PostMapping("/edit/runModeConfig")
+    public void updateRunModeConfig(@RequestBody TestplanRunRequest testplanRunRequest) {
+       testPlanService.updateRunModeConfig(testplanRunRequest);
+    }
+
     @PostMapping("/run")
     public String run(@RequestBody TestplanRunRequest testplanRunRequest) {
         return testPlanService.runPlan(testplanRunRequest);
     }
 
-    @GetMapping("/report/export/{planId}")
-    public void exportHtmlReport(@PathVariable String planId, HttpServletResponse response) throws UnsupportedEncodingException {
-        testPlanService.exportPlanReport(planId, response);
+    @PostMapping(value = "/run/batch")
+    @MsAuditLog(module = OperLogModule.TRACK_TEST_PLAN, type = OperLogConstants.EXECUTE, content = "#msClass.getLogDetails(#request.ids)", msClass = TestPlanService.class)
+    public void runBatch(@RequestBody TestplanRunRequest request) {
+        request.setTriggerMode(TriggerMode.BATCH.name());
+        testPlanService.runBatch(request);
+    }
+
+    @GetMapping("/report/export/{planId}/{lang}")
+    public void exportHtmlReport(@PathVariable String planId, @PathVariable(required = false) String lang, HttpServletResponse response) throws UnsupportedEncodingException {
+        testPlanService.exportPlanReport(planId, lang, response);
     }
 
     @GetMapping("/get/report/export/{planId}")
@@ -233,9 +232,9 @@ public class TestPlanController {
         return testPlanService.buildPlanReport(planId, true);
     }
 
-    @GetMapping("/report/db/export/{reportId}")
-    public void exportHtmlDbReport(@PathVariable String reportId, HttpServletResponse response) throws UnsupportedEncodingException {
-        testPlanService.exportPlanDbReport(reportId, response);
+    @GetMapping("/report/db/export/{reportId}/{lang}")
+    public void exportHtmlDbReport(@PathVariable String reportId, @PathVariable(required = false) String lang, HttpServletResponse response) throws UnsupportedEncodingException {
+        testPlanService.exportPlanDbReport(reportId, lang, response);
     }
 
     @GetMapping("/report/{planId}")
@@ -262,7 +261,7 @@ public class TestPlanController {
     }
 
     @PostMapping(value = "/schedule/updateEnableByPrimyKey/disable")
-    @SendNotice(taskType = NoticeConstants.TaskType.TRACK_HOME_TASK, event = NoticeConstants.Event.CLOSE_SCHEDULE, mailTemplate = "track/ScheduleClose", subject = "测试跟踪通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.TRACK_HOME_TASK, event = NoticeConstants.Event.CLOSE_SCHEDULE, subject = "测试跟踪通知")
     public Schedule disableSchedule(@RequestBody ScheduleInfoRequest request) {
         Schedule schedule = scheduleService.getSchedule(request.getTaskID());
         schedule.setEnable(false);
@@ -299,4 +298,5 @@ public class TestPlanController {
     public ScheduleDTO updateTestPlanBySchedule(@RequestBody ScheduleInfoRequest request) {
         return testPlanService.updateTestPlanBySchedule(request);
     }
+
 }

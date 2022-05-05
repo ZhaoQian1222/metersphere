@@ -19,6 +19,20 @@ export const CUSTOM_FIELD_TYPE_OPTION = [
   {value: 'multipleInput',text: 'workspace.custom_filed.multipleInput'}
 ];
 
+export const UI_ELEMENT_LOCATION_TYPE_OPTION = [
+  {value: 'id', text: 'id'},
+  {value: 'name', text: 'name'},
+  {value: 'className', text: 'class'},
+  {value: 'tagName', text: 'tag'},
+  {value: 'linkText', text: 'linkText'},
+  {value: 'partialLinkText', text: 'plink'},
+  {value: 'css', text: 'css'},
+  {value: 'xpath', text: 'xpath'},
+  {value: 'label', text: 'label'},
+  {value: 'value', text: 'value'},
+  {value: 'index', text: 'index'},
+];
+
 export const CUSTOM_FIELD_SCENE_OPTION = [
   {value: 'TEST_CASE',text: 'workspace.case_template_manage'},
   {value: 'ISSUE',text: 'workspace.issue_template_manage'},
@@ -99,8 +113,11 @@ export function API_SCENARIO_FILTERS () {
       {text: i18n.t('test_track.plan.plan_status_prepare'), value: 'Prepare'},
       {text: i18n.t('test_track.plan.plan_status_running'), value: 'Underway'},
       {text: i18n.t('test_track.plan.plan_status_completed'), value: 'Completed'},
+    ],
+    TRASH_FILTERS: [
       {text: i18n.t('test_track.plan.plan_status_trash'), value: 'Trash'},
     ],
+
     LEVEL_FILTERS: [
       {text: 'P0', value: 'P0'},
       {text: 'P1', value: 'P1'},
@@ -143,6 +160,7 @@ export const USER_GROUP_SCOPE = {
 export const PROJECT_GROUP_SCOPE = {
   'TRACK': 'permission.other.track',
   'API': 'permission.other.api',
+  'UI': 'permission.other.ui',
   'PERFORMANCE': 'permission.other.performance',
   'REPORT': 'permission.other.report'
 }

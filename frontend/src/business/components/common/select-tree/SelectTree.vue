@@ -27,6 +27,7 @@
                  @click.native="selectClick"
                  @remove-tag="removeTag"
                  @clear="clean"
+                 :placeholder="placeholder"
                  class="ms-tree-select">
         <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value"></el-option>
       </el-select>
@@ -136,6 +137,12 @@ export default {
       default() {
         return '300px';
       }
+    },
+    placeholder: {
+      type: String,
+      default() {
+        return this.$t('el.select.placeholder');
+      }
     }
   },
   //上面是父组件可传入参数
@@ -149,6 +156,7 @@ export default {
       filterText: "",
       loading: false,
       checkedId: [],
+      selectNodeIds: []
     };
   },
   computed: {
@@ -229,6 +237,9 @@ export default {
             return;
           }
         }
+      } else {
+        this.returnDataKeys = this.defaultKey;
+        this.setKey(this.defaultKey);
       }
     },
     //下拉框select点击[入口]
@@ -260,14 +271,26 @@ export default {
         });
         this.returnDatas = t;
       }
+      this.selectNodeIds = [];
+      this.getChildNodeId(data, this.selectNodeIds);
+    },
+    getChildNodeId(rootNode, nodeIds) {
+      //递归获取所有子节点ID
+      nodeIds.push(rootNode.id);
+      if (rootNode.children) {
+        for (let i = 0; i < rootNode.children.length; i++) {
+          this.getChildNodeId(rootNode.children[i], nodeIds);
+        }
+      }
     },
     //单选:清空选中
     clean() {
       this.$refs.tree.setCurrentKey(null);//清除树选中key
       this.returnDatas = null;
       this.returnDataKeys = '';
+      this.selectNodeIds = [];
       this.popoverHide();
-
+      this.$emit('clean');
     },
     //单选:设置、初始化值 key
     setKey(thisKey) {
@@ -276,6 +299,7 @@ export default {
       if (node && node.data) {
         this.setData(node.data);
       }
+      this.popoverHide();
     },
     //单选：设置、初始化对象
     setData(data) {
@@ -283,7 +307,8 @@ export default {
       this.options.push({label: data[this.obj.label], value: data[this.obj.id]});
       this.returnDatas = data;
       this.returnDataKeys = data[this.obj.id]
-
+      this.selectNodeIds = [];
+      this.getChildNodeId(data, this.selectNodeIds);
     },
     //多选:设置、初始化值 keys
     setKeys(thisKeys) {
@@ -330,6 +355,7 @@ export default {
     },
     //下拉框关闭执行
     popoverHide() {
+      this.$emit('setSelectNodeIds', this.selectNodeIds);
       this.$emit('getValue', this.returnDataKeys, this.returnDatas ? this.returnDatas : {});
     },
     // 多选，清空所有勾选
@@ -364,7 +390,9 @@ export default {
         for (let i = 0; i < data.length; i++) {
           const n = data[i];
           if (n[this.obj.pid] === id) {
-            n[this.obj.children] = fa(n[this.obj.id]);
+            if (this.obj.children) {
+              n[this.obj.children] = fa(n[this.obj.id]);
+            }
             temp.push(n);
           }
         }

@@ -83,10 +83,11 @@ public class ShareController {
         return testPlanService.getReport(planId, null);
     }
 
-    @GetMapping("/report/export/{shareId}/{planId}")
-    public void exportHtmlReport(@PathVariable String shareId, @PathVariable String planId, HttpServletResponse response) throws UnsupportedEncodingException {
+    @GetMapping("/report/export/{shareId}/{planId}/{lang}")
+    public void exportHtmlReport(@PathVariable String shareId, @PathVariable String planId,
+                                 @PathVariable(required = false) String lang, HttpServletResponse response) throws UnsupportedEncodingException {
         shareInfoService.validate(shareId, planId);
-        testPlanService.exportPlanReport(planId, response);
+        testPlanService.exportPlanReport(planId, lang, response);
     }
 
     @GetMapping("/test/plan/case/list/failure/{shareId}/{planId}")
@@ -170,7 +171,7 @@ public class ShareController {
     @GetMapping("/api/scenario/report/get/{shareId}/{reportId}")
     public APIScenarioReportResult get(@PathVariable String shareId, @PathVariable String reportId) {
         shareInfoService.validateExpired(shareId); // 测试计划，和接口都会用这个
-        return apiScenarioReportService.get(reportId);
+        return apiScenarioReportService.get(reportId,true);
     }
 
     @GetMapping("/performance/report/{shareId}/{reportId}")

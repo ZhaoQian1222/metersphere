@@ -7,7 +7,7 @@
   <parent>
     <artifactId>metersphere-server</artifactId>
     <groupId>io.metersphere</groupId>
-    <version>1.9</version>
+    <version>${revision}</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -64,6 +64,20 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>dist</directory>
+              <includes>
+                <include>**</include>
+              </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
+        </configuration>
       </plugin>
     </plugins>
   </build>

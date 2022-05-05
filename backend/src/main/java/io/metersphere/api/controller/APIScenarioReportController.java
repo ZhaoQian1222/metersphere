@@ -14,6 +14,7 @@ import io.metersphere.commons.constants.OperLogConstants;
 import io.metersphere.commons.constants.OperLogModule;
 import io.metersphere.commons.utils.PageUtils;
 import io.metersphere.commons.utils.Pager;
+import io.metersphere.dto.RequestResult;
 import io.metersphere.log.annotation.MsAuditLog;
 import io.metersphere.notice.annotation.SendNotice;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class APIScenarioReportController {
 
     @GetMapping("/get/{reportId}")
     public APIScenarioReportResult get(@PathVariable String reportId) {
-        return apiReportService.get(reportId);
+        return apiReportService.get(reportId,false);
     }
 
     @PostMapping("/list/{goPage}/{pageSize}")
@@ -46,10 +47,15 @@ public class APIScenarioReportController {
         return apiReportService.update(node);
     }
 
+    @GetMapping("/selectReportContent/{stepId}")
+    public RequestResult selectReportContent(@PathVariable String stepId) {
+        return apiReportService.selectReportContent(stepId);
+    }
+
     @PostMapping("/delete")
     @MsAuditLog(module = OperLogModule.API_AUTOMATION_REPORT, type = OperLogConstants.DELETE, beforeEvent = "#msClass.getLogDetails(#request.id)", msClass = ApiScenarioReportService.class)
     @SendNotice(taskType = NoticeConstants.TaskType.API_REPORT_TASK, event = NoticeConstants.Event.DELETE, target = "#targetClass.get(#request.id)", targetClass = ApiScenarioReportService.class,
-            mailTemplate = "api/ReportDelete", subject = "接口报告通知")
+            subject = "接口报告通知")
     public void delete(@RequestBody DeleteAPIReportRequest request) {
         apiReportService.delete(request);
     }
@@ -57,7 +63,7 @@ public class APIScenarioReportController {
     @PostMapping("/batch/delete")
     @MsAuditLog(module = OperLogModule.API_AUTOMATION_REPORT, type = OperLogConstants.BATCH_DEL, beforeEvent = "#msClass.getLogDetails(#reportRequest.ids)", msClass = ApiScenarioReportService.class)
     @SendNotice(taskType = NoticeConstants.TaskType.API_REPORT_TASK, event = NoticeConstants.Event.DELETE, target = "#targetClass.getByIds(#request.ids)", targetClass = ApiScenarioReportService.class,
-            mailTemplate = "api/ReportDelete", subject = "接口报告通知")
+            subject = "接口报告通知")
     public void deleteAPIReportBatch(@RequestBody APIReportBatchRequest request) {
         apiReportService.deleteAPIReportBatch(request);
     }

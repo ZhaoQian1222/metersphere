@@ -13,12 +13,22 @@
         </el-tooltip>
       </el-card>
     </div>
+    <div v-else-if="node.type === 'MsUiCommand'">
+      <ui-command-result
+        :step-id="node.stepId"
+        :index-number="node.index"
+        :command="node"
+        :isActive="isActive"
+        :result="node.value"/>
+    </div>
     <div v-else>
       <ms-request-result
+        :step-id="node.stepId"
         :request="node.value"
         :indexNumber="node.index"
         :error-code="node.errorCode"
         :scenarioName="node.label"
+        :total-status="node.totalStatus"
         :console="console"
         :isActive="isActive"
         v-on:requestResult="requestResult"
@@ -30,10 +40,15 @@
 <script>
 import MsRequestResult from "./RequestResult";
 import {STEP} from "@/business/components/api/automation/scenario/Setting";
+const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
+const UiCommandResult = requireComponent.keys().length > 0 ? requireComponent("./ui/automation/report/UiCommandResult.vue") : {};
 
 export default {
   name: "MsScenarioResult",
-  components: {MsRequestResult},
+  components: {
+    'UiCommandResult': UiCommandResult.default,
+    MsRequestResult
+  },
   props: {
     scenario: Object,
     node: Object,

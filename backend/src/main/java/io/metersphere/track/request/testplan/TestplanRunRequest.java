@@ -1,8 +1,10 @@
 package io.metersphere.track.request.testplan;
 
-
+import io.metersphere.track.request.testcase.QueryTestPlanRequest;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 import java.util.Map;
 
 @Getter
@@ -20,5 +22,9 @@ public class TestplanRunRequest {
     private Map<String, String> envMap;
     private String environmentType;
     private String environmentGroupId;
+    private List<String> testPlanIds;
+    private Boolean isAll;
+    private String  reportId;
+    private QueryTestPlanRequest queryTestPlanRequest;
 }
 

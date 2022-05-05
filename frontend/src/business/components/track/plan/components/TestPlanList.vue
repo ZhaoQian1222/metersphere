@@ -53,6 +53,7 @@
         <ms-table-column
           prop="status"
           :filters="statusFilters"
+          :filtered-value="['Prepare', 'Underway', 'Finished', 'Completed']"
           column-key="status"
           :field="item"
           :fields-width="fieldsWidth"
@@ -79,6 +80,10 @@
                   <el-dropdown-item :disabled="!hasEditPermission"
                                     :command="{item: scope.row, status: 'Completed'}">
                     {{ $t('test_track.plan.plan_status_completed') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item :disabled="!hasEditPermission"
+                                    :command="{item: scope.row, status: 'Archived'}">
+                    {{ $t('test_track.plan.plan_status_archived') }}
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </el-dropdown>
@@ -178,14 +183,6 @@
             <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
                     :content="itemName" style="margin-left: 0px; margin-right: 2px"></ms-tag>
           </template>
-        </ms-table-column>
-        <ms-table-column
-          prop="executionTimes"
-          :field="item"
-          :fields-width="fieldsWidth"
-          sortable
-          :label="$t('commons.execution_times')"
-          min-width="160px">
         </ms-table-column>
         <ms-table-column
           prop="testPlanTestCaseCount"
@@ -306,12 +303,30 @@
                        :with-tip="enableDeleteTip">
       {{ $t('test_track.plan.plan_delete_tip') }}
     </ms-delete-confirm>
-    <ms-test-plan-schedule-maintain ref="scheduleMaintain" @refreshTable="initTableData"/>
+    <ms-test-plan-schedule-maintain ref="scheduleMaintain" @refreshTable="initTableData" :plan-case-ids="[]"
+                                    :type="'plan'"/>
     <ms-test-plan-schedule-batch-switch ref="scheduleBatchSwitch" @refresh="refresh"/>
     <plan-run-mode-with-env @handleRunBatch="_handleRun" ref="runMode" :plan-case-ids="[]" :type="'plan'"
-                            :plan-id="currentPlanId"/>
+                            :plan-id="currentPlanId" :show-save="true"/>
     <test-plan-report-review ref="testCaseReportView"/>
     <ms-task-center ref="taskCenter" :show-menu="false"/>
+    <el-dialog
+      :visible.sync="showExecute"
+      destroy-on-close
+      :title="$t('load_test.runtime_config')"
+      width="550px"
+      @close="closeExecute">
+      <div>
+        <el-radio-group v-model="batchExecuteType">
+          <el-radio label="serial">{{ $t("run_mode.serial") }}</el-radio>
+          <el-radio label="parallel">{{ $t("run_mode.parallel") }}</el-radio>
+        </el-radio-group>
+      </div><br/>
+      <span>注：运行模式仅对测试计划间有效</span>
+      <template v-slot:footer>
+        <ms-dialog-footer @cancel="closeExecute" @confirm="handleRunBatch"/>
+      </template>
+    </el-dialog>
   </el-card>
 </template>
 
@@ -378,6 +393,7 @@ export default {
       result: {},
       cardResult: {},
       enableDeleteTip: false,
+      showExecute:false,
       queryPath: "/test/plan/list",
       deletePath: "/test/plan/delete",
       condition: {
@@ -396,7 +412,8 @@ export default {
         {text: this.$t('test_track.plan.plan_status_prepare'), value: 'Prepare'},
         {text: this.$t('test_track.plan.plan_status_running'), value: 'Underway'},
         {text: this.$t('test_track.plan.plan_status_finished'), value: 'Finished'},
-        {text: this.$t('test_track.plan.plan_status_completed'), value: 'Completed'}
+        {text: this.$t('test_track.plan.plan_status_completed'), value: 'Completed'},
+        {text: this.$t('test_track.plan.plan_status_archived'), value: 'Archived'}
       ],
       stageFilters: [
         {text: this.$t('test_track.plan.smoke_test'), value: 'smoke'},
@@ -416,6 +433,11 @@ export default {
         {
           name: this.$t('test_track.plan.test_plan_batch_switch'),
           handleClick: this.handleBatchSwitch,
+          permissions: ['PROJECT_TRACK_PLAN:READ+SCHEDULE']
+        },
+        {
+          name: this.$t('api_test.automation.batch_execute'),
+          handleClick: this.handleBatchExecute,
           permissions: ['PROJECT_TRACK_PLAN:READ+SCHEDULE']
         }
       ],
@@ -438,7 +460,8 @@ export default {
           exec: this.openReport,
           permission: ['PROJECT_TRACK_PLAN:READ+EDIT']
         },
-      ]
+      ],
+      batchExecuteType:"serial"
     };
   },
   watch: {
@@ -587,6 +610,38 @@ export default {
         this.$refs.scheduleBatchSwitch.open(param, size, this.condition.selectAll, this.condition);
       }
     },
+    handleBatchExecute(){
+      this.showExecute = true;
+    },
+    handleRunBatch(){
+      this.showExecute = false;
+      let mode = this.batchExecuteType;
+      let param = {mode};
+      const ids = [];
+      if (this.condition.selectAll) {
+        param.isAll = true;
+        param.queryTestPlanRequest = this.condition
+      }
+      else {
+        this.$refs.testPlanLitTable.selectRows.forEach((item) => {
+          ids.push(item.id)
+        });
+      }
+      param.testPlanId = this.currentPlanId;
+      param.projectId = getCurrentProjectID();
+      param.userId = getCurrentUserId();
+      param.requestOriginator = "TEST_PLAN";
+      param.testPlanIds = ids;
+      this.result = this.$post('/test/plan/run/batch/', param, () => {
+        this.$refs.taskCenter.open();
+        this.$success(this.$t('commons.run_success'));
+      }, error => {
+        // this.$error(error.message);
+      });
+    },
+    closeExecute(){
+      this.showExecute = false;
+    },
     statusChange(data) {
       if (!hasPermission('PROJECT_TRACK_PLAN:READ+EDIT')) {
         return;
@@ -727,12 +782,17 @@ export default {
       param.environmentType = environmentType;
       param.environmentGroupId = environmentGroupId;
       param.requestOriginator = "TEST_PLAN";
-      this.$refs.taskCenter.open();
-      this.result = this.$post('test/plan/run/', param, () => {
-        this.$success(this.$t('commons.run_success'));
-      }, error => {
-        // this.$error(error.message);
-      });
+      if(config.isRun === true){
+        this.$refs.taskCenter.open();
+        this.result = this.$post('test/plan/run/', param, () => {
+          this.$success(this.$t('commons.run_success'));
+        });
+      }else{
+        this.result = this.$post('test/plan/edit/runModeConfig', param, () => {
+          this.$success(this.$t('commons.save_success'));
+        });
+      }
+
     },
     saveFollow(row) {
       if (row.showFollow) {

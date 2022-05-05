@@ -17,7 +17,8 @@
               <i class="el-icon-edit" style="cursor:pointer" @click="showInput(apiCase)"/>
             </span>
 
-            <el-link type="primary" style="margin-left: 10px" @click="openHis(apiCase)" v-if="apiCase.id">{{ $t('operating_log.change_history') }}</el-link>
+            <el-link type="primary" style="margin-left: 10px" @click="openHis(apiCase)"
+                     v-if="apiCase.id">{{ $t('operating_log.change_history') }}</el-link>
           </span>
           <div v-if="apiCase.id" style="color: #999999;font-size: 12px">
             <span style="margin-left: 10px">
@@ -27,13 +28,15 @@
           </div>
         </el-col>
         <el-col :span="2">
-          <el-select size="mini" v-model="apiCase.priority" class="ms-api-select" @change="changePriority(apiCase)" :disabled="loaded">
+          <el-select size="mini" v-model="apiCase.priority" class="ms-api-select" @change="changePriority(apiCase)"
+                     :disabled="loaded">
             <el-option v-for="grd in priorities" :key="grd.id" :label="grd.name" :value="grd.id"/>
           </el-select>
         </el-col>
         <el-col :span="api.protocol==='HTTP'?4:0">
           <span v-if="api.protocol==='HTTP'">
-            <el-tag size="mini" :style="{'background-color': getColor(true, apiCase.request.method), border: getColor(true, apiCase.request.method)}"
+            <el-tag size="mini"
+                    :style="{'background-color': getColor(true, apiCase.request.method), border: getColor(true, apiCase.request.method)}"
                     class="api-el-tag">
                 {{ apiCase.request.method }}
             </el-tag>
@@ -45,34 +48,42 @@
         <el-col :span="5">
           <el-row>
             <el-col :span="8">
-              <el-select size="small" v-model="apiCase.caseStatus" style="margin-right: 5px" @change="saveTestCase(apiCase,true)" :disabled="loaded">
+              <el-select size="small" v-model="apiCase.caseStatus" style="margin-right: 5px"
+                         @change="saveTestCase(apiCase,true)" :disabled="loaded">
                 <el-option v-for="item in options" :key="item.id" :label="$t(item.label)" :value="item.id"/>
               </el-select>
             </el-col>
             <el-col :span="16">
               <div class="tag-item" @click.stop>
                 <el-tooltip :content="$t('commons.follow')" placement="bottom" effect="dark" v-if="!showFollow">
-                  <i class="el-icon-star-off" style="color: #783987; font-size: 25px; margin-top: 2px; margin-right: 15px;cursor: pointer " @click="saveFollow"/>
+                  <i class="el-icon-star-off"
+                     style="color: #783987; font-size: 25px; margin-top: 2px; margin-right: 15px;cursor: pointer "
+                     @click="saveFollow"/>
                 </el-tooltip>
                 <el-tooltip :content="$t('commons.cancel')" placement="bottom" effect="dark" v-if="showFollow">
-                  <i class="el-icon-star-on" style="color: #783987; font-size: 28px; margin-top: 2px; margin-right: 15px;cursor: pointer " @click="saveFollow" v-if="showFollow"/>
+                  <i class="el-icon-star-on"
+                     style="color: #783987; font-size: 28px; margin-top: 2px; margin-right: 15px;cursor: pointer "
+                     @click="saveFollow" v-if="showFollow"/>
                 </el-tooltip>
               </div>
             </el-col>
           </el-row>
           <el-row style="margin-top: 5px">
             <div class="tag-item" @click.stop>
-              <ms-input-tag :currentScenario="apiCase" ref="tag" @keyup.enter.native="saveTestCase(apiCase,true)" :disabled="loaded"/>
+              <ms-input-tag :currentScenario="apiCase" ref="tag" @keyup.enter.native="saveTestCase(apiCase,true)"
+                            :disabled="loaded"/>
             </div>
           </el-row>
         </el-col>
 
         <el-col :span="3">
           <span @click.stop v-if="!loaded">
-            <ms-tip-button @click="singleRun(apiCase)" :tip="$t('api_test.run')" icon="el-icon-video-play" v-permission="['PROJECT_API_DEFINITION:READ+RUN']"
+            <ms-tip-button @click="singleRun(apiCase)" :tip="$t('api_test.run')" icon="el-icon-video-play"
+                           v-permission="['PROJECT_API_DEFINITION:READ+RUN']"
                            class="run-button" size="mini" :disabled="!apiCase.id || loaded" circle v-if="!loading"/>
             <el-tooltip :content="$t('report.stop_btn')" placement="top" :enterable="false" v-else>
-              <el-button :disabled="!apiCase.id" @click.once="stop(apiCase)" size="mini" style="color:white;padding: 0;width: 28px;height: 28px;" class="stop-btn" circle>
+              <el-button :disabled="!apiCase.id" @click.once="stop(apiCase)" size="mini"
+                         style="color:white;padding: 0;width: 28px;height: 28px;" class="stop-btn" circle>
                 <div style="transform: scale(0.72)">
                   <span style="margin-left: -3.5px;font-weight: bold">STOP</span>
                 </div>
@@ -85,10 +96,12 @@
         </el-col>
 
         <el-col :span="4">
-          <el-link @click.stop type="danger" v-if="apiCase.execResult && apiCase.execResult==='error'" @click="showExecResult(apiCase)">
+          <el-link @click.stop type="danger" v-if="apiCase.execResult && apiCase.execResult==='error'"
+                   @click="showExecResult(apiCase)">
             {{ getResult(apiCase.execResult) }}
           </el-link>
-          <el-link @click.stop v-else-if="apiCase.execResult && apiCase.execResult==='success'" @click="showExecResult(apiCase)">
+          <el-link @click.stop v-else-if="apiCase.execResult && apiCase.execResult==='success'"
+                   @click="showExecResult(apiCase)">
             {{ getResult(apiCase.execResult) }}
           </el-link>
           <div v-else> {{ getResult(apiCase.execResult) }}</div>
@@ -110,25 +123,53 @@
       <div v-if="apiCase.active||type==='detail'" v-loading="loading">
         <el-divider></el-divider>
         <p class="tip">{{ $t('api_test.definition.request.req_param') }} </p>
-        <ms-api-request-form :isShowEnable="true" :showScript="true" :headers="apiCase.request.headers "
-                             :response="apiCase.responseData" :request="apiCase.request" v-if="api.protocol==='HTTP'"/>
-        <tcp-format-parameters :showScript="true" :show-pre-script="true" :request="apiCase.request"
-                               :response="apiCase.responseData"
-                               v-if="api.method==='TCP'"/>
-        <esb-definition v-xpack :request="apiCase.request" :show-pre-script="true" :showScript="true"
-                        :response="apiCase.responseData"
-                        v-if="isXpack&&api.method==='ESB'" ref="esbDefinition"/>
-        <ms-sql-basis-parameters :showScript="true" :request="apiCase.request" :response="apiCase.responseData"
-                                 v-if="api.protocol==='SQL'"/>
-        <ms-dubbo-basis-parameters :showScript="true" :request="apiCase.request" :response="apiCase.responseData"
-                                   v-if="api.protocol==='DUBBO'"/>
+        <ms-api-request-form
+          :isShowEnable="true"
+          :showScript="true"
+          :headers="apiCase.request.headers "
+          :response="apiCase.responseData"
+          :request="apiCase.request" v-if="api.protocol==='HTTP'"/>
+        <tcp-format-parameters
+          :showScript="true"
+          :show-pre-script="true"
+          :request="apiCase.request"
+          :response="apiCase.responseData"
+          v-if="api.method==='TCP'"/>
+        <esb-definition
+          class="esb-div"
+          v-xpack
+          :request="apiCase.request"
+          :show-pre-script="true"
+          :showScript="true"
+          :response="apiCase.responseData"
+          v-if="isXpack&&api.method==='ESB'" ref="esbDefinition"/>
+        <ms-sql-basis-parameters
+          :showScript="true"
+          :request="apiCase.request"
+          :response="apiCase.responseData"
+          v-if="api.protocol==='SQL'"/>
+        <ms-dubbo-basis-parameters
+          :showScript="true"
+          :request="apiCase.request"
+          :response="apiCase.responseData"
+          v-if="api.protocol==='DUBBO'"/>
         <!-- HTTP 请求返回数据 -->
         <p class="tip">{{ $t('api_test.definition.request.res_param') }}</p>
         <div v-if="isXpack&&api.method==='ESB'">
-          <esb-definition-response v-xpack v-if="isXpack" :currentProtocol="apiCase.request.protocol" :request="apiCase.request" :is-api-component="false" :show-options-button="false" :show-header="true" :api-item="apiCase"/>
+          <esb-definition-response
+            v-xpack v-if="isXpack"
+            :currentProtocol="apiCase.request.protocol"
+            :request="apiCase.request"
+            :is-api-component="false"
+            :show-options-button="false"
+            :show-header="true"
+            :api-item="apiCase"/>
         </div>
         <div v-else>
-          <api-response-component :currentProtocol="apiCase.request.protocol" :api-item="apiCase" :result="runResult"/>
+          <api-response-component
+            :currentProtocol="apiCase.request.protocol"
+            :api-item="apiCase"
+            :result="apiCase.responseData"/>
         </div>
       </div>
     </el-collapse-transition>
@@ -222,11 +263,12 @@ export default {
       showFollow: false,
       beforeRequest: {},
       compare: [],
-      isSave: false
+      isSave: false,
+      tagCount: 0,
+      requestCount: 0,
     }
   },
   props: {
-    runResult: {},
     loaded: {
       type: Boolean,
       default: false,
@@ -281,8 +323,57 @@ export default {
     if (this.currentApi && this.currentApi.request) {
       this.beforeRequest = JSON.parse(JSON.stringify(this.currentApi.request));
     }
+    this.reload();
+  },
+  watch: {
+    'apiCase.name': {
+      handler(v) {
+        this.saveStatus();
+      }
+    },
+    'apiCase.priority': {
+      handler(v) {
+        this.saveStatus();
+      }
+    },
+    'apiCase.caseStatus': {
+      handler(v) {
+        this.saveStatus();
+      }
+    },
+    'apiCase.tags': {
+      handler(v) {
+        this.tagCount++;
+        if (this.tagCount > 2) {
+          this.saveStatus();
+        }
+      }
+    },
+    'apiCase.request': {
+      handler(v) {
+        this.requestCount++;
+        if (this.requestCount > 1) {
+          this.saveStatus();
+        }
+      }
+    }
+  },
+  mounted() {
+    if (!(this.$store.state.apiCaseMap instanceof Map)) {
+      this.$store.state.apiCaseMap = new Map();
+    }
+    if (this.apiCase.id) {
+      this.$store.state.apiCaseMap.set(this.apiCase.id, 0);
+    }
   },
   methods: {
+    saveStatus() {
+      if (this.$store.state.apiCaseMap && this.apiCase.id) {
+        let change = this.$store.state.apiCaseMap.get(this.apiCase.id);
+        change = change + 1;
+        this.$store.state.apiCaseMap.set(this.apiCase.id, change);
+      }
+    },
     currentUser: () => {
       return getCurrentUser();
     },
@@ -309,12 +400,15 @@ export default {
       });
     },
     singleRun(data) {
-      if (this.api.protocol !== "SQL" && this.api.protocol != "DUBBO" && this.api.protocol != "dubbo://" && !this.environment) {
+      if (data.apiMethod !== "SQL" && data.apiMethod !== "DUBBO" && data.apiMethod !== "dubbo://" && data.apiMethod !== "TCP" && !this.environment) {
         this.$warning(this.$t('api_test.environment.select_environment'));
         return;
       }
-      data.message = true;
-      data.request.useEnvironment = this.environment;
+      if (data.apiMethod !== "SQL" && data.apiMethod !== "DUBBO" && data.apiMethod !== "dubbo://" && data.apiMethod !== "TCP") {
+        data.request.useEnvironment = this.environment;
+      } else {
+        data.request.useEnvironment = data.request.environmentId;
+      }
       this.$emit('singleRun', data);
     },
     stop(data) {
@@ -325,7 +419,14 @@ export default {
         let uuid = getUUID();
         let request = JSON.parse(JSON.stringify(data.request));
         request.id = uuid;
-        let obj = {name: "copy_" + data.name, priority: data.priority, active: true, tags: data.tags, request: request, uuid: uuid};
+        let obj = {
+          name: "copy_" + data.name,
+          priority: data.priority,
+          active: true,
+          tags: data.tags,
+          request: request,
+          uuid: uuid
+        };
         this.$emit('copyCase', obj);
       }
     },
@@ -385,7 +486,10 @@ export default {
     reload() {
       this.saveLoading = true
       this.$nextTick(() => {
-        this.saveLoading = false
+        this.saveLoading = false;
+        if (this.apiCase.id) {
+          this.$store.state.apiCaseMap.set(this.apiCase.id, 0);
+        }
       });
     },
     sort(stepArray) {
@@ -395,7 +499,10 @@ export default {
             stepArray[i].clazzName = TYPE_TO_C.get(stepArray[i].type);
           }
           if (stepArray[i].type === "Assertions" && !stepArray[i].document) {
-            stepArray[i].document = {type: "JSON", data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}};
+            stepArray[i].document = {
+              type: "JSON",
+              data: {xmlFollowAPI: false, jsonFollowAPI: false, json: [], xml: []}
+            };
           }
           if (stepArray[i] && stepArray[i].authManager && !stepArray[i].authManager.clazzName) {
             stepArray[i].authManager.clazzName = TYPE_TO_C.get(stepArray[i].authManager.type);
@@ -453,17 +560,18 @@ export default {
         row.createTime = data.createTime;
         row.updateTime = data.updateTime;
         this.compare = [];
-        if (!row.message) {
-          this.$success(this.$t('commons.save_success'));
-          this.reload();
-          this.isSave = false;
-          // 刷新编辑后用例列表
-          if (this.api.source === "editCase") {
-            this.$emit('reLoadCase');
-          }
-          if (!hideAlert) {
-            this.$emit('refresh');
-          }
+        row.type = null;
+        this.$success(this.$t('commons.save_success'));
+        this.tagCount = 0;
+        this.requestCount = 0;
+        this.reload();
+        this.isSave = false;
+        // 刷新编辑后用例列表
+        if (this.api.source === "editCase") {
+          this.$emit('reLoadCase');
+        }
+        if (!hideAlert) {
+          this.$emit('refresh');
         }
       }, (error) => {
         this.isSave = false;
@@ -604,5 +712,9 @@ export default {
 
 /deep/ .el-card__body {
   padding: 5px 10px;
+}
+
+.esb-div >>> .el-table {
+  overflow: auto;
 }
 </style>

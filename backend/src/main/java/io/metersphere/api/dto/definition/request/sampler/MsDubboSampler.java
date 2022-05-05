@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.annotation.JSONType;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -11,12 +12,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.ningyu.jmeter.plugin.dubbo.sample.DubboSample;
 import io.github.ningyu.jmeter.plugin.dubbo.sample.MethodArgument;
 import io.github.ningyu.jmeter.plugin.util.Constants;
+import io.metersphere.api.dto.definition.parse.JMeterScriptUtil;
 import io.metersphere.api.dto.definition.request.ElementUtil;
 import io.metersphere.api.dto.definition.request.ParameterConfig;
 import io.metersphere.api.dto.definition.request.sampler.dubbo.MsConfigCenter;
 import io.metersphere.api.dto.definition.request.sampler.dubbo.MsConsumerAndService;
 import io.metersphere.api.dto.definition.request.sampler.dubbo.MsRegistryCenter;
 import io.metersphere.api.dto.scenario.KeyValue;
+import io.metersphere.api.dto.scenario.environment.EnvironmentConfig;
+import io.metersphere.api.dto.scenario.environment.GlobalScriptFilterRequest;
 import io.metersphere.api.service.ApiDefinitionService;
 import io.metersphere.api.service.ApiTestCaseService;
 import io.metersphere.base.domain.ApiDefinitionWithBLOBs;
@@ -83,6 +87,8 @@ public class MsDubboSampler extends MsTestElement {
         // 非导出操作，且不是启用状态则跳过执行
         if (!config.isOperating() && !this.isEnable()) {
             return;
+        }else if(config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())){
+            this.setName(config.getOperatingSampleTestName());
         }
         if (this.getReferenced() != null && "Deleted".equals(this.getReferenced())) {
             return;
@@ -97,12 +103,32 @@ public class MsDubboSampler extends MsTestElement {
         }
 
         final HashTree testPlanTree = tree.add(dubboSample(config));
+
+        //添加全局前后置脚本
+        EnvironmentConfig envConfig = null;
+        if (config.getConfig() != null) {
+            envConfig = config.getConfig().get(this.getProjectId());
+        }
+        //处理全局前后置脚本(步骤内)
+        String environmentId = this.getEnvironmentId();
+        if (environmentId == null) {
+            if(StringUtils.isEmpty(this.useEnvironment) && envConfig != null){
+                environmentId = envConfig.getApiEnvironmentid();
+            }else {
+                environmentId = this.useEnvironment;
+            }
+        }
+        //根据配置将脚本放置在私有脚本之前
+        JMeterScriptUtil.setScriptByEnvironmentConfig(envConfig, testPlanTree, GlobalScriptFilterRequest.DUBBO.name(), environmentId, config, false);
         if (CollectionUtils.isNotEmpty(hashTree)) {
             hashTree = ElementUtil.order(hashTree);
             hashTree.forEach(el -> {
                 el.toHashTree(testPlanTree, el.getHashTree(), config);
             });
         }
+
+        //根据配置将脚本放置在私有脚本之后
+        JMeterScriptUtil.setScriptByEnvironmentConfig(envConfig, testPlanTree, GlobalScriptFilterRequest.DUBBO.name(), environmentId, config, true);
     }
 
     private boolean setRefElement() {
@@ -116,7 +142,7 @@ public class MsDubboSampler extends MsTestElement {
                 ApiTestCaseWithBLOBs bloBs = apiTestCaseService.get(this.getId());
                 if (bloBs != null) {
                     this.setProjectId(bloBs.getProjectId());
-                    JSONObject element = JSON.parseObject(bloBs.getRequest());
+                    JSONObject element = JSON.parseObject(bloBs.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(element);
                     proxy = mapper.readValue(element.toJSONString(), new TypeReference<MsDubboSampler>() {
                     });

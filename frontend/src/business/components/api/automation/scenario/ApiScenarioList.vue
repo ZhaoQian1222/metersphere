@@ -99,7 +99,7 @@
                            sortable
                            :field="item"
                            :fields-width="fieldsWidth"
-                           :filters="apiscenariofilters.STATUS_FILTERS"
+                           :filters="!trashEnable ? apiscenariofilters.STATUS_FILTERS : apiscenariofilters.TRASH_FILTERS"
                            min-width="120px">
             <template v-slot:default="scope">
               <plan-status-table-item :value="scope.row.status"/>
@@ -252,7 +252,8 @@
 
         <template v-slot:opt-behind="scope">
           <ms-scenario-extend-buttons v-if="!trashEnable" style="display: contents" @openScenario="openScenario"
-                                      :row="scope.row"/>
+                                      :request="runRequest"
+                                      :row="scope.row" @openSchedule="openSchedule(scope.row)"/>
         </template>
 
       </ms-table>
@@ -916,6 +917,14 @@ export default {
       this.$refs.runMode.open();
 
     },
+    openSchedule(row) {
+      let run = {};
+      run.id = getUUID();
+      run.ids = [row.id];
+      run.projectId = this.projectId;
+      run.condition = this.condition;
+      this.runRequest = run;
+    },
     orderBySelectRows() {
       let selectIds = this.$refs.scenarioTable.selectIds;
       let array = [];
@@ -1144,14 +1153,14 @@ export default {
         param.ids = [row.id];
         this.$post('/api/automation/checkBeforeDelete/', param, response => {
           let checkResult = response.data;
-          let alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " [" + row.name + "] ?";
+          let alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " " + row.name + " ?";
           if (!checkResult.deleteFlag) {
             alertMsg = "";
             checkResult.checkMsg.forEach(item => {
               alertMsg += item;
             });
             if (alertMsg === "") {
-              alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " [" + row.name + "] ?";
+              alertMsg = this.$t('load_test.delete_threadgroup_confirm') + " " + row.name + " ?";
             } else {
               alertMsg += this.$t('api_test.is_continue');
             }

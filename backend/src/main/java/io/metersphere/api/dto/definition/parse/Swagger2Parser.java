@@ -265,7 +265,11 @@ public class Swagger2Parser extends SwaggerAbstractParser {
         msResponse.setStatusCode(new ArrayList<>());
         if (responses != null && responses.size() > 0) {
             responses.forEach((responseCode, response) -> {
-                msResponse.getStatusCode().add(new KeyValue(responseCode, responseCode));
+                if(StringUtils.isNotBlank(response.getDescription())){
+                    msResponse.getStatusCode().add(new KeyValue(responseCode, response.getDescription()));
+                }else{
+                    msResponse.getStatusCode().add(new KeyValue(responseCode, responseCode));
+                }
                 if (responseCode.equals("200")&&response.getResponseSchema()!=null) {
                     parseResponseBody(response.getResponseSchema(),msResponse.getBody());
                     msResponse.getBody().setFormat("JSON-SCHEMA");
@@ -483,7 +487,7 @@ public class Swagger2Parser extends SwaggerAbstractParser {
     private void handleBaseProperties(JsonSchemaItem item, Property value) {
         if (value instanceof StringProperty || value instanceof DateProperty || value instanceof DateTimeProperty ) {
             item.setType("string");
-        } else if (value instanceof IntegerProperty) {
+        } else if (value instanceof IntegerProperty || value instanceof BaseIntegerProperty) {
             item.setType("integer");
         } else if (value instanceof BooleanProperty) {
             item.setType("boolean");

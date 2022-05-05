@@ -1,6 +1,6 @@
 <template>
   <ms-container>
-    <ms-main-container>
+    <ms-main-container class="report-content">
       <el-card v-loading="result ? result.loading : false">
         <test-plan-report-buttons :is-db="isDb" :plan-id="planId" :is-share="isShare" :report="report"
                                   v-if="!isTemplate && !isShare"/>
@@ -59,8 +59,8 @@ export default {
   },
   props: {
     planId:String,
-    isTemplate: Boolean,
     isShare: Boolean,
+    isTemplate: Boolean,
     isDb: Boolean,
     shareId: String,
     reportId: String
@@ -122,13 +122,9 @@ export default {
     getReport() {
       if (this.isTemplate) {
         this.report = "#report";
-
-        // this.report = {}; 测试代码
-        // this.result = getExportReport(this.planId, (data) => {
-        //   data.config = JSON.parse(data.config);
-        //   this.report = data;
-        // });
-
+        if (this.report.lang) {
+          this.$setLang(this.report.lang);
+        }
         this.report.config = this.getDefaultConfig(this.report);
       }  else if (this.isDb) {
         if (this.isShare) {
@@ -156,13 +152,14 @@ export default {
       }
     },
     getDefaultConfig(report) {
+      let dbConfig = null;
       if (report && report.config) {
         let configStr = report.config;
         if (configStr) {
-          return JSON.parse(configStr);
+          dbConfig = JSON.parse(configStr);
         }
       }
-      return {
+      let config =  {
         overview: {
           enable: true,
           name: this.$t('test_track.report.overview')
@@ -238,6 +235,20 @@ export default {
           }
         }
       };
+      if (dbConfig) {
+        this.mergeConfig(config, dbConfig);
+      }
+      return config;
+    },
+    mergeConfig(config, dbConfig) {
+      for (let key of Object.keys(config)) {
+        if (dbConfig[key]) {
+          config[key].enable = dbConfig[key].enable;
+          if (config[key].children && dbConfig[key].children) {
+            this.mergeConfig(config[key].children, dbConfig[key].children);
+          }
+        }
+      }
     }
   }
 }

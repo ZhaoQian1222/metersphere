@@ -397,7 +397,11 @@ public class ShareInfoService {
             }
         }
         if (!previewJsonArray.isEmpty()) {
-            apiInfoDTO.setRequestPreviewData(previewJsonArray);
+            if(previewJsonArray.size() == 1){
+                apiInfoDTO.setRequestPreviewData(previewJsonArray.get(0));
+            }else {
+                apiInfoDTO.setRequestPreviewData(previewJsonArray);
+            }
         }
         apiInfoDTO.setSelectedFlag(true);
         return apiInfoDTO;
@@ -463,15 +467,11 @@ public class ShareInfoService {
         }
     }
 
-    public ShareInfo createShareInfo(ShareInfo request) {
+    public ShareInfo createShareInfo(ShareInfo shareInfo) {
         long createTime = System.currentTimeMillis();
-        ShareInfo shareInfo = new ShareInfo();
         shareInfo.setId(UUID.randomUUID().toString());
-        shareInfo.setCustomData(request.getCustomData());
-        shareInfo.setCreateUserId(request.getCreateUserId());
         shareInfo.setCreateTime(createTime);
         shareInfo.setUpdateTime(createTime);
-        shareInfo.setShareType(request.getShareType());
         shareInfoMapper.insert(shareInfo);
         return shareInfo;
     }

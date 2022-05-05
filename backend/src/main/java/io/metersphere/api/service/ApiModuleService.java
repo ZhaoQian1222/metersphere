@@ -274,15 +274,16 @@ public class ApiModuleService extends NodeTreeService<ApiModuleDTO> {
             criteria.andNameEqualTo(node.getName())
                     .andProjectIdEqualTo(node.getProjectId());
 
+            if (StringUtils.isNotBlank(node.getParentId())) {
+                criteria.andParentIdEqualTo(node.getParentId());
+            } else {
+                criteria.andLevelEqualTo(node.getLevel());
+            }
+
             if (StringUtils.isNotBlank(node.getProtocol())) {
                 criteria.andProtocolEqualTo(node.getProtocol());
             }
 
-            if (StringUtils.isNotBlank(node.getParentId())) {
-                criteria.andParentIdEqualTo(node.getParentId());
-            } else {
-                criteria.andParentIdIsNull();
-            }
             if (StringUtils.isNotBlank(node.getId())) {
                 criteria.andIdNotEqualTo(node.getId());
             }
@@ -296,12 +297,9 @@ public class ApiModuleService extends NodeTreeService<ApiModuleDTO> {
         ApiModuleExample example = new ApiModuleExample();
         ApiModuleExample.Criteria criteria = example.createCriteria();
         criteria.andNameEqualTo(node.getName())
-                .andProjectIdEqualTo(node.getProjectId());
-        if (StringUtils.isNotBlank(node.getParentId())) {
-            criteria.andParentIdEqualTo(node.getParentId());
-        } else {
-            criteria.andParentIdIsNull();
-        }
+                .andProjectIdEqualTo(node.getProjectId())
+                .andLevelEqualTo(node.getLevel());
+
         if (StringUtils.isNotBlank(node.getId())) {
             criteria.andIdNotEqualTo(node.getId());
         }

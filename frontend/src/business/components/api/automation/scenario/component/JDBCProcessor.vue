@@ -15,6 +15,7 @@
     <template v-slot:request>
       <jdbc-processor-content
         :showScript="false"
+        :scenarioId="scenarioId"
         :request="request"/>
     </template>
   </api-base-component>
@@ -34,6 +35,7 @@ export default {
     ApiBaseComponent, MsDropdown, MsInstructionsIcon, MsCodeEdit
   },
   props: {
+    scenarioId: String,
     draggable: {
       type: Boolean,
       default: false,

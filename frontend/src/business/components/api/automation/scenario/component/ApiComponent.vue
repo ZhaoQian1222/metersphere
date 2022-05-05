@@ -46,7 +46,8 @@
            {{ $t('commons.testing') }}
          </span>
         <!--  场景调试步骤增加误报判断  -->
-        <span class="ms-step-debug-code" :class="'ms-req-error-report'" v-if="!loading &&!request.testing && request.debug && request.requestResult[0] && request.requestResult[0].responseResult && request.requestResult[0].status==='errorReportResult'">
+        <span class="ms-step-debug-code" :class="'ms-req-error-report'" v-if="!loading &&!request.testing && request.debug
+            && request.requestResult[0] && request.requestResult[0].responseResult && request.requestResult[0].status==='errorReportResult'">
           {{ $t("error_report_library.option.name") }}
         </span>
         <span class="ms-step-debug-code"
@@ -82,6 +83,7 @@
               :isShowEnable="true"
               :response="response"
               :referenced="true"
+              :scenarioId="currentScenario.id"
               :headers="request.headers "
               :is-read-only="isCompReadOnly"
               :request="request"/>
@@ -98,18 +100,21 @@
               :is-read-only="isCompReadOnly"
               :response="response"
               :show-pre-script="true"
+              :scenarioId="currentScenario.id"
               :show-script="true" :request="request"/>
 
             <ms-sql-basis-parameters
               v-if="request.protocol==='SQL'|| request.type==='JDBCSampler'"
               :request="request"
               :response="response"
+              :scenarioId="currentScenario.id"
               :is-read-only="isCompReadOnly"
               :showScript="true"/>
 
             <ms-dubbo-basis-parameters
               v-if="request.protocol==='DUBBO' || request.protocol==='dubbo://'|| request.type==='DubboSampler'"
               :request="request"
+              :scenarioId="currentScenario.id"
               :response="response"
               :is-read-only="isCompReadOnly"
               :showScript="true"/>
@@ -190,7 +195,6 @@ export default {
       type: Boolean,
       default: true,
     },
-    currentEnvironmentId: String,
     projectList: Array,
     envMap: Map,
     message: String,
@@ -246,7 +250,11 @@ export default {
       this.request.projectId = getCurrentProjectID();
     }
     this.request.customizeReq = this.isCustomizeReq;
-
+    this.request.currentScenarioId = this.currentScenario.id;
+    // 传递场景ID
+    if (this.request.hashTree) {
+      this.setOwnEnvironment(this.request.hashTree);
+    }
     if (this.request.num) {
       this.isShowNum = true;
       this.request.root = true;
@@ -351,6 +359,17 @@ export default {
     },
   },
   methods: {
+    setOwnEnvironment(scenarioDefinition) {
+      for (let i in scenarioDefinition) {
+        let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
+        if (typeArray.indexOf(scenarioDefinition[i].type) !== -1) {
+          scenarioDefinition[i].currentScenarioId = this.currentScenario.id;
+        }
+        if (scenarioDefinition[i].hashTree !== undefined && scenarioDefinition[i].hashTree.length > 0) {
+          this.setOwnEnvironment(scenarioDefinition[i].hashTree);
+        }
+      }
+    },
     forStatus() {
       this.reqSuccess = true;
       if (this.request.result && this.request.result.length > 0) {
@@ -480,17 +499,18 @@ export default {
       this.reload();
     },
     run() {
+      let selectEnvId;
+      // 自定义请求
       if (this.isApiImport || this.request.isRefEnvironment) {
         if (this.request.type && (this.request.type === "HTTPSamplerProxy" || this.request.type === "JDBCSampler" || this.request.type === "TCPSampler")) {
-          if (!this.environmentMap || this.environmentMap.size === 0) {
+          if (this.$store.state.scenarioEnvMap && this.$store.state.scenarioEnvMap instanceof Map
+            && this.$store.state.scenarioEnvMap.has((this.currentScenario.id + "_" + this.request.projectId))) {
+            selectEnvId = this.$store.state.scenarioEnvMap.get((this.currentScenario.id + "_" + this.request.projectId));
+            this.environmentMap = this.envMap;
+          }
+          if (!selectEnvId) {
             this.$warning(this.$t('api_test.automation.env_message'));
             return false;
-          } else if (this.environmentMap && this.environmentMap.size > 0) {
-            const env = this.environmentMap.get(this.request.projectId);
-            if (!env) {
-              this.$warning(this.$t('api_test.automation.env_message'));
-              return false;
-            }
           }
         }
       }
@@ -502,12 +522,15 @@ export default {
       this.request.active = true;
       this.loading = true;
       this.runData = [];
-      this.request.useEnvironment = this.currentEnvironmentId;
+      if (selectEnvId) {
+        this.request.useEnvironment = selectEnvId;
+        this.request.environmentId = selectEnvId;
+      }
       this.request.customizeReq = this.isCustomizeReq;
       let debugData = {
         id: this.currentScenario.id, name: this.currentScenario.name, type: "scenario",
         variables: this.currentScenario.variables, referenced: 'Created', headers: this.currentScenario.headers,
-        enableCookieShare: this.enableCookieShare, environmentId: this.currentEnvironmentId, hashTree: [this.request],
+        enableCookieShare: this.enableCookieShare, environmentId: selectEnvId, hashTree: [this.request],
       };
       this.runData.push(debugData);
       this.request.requestResult = [];
@@ -627,12 +650,12 @@ export default {
         });
       }
     },
-    checkPermission(resource, workspaceId, isTurnSpace){
+    checkPermission(resource, workspaceId, isTurnSpace) {
       this.$get('/project/getOwnerProjectIds', res => {
         const project = res.data.find(p => p === resource.projectId);
-        if(!project){
+        if (!project) {
           this.$warning(this.$t('commons.no_permission'));
-        }else{
+        } else {
           this.gotoTurn(resource, workspaceId, isTurnSpace)
         }
 

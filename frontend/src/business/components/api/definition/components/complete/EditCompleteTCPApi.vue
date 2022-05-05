@@ -108,6 +108,8 @@
       <div>
         <el-checkbox v-model="basisData.newVersionRemark">{{ $t('commons.remark') }}</el-checkbox>
         <el-checkbox v-model="basisData.newVersionDeps">{{ $t('commons.relationship.name') }}</el-checkbox>
+        <el-checkbox v-model="basisData.newVersionCase">CASE</el-checkbox>
+        <el-checkbox v-model="basisData.newVersionMock">MOCK</el-checkbox>
       </div>
 
       <template v-slot:footer>
@@ -274,6 +276,12 @@ export default {
           }
         }
         this.$emit('saveApi', this.basisData);
+        this.$store.state.apiStatus.set("fromChange", false);
+        this.$store.state.apiMap.set(this.basisData.id, this.$store.state.apiStatus);
+      } else {
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
+        }
       }
     },
     runTest() {
@@ -362,10 +370,12 @@ export default {
       });
     },
     compare(row) {
+      this.basisData.createTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.basisData.versionId)[0].createTime;
       this.$get('/api/definition/get/' +  row.id+"/"+this.basisData.refId, response => {
         this.$get('/api/definition/get/' + response.data.id, res => {
           if (res.data) {
             this.newData = res.data;
+            this.newData.createTime = row.createTime;
             if (this.newData.method !== 'TCP' && this.newData.method !== 'ESB') {
               this.newData.method = this.newData.protocol;
             }
@@ -482,11 +492,21 @@ export default {
       this.basisData.versionName = row.name;
       this.$set(this.basisData, 'newVersionRemark', !!this.basisData.remark);
       this.$set(this.basisData, 'newVersionDeps', this.$refs.apiOtherInfo.relationshipCount > 0);
-      if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.basisData.remark) {
-        this.createNewVersionVisible = true;
-      } else {
-        this.saveApi();
-      }
+      this.$set(this.basisData, 'newVersionCase', this.basisData.caseTotal > 0);
+
+      this.$post('/mockConfig/genMockConfig', {projectId: this.projectId, apiId: this.basisData.id}, response => {
+        this.$set(this.basisData, 'newVersionMock', response.data.mockExpectConfigList.length > 0);
+
+        if (this.$refs.apiOtherInfo.relationshipCount > 0 || this.basisData.remark ||
+          this.basisData.newVersionCase || this.basisData.newVersionMock) {
+          this.createNewVersionVisible = true;
+        } else {
+          this.saveApi();
+          if (this.$refs.versionHistory) {
+            this.$refs.versionHistory.loading = false;
+          }
+        }
+      });
     },
     del(row) {
       this.$alert(this.$t('api_test.definition.request.delete_confirm') + ' ' + row.name + " ？", '', {

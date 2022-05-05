@@ -82,6 +82,23 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'passRate', key: 'b', label: 'api_test.automation.passing_rate'},
     {id: 'createTime', key: 'c', label: 'commons.create_time'},
   ],
+  //场景测试
+  UI_SCENARIO: [
+    {id: 'num', key: '1', label: "ID"},
+    {id: 'name', key: '2', label: 'api_report.scenario_name'},
+    {id: 'level', key: '3', label: 'api_test.automation.case_level'},
+    {id: 'status', key: '4', label: 'test_track.plan.plan_status'},
+    {id: 'tags', key: '5', label: 'commons.tag'},
+    // {id: 'versionId', key: 'f', label: 'project.version.name', xpack: true},
+    {id: 'creatorName', key: 'd', label: 'api_test.automation.creator'},
+    {id: 'principalName', key: '6', label: 'api_test.definition.api_principal'},
+    // {id: 'environmentMap', key: 'e', label: 'commons.environment'},
+    {id: 'updateTime', key: '7', label: 'api_test.definition.api_last_time'},
+    {id: 'stepTotal', key: '8', label: 'api_test.automation.step'},
+    {id: 'lastResult', key: 'a', label: 'api_test.automation.last_result'},
+    {id: 'passRate', key: 'b', label: 'api_test.automation.passing_rate'},
+    {id: 'createTime', key: 'c', label: 'commons.create_time'},
+  ],
   //用例评审
   TEST_CASE_REVIEW: [
     {id: 'name', key: '1', label: 'test_track.review.review_name'},
@@ -232,6 +249,62 @@ export let CUSTOM_TABLE_HEADER = {
     {id: 'description', key: '7', label: 'test_track.issue.description'},
     {id: 'caseCount', key: '9', label: 'api_test.definition.api_case_number'},
     {id: 'createTime', key: '8', label: 'commons.create_time'},
+  ],
+
+  //缺陷列表
+  ELEMENT_LIST: [
+    {id: 'num', key: '1', label: 'ID'},
+    {id: 'name', key: '2', label: '元素名称'},
+    {id: 'locationType', key: '3', label: '定位类型'},
+    {id: 'location', key: '4', label: '元素定位'},
+    {id: 'createUser', key: '5', label: '创建人'},
+    {id: 'createTime', key: '6', label: 'commons.create_time'},
+    {id: 'updateTime', key: '7', label: 'commons.update_time'},
+  ],
+
+  //空间配额
+  QUOTA_WS_LIST: [
+    {id: 'workspaceName', key: 'a', label: 'commons.workspace'},
+    {id: 'api', key: 'b', label: 'quota.api'},
+    {id: 'performance', key: 'c', label: 'quota.performance'},
+    {id: 'maxThreads', key: 'd', label: 'quota.max_threads'},
+    {id: 'duration', key: 'e', label: 'quota.duration'},
+    {id: 'resourcePool', key: 'f', label: 'quota.resource_pool'},
+    {id: 'useDefault', key: 'j', label: 'quota.use_default'},
+    {id: 'vumTotal', key: 'h', label: 'quota.vum_total'},
+    {id: 'vumUsed', key: 'i', label: 'quota.vum_used'},
+    {id: 'member', key: 'g', label: 'quota.member'},
+    {id: 'project', key: 'k', label: 'quota.project'},
+  ],
+
+  //项目配额
+  QUOTA_PJ_LIST: [
+    {id: 'projectName', key: 'a', label: 'commons.project'},
+    {id: 'api', key: 'b', label: 'quota.api'},
+    {id: 'performance', key: 'c', label: 'quota.performance'},
+    {id: 'maxThreads', key: 'd', label: 'quota.max_threads'},
+    {id: 'duration', key: 'e', label: 'quota.duration'},
+    {id: 'resourcePool', key: 'f', label: 'quota.resource_pool'},
+    {id: 'useDefault', key: 'j', label: 'quota.use_default'},
+    {id: 'vumTotal', key: 'h', label: 'quota.vum_total'},
+    {id: 'vumUsed', key: 'i', label: 'quota.vum_used'},
+    {id: 'member', key: 'g', label: 'quota.member'},
+  ],
+
+  // 测试报告列表
+  PERFORMANCE_REPORT_TABLE: [
+    {id: 'testName', key: 'a', label: 'report.test_name'},
+    {id: 'name', key: 'b', label: 'commons.name'},
+    {id: 'versionId', key: 'c', label: 'project.version.name'},
+    {id: 'userName', key: 'd', label: 'report.user_name'},
+    {id: 'maxUsers', key: 'e', label: 'report.max_users'},
+    {id: 'avgResponseTime', key: 'f', label: 'report.response_time'},
+    {id: 'tps', key: 'g', label: 'TPS'},
+    {id: 'testStartTime', key: 'h', label: 'report.test_start_time'},
+    {id: 'testEndTime', key: 'i', label: 'report.test_end_time'},
+    {id: 'testDuration', key: 'j', label: 'report.test_execute_time'},
+    {id: 'triggerMode', key: 'k', label: 'test_track.report.list.trigger_mode'},
+    {id: 'status', key: 'l', label: 'commons.status'},
   ]
 
 }

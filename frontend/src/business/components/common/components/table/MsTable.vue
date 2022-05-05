@@ -6,7 +6,7 @@
         v-loading="tableIsLoading"
         :data="data"
         :default-sort="defaultSort"
-        :class="{'ms-select-all-fixed': showSelectAll}"
+        :class="{'ms-select-all-fixed': showSelectAll, 'row-click': rowClickStyle}"
         :height="screenHeight"
         :row-key="rowKey"
         :row-class-name="tableRowClassName"
@@ -75,7 +75,7 @@
 
       <el-table-column
         v-if="operators && operators.length > 0"
-        fixed="right"
+        :fixed="operatorFixed"
         :min-width="operatorWidth"
         :label="$t('commons.operating')">
         <template slot="header">
@@ -226,6 +226,13 @@ export default {
         return "150px";
       }
     },
+    // 操作列的宽度
+    operatorFixed: {
+      type: [String, Boolean],
+      default() {
+        return "right";
+      }
+    },
     //开启全选
     enableSelection: {
       type: Boolean,
@@ -237,6 +244,13 @@ export default {
       type: Boolean,
       default() {
         return true;
+      }
+    },
+    // 添加鼠标移入小手样式
+    rowClickStyle: {
+      type: Boolean,
+      default() {
+        return false;
       }
     },
     tableIsLoading:{
@@ -293,7 +307,9 @@ export default {
     initData(){
       //初始化数据是否显示提示块
       if(this.data && this.data.length > 0){
-        this.data[0].showBatchTip = true;
+        this.$nextTick(() => {
+          this.data[0].showBatchTip = true;
+        });
       }
     },
     // 批量操作提示, 第一次勾选提示, 之后不提示
@@ -505,6 +521,18 @@ export default {
 </script>
 
 <style scoped>
+.el-table{
+  overflow: auto;
+}
+.el-table__header-wrapper,.el-table__body-wrapper,.el-table__footer-wrapper{overflow:visible;}
+.el-table__body-wrapper{
+  overflow-x:visible !important;
+}
+/* 这个是为了解决前面样式覆盖之后伪类带出来的竖线 */
+.el-table::after{
+  position: relative;
+}
+
 .batch-popper {
   top: 300px;
   color: #1FDD02;
@@ -553,6 +581,10 @@ export default {
 
 .disable-hover >>> tr:hover>td{
   background-color: #ffffff !important;
+}
+
+.row-click {
+  cursor:pointer;
 }
 
 </style>

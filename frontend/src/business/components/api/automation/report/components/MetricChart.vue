@@ -11,10 +11,10 @@
 
           <div v-if="isExport">
              <span class="ms-req ms-req-error" v-if="content.error && content.error>0">
-                <span class="ms-req-span"> {{ content.success + content.error }} 请求</span>
+                <span class="ms-req-span"> {{ content.success + content.error }}  {{isUi ? '指令' :  $t('api_report.request')}}</span>
            </span>
             <span class="ms-req ms-req-success" v-else>
-                <span class="ms-req-span">  {{ content.success ? content.success + content.error : 0 }} 请求</span>
+                <span class="ms-req-span">  {{ content.success ? content.success + content.error : 0 }}  {{isUi ? '指令' :  $t('api_report.request')}}</span>
            </span>
           </div>
           <ms-chart id="chart" ref="chart" :options="options" :height="220" style="margin-right: 10px"
@@ -81,8 +81,8 @@
             <div class="value">{{ content.scenarioErrorReport ? content.scenarioErrorReport : 0 }}</div>
             <div class="name">{{ $t('error_report_library.option.name') }}</div>
           </div>
-          <span class="ms-point-unexecute"/>
-          <div class="metric-box">
+          <span v-show="showUnExecuteReport" class="ms-point-unexecute"/>
+          <div v-show="showUnExecuteReport" class="metric-box">
             <div class="value">{{ content.scenarioUnExecute ? content.scenarioUnExecute : 0 }}</div>
             <div class="name">{{ $t('api_test.home_page.detail_card.unexecute') }}</div>
           </div>
@@ -111,8 +111,8 @@
               <div class="value">{{ content.scenarioStepErrorReport ? content.scenarioStepErrorReport : 0 }}</div>
               <div class="name">{{ $t('error_report_library.option.name') }}</div>
             </div>
-            <span class="ms-point-unexecute" />
-            <div class="metric-box">
+            <span v-show="showUnExecuteReport" class="ms-point-unexecute" />
+            <div v-show="showUnExecuteReport" class="metric-box">
               <div class="value">{{
                   content.scenarioStepUnExecuteReport ? content.scenarioStepUnExecuteReport : 0
                 }}
@@ -141,10 +141,10 @@
             <div class="value">{{ errorCodeAssertions }}</div>
             <div class="name">{{ $t('error_report_library.assertion') }}</div>
           </div>
-          <div class="metric-icon-box">
+          <div class="metric-icon-box" v-if="!isUi">
             <i class="el-icon-document-copy total"></i>
             <div class="value">{{ this.content.total }}</div>
-            <div class="name">{{ $t('api_report.request') }}</div>
+            <div class="name">{{ isUi ? '指令' : $t('api_report.request') }}</div>
           </div>
         </el-row>
       </div>
@@ -217,7 +217,7 @@ export default {
         },
         title: [{
           text: (this.content.success + this.content.error  + this.content.errorCode + this.content.unExecute),
-          subtext: this.$t('api_report.request'),
+          subtext: this.isUi ? '指令' : this.$t('api_report.request'),
           top: 'center',
           left: 'center',
           textStyle: {
@@ -263,7 +263,6 @@ export default {
         ]
       };
     },
-
     fail() {
       return (this.content.error / this.content.total * 100).toFixed(0) + "%";
     },
@@ -272,6 +271,13 @@ export default {
     },
     errorCodeAssertions() {
       return this.content.errorCode + " / " + this.content.totalAssertions;
+    },
+    isUi() {
+      return this.report.reportType && this.report.reportType.startsWith("UI");
+    },
+    showUnExecuteReport() {
+      return (this.content.scenarioStepUnExecuteReport && this.content.scenarioStepUnExecuteReport > 0)
+        || (this.content.scenarioUnExecute && this.content.scenarioUnExecute > 0);
     }
   },
 }

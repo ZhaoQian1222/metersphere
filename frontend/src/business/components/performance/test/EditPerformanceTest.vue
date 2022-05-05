@@ -184,6 +184,10 @@ export default {
     if (hasLicense()) {
       this.getVersionHistory();
     }
+    this.$EventBus.$on('projectChange', this.handleProjectChange);
+  },
+  destroyed () {
+    this.$EventBus.$off('projectChange', this.handleProjectChange);
   },
   mounted() {
     this.importAPITest();
@@ -309,6 +313,9 @@ export default {
     },
     save(newVersion) {
       if (!this.validTest()) {
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
+        }
         return;
       }
       if (!this.test.versionId) {
@@ -326,6 +333,10 @@ export default {
             path: '/performance/test/edit/' + response.data.id,
           });
           this.getVersionHistory();
+        }
+      }, error => {
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
         }
       });
     },
@@ -561,10 +572,12 @@ export default {
     },
     compare(row) {
       this.oldData = this.test;
+      this.oldData.createTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === this.test.versionId)[0].createTime;
       this.$get('/performance/get/' + row.id + "/" + this.test.refId, response => {
         this.$get('/performance/get/' + response.data.id, res => {
           if (res.data) {
             this.newData = res.data;
+            this.newData.createTime = row.createTime;
             this.$get('/performance/test/follow/' + response.data.id, resp => {
               if (resp.data && resp.data.follows) {
                 for (let i = 0; i < resp.data.follows.length; i++) {
@@ -610,7 +623,12 @@ export default {
           }
         }
       });
-    }
+    },
+    handleProjectChange() {
+      if (this.$route.name === 'editPerTest') {
+        this.$router.push('/performance/test/all');
+      }
+    },
   }
 };
 </script>

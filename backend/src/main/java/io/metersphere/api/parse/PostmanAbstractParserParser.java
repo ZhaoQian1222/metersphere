@@ -39,6 +39,7 @@ public abstract class PostmanAbstractParserParser<T> extends ApiImportAbstractPa
         } else {
             request.setPath("/");
         }
+        request.getBody().setType("KeyValue");
         parseBody(request.getBody(), requestDesc);
         request.setArguments(parseKeyValue(url == null ? new ArrayList<>() : url.getQuery()));
         request.setHeaders(parseKeyValue(requestDesc.getHeader()));
@@ -93,7 +94,7 @@ public abstract class PostmanAbstractParserParser<T> extends ApiImportAbstractPa
             if (StringUtils.isNotBlank(scriptStr)) {
                 MsJSR223PreProcessor jsr223PreProcessor = new MsJSR223PreProcessor();
                 jsr223PreProcessor.setName("JSR223PreProcessor");
-                jsr223PreProcessor.setScriptLanguage("nashornScript");
+                jsr223PreProcessor.setScriptLanguage("rhino");
                 jsr223PreProcessor.setScript(parseVariable(scriptStr.toString()));
                 LinkedList<MsTestElement> hashTree = new LinkedList<>();
                 hashTree.add(jsr223PreProcessor);
@@ -104,7 +105,7 @@ public abstract class PostmanAbstractParserParser<T> extends ApiImportAbstractPa
 
     private List<KeyValue> parseKeyValue(List<PostmanKeyValue> postmanKeyValues) {
         if (postmanKeyValues == null) {
-            return null;
+            return new ArrayList<>();
         }
         List<KeyValue> keyValues = new ArrayList<>();
         postmanKeyValues.forEach(item -> {

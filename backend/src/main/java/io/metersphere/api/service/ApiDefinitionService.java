@@ -2,6 +2,7 @@ package io.metersphere.api.service;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.metersphere.api.dto.APIReportResult;
@@ -51,7 +52,9 @@ import io.metersphere.service.*;
 import io.metersphere.track.request.testcase.ApiCaseRelevanceRequest;
 import io.metersphere.track.request.testcase.QueryTestPlanRequest;
 import io.metersphere.track.service.TestPlanService;
+import org.apache.commons.beanutils.BeanComparator;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.comparators.FixedOrderComparator;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
@@ -116,6 +119,10 @@ public class ApiDefinitionService {
     private NoticeSendService noticeSendService;
     @Resource
     private ExtApiTestCaseMapper extApiTestCaseMapper;
+    @Resource
+    private MockConfigMapper mockConfigMapper;
+    @Resource
+    private MockExpectConfigMapper mockExpectConfigMapper;
     @Resource
     private RelationshipEdgeService relationshipEdgeService;
     @Resource
@@ -208,20 +215,20 @@ public class ApiDefinitionService {
         Map<String, Map<String, List<ApiDefinition>>> projectIdMap = new HashMap<>();
         for (ApiDefinition api : updateApiList) {
             String projectId = api.getProjectId();
-            String protocal = api.getProtocol();
+            String protocol = api.getProtocol();
             if (projectIdMap.containsKey(projectId)) {
-                if (projectIdMap.get(projectId).containsKey(protocal)) {
-                    projectIdMap.get(projectId).get(protocal).add(api);
+                if (projectIdMap.get(projectId).containsKey(protocol)) {
+                    projectIdMap.get(projectId).get(protocol).add(api);
                 } else {
                     List<ApiDefinition> list = new ArrayList<>();
                     list.add(api);
-                    projectIdMap.get(projectId).put(protocal, list);
+                    projectIdMap.get(projectId).put(protocol, list);
                 }
             } else {
                 List<ApiDefinition> list = new ArrayList<>();
                 list.add(api);
                 Map<String, List<ApiDefinition>> map = new HashMap<>();
-                map.put(protocal, list);
+                map.put(protocol, list);
                 projectIdMap.put(projectId, map);
             }
         }
@@ -231,8 +238,8 @@ public class ApiDefinitionService {
             Map<String, List<ApiDefinition>> map = entry.getValue();
 
             for (Map.Entry<String, List<ApiDefinition>> itemEntry : map.entrySet()) {
-                String protocal = itemEntry.getKey();
-                ApiModule node = apiModuleService.getDefaultNodeUnCreateNew(projectId, protocal);
+                String protocol = itemEntry.getKey();
+                ApiModule node = apiModuleService.getDefaultNodeUnCreateNew(projectId, protocol);
                 if (node != null) {
                     List<ApiDefinition> testCaseList = itemEntry.getValue();
                     for (ApiDefinition apiDefinition : testCaseList) {
@@ -255,6 +262,12 @@ public class ApiDefinitionService {
             return new ArrayList<>();
         }
         List<ApiDefinitionResult> resList = extApiDefinitionMapper.listByIds(request.getIds());
+        // 排序
+        FixedOrderComparator<String> fixedOrderComparator = new FixedOrderComparator<String>(request.getIds());
+        fixedOrderComparator.setUnknownObjectBehavior(FixedOrderComparator.UnknownObjectBehavior.BEFORE);
+        BeanComparator beanComparator = new BeanComparator("id", fixedOrderComparator);
+        Collections.sort(resList, beanComparator);
+
         calculateResult(resList, request.getProjectId());
         return resList;
     }
@@ -263,12 +276,12 @@ public class ApiDefinitionService {
      * 初始化部分参数
      *
      * @param request
-     * @param setDefultOrders
+     * @param defaultSorting
      * @param checkThisWeekData
      * @return
      */
-    private ApiDefinitionRequest initRequest(ApiDefinitionRequest request, boolean setDefultOrders, boolean checkThisWeekData) {
-        if (setDefultOrders) {
+    private ApiDefinitionRequest initRequest(ApiDefinitionRequest request, boolean defaultSorting, boolean checkThisWeekData) {
+        if (defaultSorting) {
             request.setOrders(ServiceUtils.getDefaultSortOrder(request.getOrders()));
         }
         if (checkThisWeekData) {
@@ -303,7 +316,7 @@ public class ApiDefinitionService {
     }
 
     public ApiDefinitionWithBLOBs create(SaveApiDefinitionRequest request, List<MultipartFile> bodyFiles) {
-        checkQuota();
+        checkQuota(request.getProjectId());
         if (StringUtils.equals(request.getProtocol(), "DUBBO")) {
             request.setMethod("dubbo://");
         }
@@ -318,7 +331,6 @@ public class ApiDefinitionService {
     }
 
     public ApiDefinitionWithBLOBs update(SaveApiDefinitionRequest request, List<MultipartFile> bodyFiles) {
-        checkQuota();
         if (request.getRequest() != null) {
             deleteFileByTestId(request.getRequest().getId());
         }
@@ -333,10 +345,10 @@ public class ApiDefinitionService {
         return getBLOBs(returnModel.getId());
     }
 
-    public void checkQuota() {
+    public void checkQuota(String projectId) {
         QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
         if (quotaService != null) {
-            quotaService.checkAPIDefinitionQuota();
+            quotaService.checkAPIDefinitionQuota(projectId);
         }
     }
 
@@ -612,30 +624,10 @@ public class ApiDefinitionService {
             test.setCreateUser(SessionUtils.getUserId());
             test.setOrder(oldApi.getOrder());
             test.setRefId(oldApi.getRefId());
-            // 创建新版是否关联备注
-            if (!request.isNewVersionRemark()) {
-                test.setRemark(null);
-            }
+            // 保存扩展信息
+            saveExtendInfo(request, test, oldApi);
+
             apiDefinitionMapper.insertSelective(test);
-
-            // 创建新版是否关联依赖关系
-            if (request.isNewVersionDeps()) {
-                List<RelationshipEdgeDTO> pre = this.getRelationshipApi(oldApi.getId(), "PRE");
-                List<String> targetIds = pre.stream().map(RelationshipEdgeKey::getTargetId).collect(Collectors.toList());
-                RelationshipEdgeRequest req = new RelationshipEdgeRequest();
-                req.setTargetIds(targetIds);
-                req.setType("API");
-                req.setId(test.getId());
-                relationshipEdgeService.saveBatch(req);
-
-                List<RelationshipEdgeDTO> post = this.getRelationshipApi(oldApi.getId(), "POST");
-                List<String> sourceIds = post.stream().map(RelationshipEdgeKey::getSourceId).collect(Collectors.toList());
-                RelationshipEdgeRequest req2 = new RelationshipEdgeRequest();
-                req2.setSourceIds(sourceIds);
-                req2.setType("API");
-                req2.setId(test.getId());
-                relationshipEdgeService.saveBatch(req2);
-            }
         }
 
         // 同步修改用例路径
@@ -648,6 +640,58 @@ public class ApiDefinitionService {
         ApiDefinitionWithBLOBs result = apiDefinitionMapper.selectByPrimaryKey(test.getId());
         checkAndSetLatestVersion(result.getRefId());
         return result;
+    }
+
+    private void saveExtendInfo(SaveApiDefinitionRequest request, ApiDefinitionWithBLOBs test, ApiDefinitionWithBLOBs oldApi) {
+        // 创建新版是否关联备注
+        if (!request.isNewVersionRemark()) {
+            test.setRemark(null);
+        }
+        if (request.isNewVersionCase()) {
+            test.setCaseTotal(oldApi.getCaseTotal());
+            extApiTestCaseMapper.insertNewVersionCases(test, oldApi);
+        }
+        if (request.isNewVersionMock()) {
+            MockConfigExample mockConfigExample = new MockConfigExample();
+            mockConfigExample.createCriteria().andApiIdEqualTo(oldApi.getId());
+            List<MockConfig> mockConfigs = mockConfigMapper.selectByExample(mockConfigExample);
+            mockConfigs.forEach(config -> {
+                String newMockConfigId = UUID.randomUUID().toString();
+                // 1
+                MockExpectConfigExample expectConfigExample = new MockExpectConfigExample();
+                expectConfigExample.createCriteria().andMockConfigIdEqualTo(config.getId());
+                List<MockExpectConfigWithBLOBs> mockExpectConfigWithBLOBs = mockExpectConfigMapper.selectByExampleWithBLOBs(expectConfigExample);
+                mockExpectConfigWithBLOBs.forEach(expectConfig -> {
+                    expectConfig.setId(UUID.randomUUID().toString());
+                    expectConfig.setMockConfigId(newMockConfigId);
+                    mockExpectConfigMapper.insert(expectConfig);
+                });
+
+                // 2
+                config.setId(newMockConfigId);
+                config.setApiId(test.getId());
+                mockConfigMapper.insert(config);
+            });
+        }
+
+        // 创建新版是否关联依赖关系
+        if (request.isNewVersionDeps()) {
+            List<RelationshipEdgeDTO> pre = this.getRelationshipApi(oldApi.getId(), "PRE");
+            List<String> targetIds = pre.stream().map(RelationshipEdgeKey::getTargetId).collect(Collectors.toList());
+            RelationshipEdgeRequest req = new RelationshipEdgeRequest();
+            req.setTargetIds(targetIds);
+            req.setType("API");
+            req.setId(test.getId());
+            relationshipEdgeService.saveBatch(req);
+
+            List<RelationshipEdgeDTO> post = this.getRelationshipApi(oldApi.getId(), "POST");
+            List<String> sourceIds = post.stream().map(RelationshipEdgeKey::getSourceId).collect(Collectors.toList());
+            RelationshipEdgeRequest req2 = new RelationshipEdgeRequest();
+            req2.setSourceIds(sourceIds);
+            req2.setType("API");
+            req2.setId(test.getId());
+            relationshipEdgeService.saveBatch(req2);
+        }
     }
 
     /**
@@ -1067,7 +1111,7 @@ public class ApiDefinitionService {
                     CollectionUtils.isNotEmpty(request.getTestElement().getHashTree()) &&
                     CollectionUtils.isNotEmpty(request.getTestElement().getHashTree().get(0).getHashTree()) ?
                     request.getTestElement().getHashTree().get(0).getHashTree().get(0).getName() : request.getId();
-            ApiDefinitionExecResult result = ApiDefinitionExecResultUtil.add(testId, APITestStatus.Running.name(), request.getId());
+            ApiDefinitionExecResult result = ApiDefinitionExecResultUtil.add(testId, APITestStatus.Running.name(), request.getId(), Objects.requireNonNull(SessionUtils.getUser()).getId());
             result.setProjectId(request.getProjectId());
             result.setTriggerMode(TriggerMode.MANUAL.name());
             apiDefinitionExecResultMapper.insert(result);
@@ -1167,7 +1211,6 @@ public class ApiDefinitionService {
                         .context(context)
                         .testId(scheduleId)
                         .subject(Translator.get("swagger_url_scheduled_import_notification"))
-                        .failedMailTemplate("SwaggerImportFaild")
                         .paramMap(paramMap)
                         .event(NoticeConstants.Event.IMPORT)
                         .build();
@@ -1193,7 +1236,6 @@ public class ApiDefinitionService {
                         .context(context)
                         .testId(scheduleId)
                         .subject(Translator.get("swagger_url_scheduled_import_notification"))
-                        .successMailTemplate("SwaggerImport")
                         .paramMap(paramMap)
                         .event(NoticeConstants.Event.EXECUTE_SUCCESSFUL)
                         .build();
@@ -1663,14 +1705,12 @@ public class ApiDefinitionService {
     }
 
     public List<ApiDefinitionWithBLOBs> preparedUrl(String projectId, String method, String baseUrlSuffix) {
-
         if (StringUtils.isEmpty(baseUrlSuffix)) {
             return new ArrayList<>();
         } else {
             ApiDefinitionExample example = new ApiDefinitionExample();
             example.createCriteria().andMethodEqualTo(method).andProjectIdEqualTo(projectId).andStatusNotEqualTo("Trash").andProtocolEqualTo("HTTP");
             List<ApiDefinition> apiList = apiDefinitionMapper.selectByExample(example);
-
             List<String> apiIdList = new ArrayList<>();
             boolean urlSuffixEndEmpty = false;
             String urlSuffix = baseUrlSuffix;
@@ -1934,7 +1974,7 @@ public class ApiDefinitionService {
         ApiDefinitionWithBLOBs bloBs = apiDefinitionMapper.selectByPrimaryKey(id);
         List<DocumentElement> elements = new LinkedList<>();
         if (bloBs != null && StringUtils.isNotEmpty(bloBs.getResponse())) {
-            JSONObject object = JSON.parseObject(bloBs.getResponse());
+            JSONObject object = JSON.parseObject(bloBs.getResponse(), Feature.DisableSpecialKeyDetect);
             JSONObject body = (JSONObject) object.get("body");
             if (body != null) {
                 String raw = body.getString("raw");

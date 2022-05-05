@@ -234,11 +234,13 @@ public class ApiScenarioModuleService extends NodeTreeService<ApiScenarioModuleD
             ApiScenarioModuleExample.Criteria criteria = example.createCriteria();
             criteria.andNameEqualTo(node.getName())
                     .andProjectIdEqualTo(node.getProjectId());
+
             if (StringUtils.isNotBlank(node.getParentId())) {
                 criteria.andParentIdEqualTo(node.getParentId());
             } else {
-                criteria.andParentIdIsNull();
+                criteria.andLevelEqualTo(node.getLevel());
             }
+
             if (StringUtils.isNotBlank(node.getId())) {
                 criteria.andIdNotEqualTo(node.getId());
             }
@@ -321,12 +323,9 @@ public class ApiScenarioModuleService extends NodeTreeService<ApiScenarioModuleD
         ApiScenarioModuleExample example = new ApiScenarioModuleExample();
         ApiScenarioModuleExample.Criteria criteria = example.createCriteria();
         criteria.andNameEqualTo(node.getName())
-                .andProjectIdEqualTo(node.getProjectId());
-        if (StringUtils.isNotBlank(node.getParentId())) {
-            criteria.andParentIdEqualTo(node.getParentId());
-        } else {
-            criteria.andParentIdIsNull();
-        }
+                .andProjectIdEqualTo(node.getProjectId())
+                .andLevelEqualTo(node.getLevel());
+
         if (StringUtils.isNotBlank(node.getId())) {
             criteria.andIdNotEqualTo(node.getId());
         }

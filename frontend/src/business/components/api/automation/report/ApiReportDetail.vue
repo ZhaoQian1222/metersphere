@@ -1,24 +1,31 @@
 <template>
   <ms-container v-loading="loading">
-    <ms-main-container>
+    <ms-main-container class="api-report-content">
       <el-card>
         <section class="report-container" v-if="this.report.testId">
           <ms-api-report-view-header :show-cancel-button="showCancelButton" :is-plan="isPlan" :is-template="isTemplate"
                                      :debug="debug" :report="report" @reportExport="handleExport"
                                      @reportSave="handleSave"/>
           <main v-if="isNotRunning">
+
             <ms-metric-chart :content="content" :totalTime="totalTime" :report="report"/>
+
             <div>
               <el-tabs v-model="activeName" @tab-click="handleClick">
                 <el-tab-pane :label="$t('api_report.total')" name="total">
-                  <ms-scenario-results :treeData="fullTreeNodes" :console="content.console"
-                                       v-on:requestResult="requestResult" ref="resultsTree"/>
+                  <ms-scenario-results :treeData="fullTreeNodes"
+                                       :console="content.console"
+                                       :report="report"
+                                       v-on:requestResult="requestResult"
+                                       ref="resultsTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="fail">
                   <template slot="label">
                     <span class="fail">{{ $t('api_report.fail') }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :console="content.console"
+                                       :report="report"
                                        :treeData="fullTreeNodes" ref="failsTree"
                                        :errorReport="content.error"/>
                 </el-tab-pane>
@@ -26,14 +33,18 @@
                   <template slot="label">
                     <span class="fail" style="color: #F6972A">{{ $t('error_report_library.option.name') }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :report="report"
+                                       :console="content.console"
                                        :treeData="fullTreeNodes" ref="errorReportTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="unExecute" v-if="content.unExecute > 0">
                   <template slot="label">
                     <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
                   </template>
-                  <ms-scenario-results v-on:requestResult="requestResult" :console="content.console"
+                  <ms-scenario-results v-on:requestResult="requestResult"
+                                       :report="report"
+                                       :console="content.console"
                                        :treeData="fullTreeNodes" ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
@@ -332,8 +343,12 @@ export default {
       this.init();
       if (this.isTemplate) {
         // 测试计划报告导出
-        this.report = this.templateReport;
-        this.buildReport();
+        if(this.templateReport){
+          this.handleGetScenarioReport(this.templateReport);
+        }else {
+          this.report = this.templateReport;
+          this.buildReport();
+        }
       } else if (this.isShare) {
         getShareScenarioReport(this.shareId, this.reportId, (data) => {
           this.checkReport(data);
@@ -480,14 +495,14 @@ export default {
     },
     handleExport() {
       if (this.report.reportVersion && this.report.reportVersion > 1) {
-        if (this.report.reportType === 'API_INTEGRATED') {
+        if (this.report.reportType === 'API_INTEGRATED' || this.report.reportType === 'UI_INTEGRATED') {
           let scenario = {name: "", requestResults: []};
           this.content.scenarios = [scenario];
           this.formatExportApi(this.fullTreeNodes, scenario);
         } else {
           if (this.fullTreeNodes) {
             this.fullTreeNodes.forEach(item => {
-              if (item.type === "scenario") {
+              if (item.type === "scenario" || item.type === "UiScenario") {
                 let scenario = {name: item.label, requestResults: []};
                 if (this.content.scenarios && this.content.scenarios.length > 0) {
                   this.content.scenarios.push(scenario);
@@ -525,13 +540,19 @@ export default {
     },
     exportReportReset() {
       this.$router.go(0);
-    }
+    },
+    handleProjectChange() {
+      this.$router.push('/api/automation/report');
+    },
   },
 
   created() {
     this.getReport();
+    this.$EventBus.$on('projectChange', this.handleProjectChange);
   },
-
+  destroyed () {
+    this.$EventBus.$off('projectChange', this.handleProjectChange);
+  },
   computed: {
     path() {
       return "/api/test/edit?id=" + this.report.testId;
@@ -541,6 +562,9 @@ export default {
     },
     projectId() {
       return getCurrentProjectID();
+    },
+    isUi() {
+      return this.report.reportType && this.report.reportType.startsWith("UI");
     },
   }
 }

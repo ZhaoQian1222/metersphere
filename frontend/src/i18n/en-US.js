@@ -36,7 +36,7 @@ export default {
     close_schedule: 'Close Schedule',
     open_schedule: 'Start Schedule',
     schedule_switch: 'Schedule Switch',
-    schedule_cron_title: 'Schedule Time Expression',
+    schedule_cron_title: 'Cron Expression',
     review_complete: 'Review Completed',
     examples: 'examples',
     help_documentation: 'Help',
@@ -45,8 +45,8 @@ export default {
     delete_cancelled: 'Delete cancelled',
     option_cannot_spread_pages: 'This options not support spread pages.Do you want continue?',
     workspace: 'Workspace',
-    space:'Space',
-    current_workspace:"Current Workspace",
+    space: 'Space',
+    current_workspace: "Current Workspace",
     organization: 'Organization',
     setting: 'Setting',
     project: 'Project',
@@ -74,6 +74,7 @@ export default {
     actuator: 'Actuator',
     confirm_info: 'Not saved, are you sure to close?',
     prompt: 'Prompt',
+    task_center_remark: 'The debugging history only shows the last five pieces of data',
     operating: 'Operating',
     input_limit: 'Within {0} and {1} characters',
     login: 'Sign In',
@@ -418,6 +419,7 @@ export default {
     open_source_version: "OPEN-SOURCE",
     function_planning: "The function is being planned...",
     enterprise_edition_tips: "This is an enterprise edition feature, <a href='https://metersphere.io/enterprise.html' target='_blank'>please consult for details</a>",
+    ui_edition_tips: "UI automation is an enterprise version function, you can apply for a trial on the official website",
     system_data: "System Data",
     system_user: "User",
     system_workspace: "Workspace",
@@ -442,6 +444,7 @@ export default {
     delete_current_version: 'Current version',
     delete_all_version: 'All versions',
     change_password_tips: 'Your password is the initial system password, please change it as soon as possible',
+    ui: 'UI TEST',
     git_repository: 'Git Repository',
     repositoryUrl: 'Git Repository Url',
     repositoryName: 'Git Repository Name',
@@ -464,6 +467,7 @@ export default {
     status: 'Valid State',
     valid: 'Valid',
     invalid: 'invalid',
+    count_warning: 'The number of system users has exceeded the license limit. Please contact the staff as soon as possible.',
     expired: 'expired',
   },
   workstation: {
@@ -608,6 +612,8 @@ export default {
       env_list: "Environment List",
       confirm: "Confirm",
       please_select_env_for_current_scenario: "please select env for current scenario",
+      please_select_env_for_current_plan: "please select env for current plan",
+      please_select_run_within_resource_pool: "Please select a resource pool",
       lack_env: "Environment group is missing environment！",
       lack_necessary_environment: "This environment group lacks the necessary project environment！",
       available_group: 'available',
@@ -2158,6 +2164,7 @@ export default {
       plan_status_running: "Starting",
       plan_status_finished: "Finished",
       plan_status_completed: "Completed",
+      plan_status_archived: "Archived",
       plan_status_trash: "Trashed",
       planned_start_time: "Start Time",
       planned_end_time: "End Time",
@@ -2473,6 +2480,7 @@ export default {
     SMTP_port: 'SMTP port',
     SMTP_account: 'SMTP account',
     SMTP_password: 'SMTP password',
+    SMTP_from: 'From',
     SSL: 'Turn on SSL (if the SMTP port is 465, you usually need to enable SSL)',
     TLS: 'Turn on TLS (if the SMTP port is 587, you usually need to enable TLS)',
     SMTP: 'Anonymous SMTP or not',
@@ -2481,7 +2489,7 @@ export default {
     account: 'Account cannot be empty',
     test_recipients: 'Test recipients',
     tip: 'Tip: use as test mail recipient only',
-
+    from_tip: 'Note: It must be the mailbox verified by the mail server, otherwise it is sent by SMTP account by default'
   },
   i18n: {
     home: 'Home',
@@ -2576,13 +2584,13 @@ export default {
   },
   quota: {
     default: {
-      organization: "Organization Default Quota",
+      project: "Project Default Quota",
       workspace: "Workspace Default Quota",
     },
     api: "Number of interface tests",
     performance: "Number of performance tests",
     resource_pool: "Available test resource pool",
-    max_threads: "Maximum Concurrency",
+    max_threads: "Same Period Maximum Concurrency",
     duration: "Stress test duration(seconds)",
     use_default: "Default Quota",
     yes: "Yes",
@@ -2593,6 +2601,11 @@ export default {
     edit_quota_title: "{0} quota",
     workspace_quota_list: "Workspace quota list of {0}",
     unlimited: "Unlimited",
+    member: "Member",
+    project: "Project",
+    vum_total: "Total vum",
+    vum_used: "Used vum",
+    vum_tip: "vum (thread * duration): a concurrent user consumes 1 vum for one minute",
     clean: "Clean"
   },
   schema: {
@@ -2868,6 +2881,11 @@ export default {
       read: "READ",
       edit: "EDIT",
     },
+    workspace_quota: {
+      name: "Quota",
+      read: "READ",
+      edit: "EDIT"
+    },
     project_message: {
       name: "Message",
       read: "READ",
@@ -3047,11 +3065,43 @@ export default {
       create_performance_batch: "BATCH CREATE PERFORMANCE",
       batch_copy: "BATCH COPY",
     },
+    project_ui_scenario: {
+      name: "Scenario",
+      read: "READ",
+      create: "CREATE",
+      edit: "EDIT",
+      delete: "DELETE",
+      copy: "COPY",
+      run: "RUN",
+      debug: "DEBUG",
+      schedule: "SCHEDULE",
+      import: "IMPORT",
+      export: "EXPORT",
+      move_batch: "MOVE BATCH",
+      create_performance: "CREATE PERFORMANCE",
+      create_performance_batch: "BATCH CREATE PERFORMANCE",
+      batch_copy: "BATCH COPY",
+      open_url_content: "According to the URL, open the specified operation page"
+    },
     project_api_report: {
       name: "Report",
       read: "READ",
       delete: "DELETE",
       export: "EXPORT",
+    },
+    project_ui_report: {
+      name: "Report",
+      read: "READ",
+      delete: "DELETE",
+      share: "SHARE",
+    },
+    project_ui_element: {
+      name: "Element",
+      read: "READ",
+      create: "CREATE",
+      edit: "EDIT",
+      delete: "DELETE",
+      copy: "COPY",
     },
     project_performance_test: {
       name: "Test",
@@ -3102,6 +3152,7 @@ export default {
     other: {
       track: "Track",
       api: "API",
+      ui: "UI",
       performance: "Performance",
       project: "Project",
       report: "Report Statistics"
@@ -3123,6 +3174,8 @@ export default {
     tips:"Tips: Use error report in \"Project Settings - Project environment-Assertions\"",
     use_error_report: "Use error code",
     use_desc: "In case of conflict between error code and error assertions, it is treated as error code",
+    conflict_with_success: "If request has error report and success assertion：",
+    conflict_with_error: "If request has error report and error assertion：",
     option: {
       name: "Err code",
       error_code: "Name",
@@ -3135,5 +3188,10 @@ export default {
     match_type: {
       text: "TXT"
     }
+  },
+  ui: {
+    ui_automation: "UI Automation",
+    ui_element: "UI Element Library",
+    report: "Test Report",
   }
 };

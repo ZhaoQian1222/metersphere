@@ -3,10 +3,13 @@ package io.metersphere.api.dto.definition.parse;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import io.metersphere.api.dto.ApiTestImportRequest;
 import io.metersphere.api.dto.definition.ApiModuleDTO;
 import io.metersphere.api.dto.definition.SwaggerApiExportResult;
-import io.metersphere.api.dto.definition.parse.swagger.*;
+import io.metersphere.api.dto.definition.parse.swagger.SwaggerApiInfo;
+import io.metersphere.api.dto.definition.parse.swagger.SwaggerInfo;
+import io.metersphere.api.dto.definition.parse.swagger.SwaggerParams;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
 import io.metersphere.api.dto.definition.request.variable.JsonSchemaItem;
 import io.metersphere.api.dto.definition.response.HttpResponse;
@@ -33,6 +36,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpMethod;
+
 import java.io.InputStream;
 import java.util.*;
 
@@ -491,7 +495,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             return null;
         }
 
-        if (schema.getExample() != null) {
+         if (schema.getExample() != null) {
             item.getMock().put("mock", schema.getExample());
         } else {
             item.getMock().put("mock", "");
@@ -507,6 +511,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         Map<String, JsonSchemaItem> JsonSchemaProperties = new LinkedHashMap<>();
         properties.forEach((key, value) -> {
             JsonSchemaItem item = new JsonSchemaItem();
+            item.setType(schema.getType());
             item.setDescription(schema.getDescription());
             JsonSchemaItem proItem = parseSchema(value, refSet);
             if (proItem != null) JsonSchemaProperties.put(key, proItem);
@@ -594,17 +599,17 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             }
             swaggerApiInfo.setTags(Arrays.asList(moduleName));
             //  设置请求体
-            JSONObject requestObject = JSON.parseObject(apiDefinition.getRequest());    //  将api的request属性转换成JSON对象以便获得参数
+            JSONObject requestObject = JSON.parseObject(apiDefinition.getRequest(), Feature.DisableSpecialKeyDetect);    //  将api的request属性转换成JSON对象以便获得参数
             JSONObject requestBody = buildRequestBody(requestObject);
             swaggerApiInfo.setRequestBody(requestBody);
             //  设置响应体
-            JSONObject responseObject = JSON.parseObject(apiDefinition.getResponse());
+            JSONObject responseObject = JSON.parseObject(apiDefinition.getResponse(),Feature.DisableSpecialKeyDetect);
             swaggerApiInfo.setResponses(buildResponseBody(responseObject));
             //  设置请求参数列表
             List<JSONObject> paramsList = buildParameters(requestObject);
             swaggerApiInfo.setParameters(paramsList);
             swaggerApiInfo.setDescription(apiDefinition.getDescription());
-            JSONObject methodDetail = JSON.parseObject(JSON.toJSONString(swaggerApiInfo));
+            JSONObject methodDetail = JSON.parseObject(JSON.toJSONString(swaggerApiInfo),Feature.DisableSpecialKeyDetect);
             if (paths.getJSONObject(apiDefinition.getPath()) == null) {
                 paths.put(apiDefinition.getPath(), new JSONObject());
             }   //  一个路径下有多个发方法，如post，get，因此是一个 JSONObject 类型
@@ -644,7 +649,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
 //                        schema.put("example", param.getString("value"));
 //                        swaggerParam.setSchema(schema);
 //                    }
-                    paramsList.add(JSON.parseObject(JSON.toJSONString(swaggerParam)));
+                    paramsList.add(JSON.parseObject(JSON.toJSONString(swaggerParam),Feature.DisableSpecialKeyDetect));
                 }
             }
         }
@@ -735,11 +740,11 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             } else if (StringUtils.equals(type, "object")) {
                 parsedParam.put("type", "object");
                 JSONObject properties = requestBody.getJSONObject("properties");
-
+                JSONObject jsonObject = buildFormDataSchema(properties);
                 if (StringUtils.isNotBlank(requestBody.getString("description"))) {
                     parsedParam.put("description", requestBody.getString("description"));
                 }
-                parsedParam.put("properties", properties);
+                parsedParam.put("properties", jsonObject.getJSONObject("properties"));
             } else if (StringUtils.equals(type, "integer")) {
                 parsedParam.put("type", "integer");
                 parsedParam.put("format", "int64");
@@ -824,9 +829,23 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             JSONObject obj = ((JSONObject) kvs.get(key));
             property.put("type", StringUtils.isNotEmpty(obj.getString("type")) ? obj.getString("type") : "string");
             String value = obj.getString("value");
-            property.put("example", value);
+            if (StringUtils.isBlank(value)) {
+                JSONObject mock = obj.getJSONObject("mock");
+                if (mock != null) {
+                    Object mockValue = mock.get("mock");
+                    property.put("example", mockValue);
+                } else {
+                    property.put("example", value);
+                }
+            } else {
+                property.put("example", value);
+            }
             property.put("description", obj.getString("description"));
             property.put("required", obj.getString("required"));
+            if (obj.getJSONObject("properties") != null) {
+                JSONObject properties1 = buildFormDataSchema(obj.getJSONObject("properties"));
+                property.put("properties",properties1.getJSONObject("properties"));
+            }
             properties.put(key, property);
         }
         schema.put("properties", properties);

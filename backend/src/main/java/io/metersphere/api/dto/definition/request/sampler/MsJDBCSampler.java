@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.annotation.JSONType;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,12 +78,17 @@ public class MsJDBCSampler extends MsTestElement {
     @JSONField(ordinal = 31)
     private boolean customizeReq;
 
+    @JSONField(ordinal = 32)
+    private Boolean isRefEnvironment;
+
     @Override
     public void toHashTree(HashTree tree, List<MsTestElement> hashTree, MsParameter msParameter) {
         ParameterConfig config = (ParameterConfig) msParameter;
         // 非导出操作，且不是启用状态则跳过执行
         if (config != null && !config.isOperating() && !this.isEnable()) {
             return;
+        } else if (config.isOperating() && StringUtils.isNotEmpty(config.getOperatingSampleTestName())) {
+            this.setName(config.getOperatingSampleTestName());
         }
         if (this.getReferenced() != null && MsTestElementConstants.REF.name().equals(this.getReferenced())) {
             boolean ref = this.setRefElement();
@@ -118,38 +124,37 @@ public class MsJDBCSampler extends MsTestElement {
                 }
             }
         }
+
         EnvironmentConfig envConfig = null;
-        // 自选了数据源
-        if (config.isEffective(this.getProjectId()) && CollectionUtils.isNotEmpty(config.getConfig().get(this.getProjectId()).getDatabaseConfigs())
-                && isDataSource(config.getConfig().get(this.getProjectId()).getDatabaseConfigs())) {
-            EnvironmentConfig environmentConfig = config.getConfig().get(this.getProjectId());
-            if(environmentConfig.getDatabaseConfigs() != null && StringUtils.isNotEmpty(environmentConfig.getApiEnvironmentid())){
-                this.environmentId = environmentConfig.getApiEnvironmentid();
-            }
+        // 自定义请求非引用环境取自身环境
+        if (StringUtils.equalsIgnoreCase(this.getReferenced(), "Created") && (isRefEnvironment == null || !isRefEnvironment)) {
             this.dataSource = null;
             envConfig = this.initDataSource();
         } else {
-            // 取当前环境下默认的一个数据源
-            if (config.isEffective(this.getProjectId())) {
-                if (config.getConfig().get(this.getProjectId()) != null) {
-                    envConfig = config.getConfig().get(this.getProjectId());
-                    if (CollectionUtils.isNotEmpty(envConfig.getDatabaseConfigs())) {
-                        this.dataSource = envConfig.getDatabaseConfigs().get(0);
+            if (config.isEffective(this.getProjectId()) && CollectionUtils.isNotEmpty(config.getConfig().get(this.getProjectId()).getDatabaseConfigs())
+                    && isDataSource(config.getConfig().get(this.getProjectId()).getDatabaseConfigs())) {
+                EnvironmentConfig environmentConfig = config.getConfig().get(this.getProjectId());
+                if (environmentConfig.getDatabaseConfigs() != null && StringUtils.isNotEmpty(environmentConfig.getApiEnvironmentid())) {
+                    this.environmentId = environmentConfig.getApiEnvironmentid();
+                }
+                this.dataSource = null;
+                envConfig = this.initDataSource();
+            } else {
+                // 取当前环境下默认的一个数据源
+                if (config.isEffective(this.getProjectId())) {
+                    if (config.getConfig().get(this.getProjectId()) != null) {
+                        envConfig = config.getConfig().get(this.getProjectId());
+                        if (CollectionUtils.isNotEmpty(envConfig.getDatabaseConfigs())) {
+                            this.dataSource = envConfig.getDatabaseConfigs().get(0);
+                        }
                     }
                 }
             }
         }
 
         if (this.dataSource == null) {
-            // 用自身的数据
-            if (StringUtils.isNotEmpty(dataSourceId)) {
-                this.dataSource = null;
-                envConfig = this.initDataSource();
-            }
-            if (this.dataSource == null) {
-                String message = "数据源为空请选择数据源";
-                MSException.throwException(StringUtils.isNotEmpty(this.getName()) ? this.getName() + "：" + message : message);
-            }
+            String message = "数据源为空请选择数据源";
+            MSException.throwException(StringUtils.isNotEmpty(this.getName()) ? this.getName() + "：" + message : message);
         }
         final HashTree samplerHashTree = tree.add(jdbcSampler(config));
         tree.add(jdbcDataSource());
@@ -240,7 +245,7 @@ public class MsJDBCSampler extends MsTestElement {
                 if (bloBs != null) {
                     this.setName(bloBs.getName());
                     this.setProjectId(bloBs.getProjectId());
-                    JSONObject element = JSON.parseObject(bloBs.getRequest());
+                    JSONObject element = JSON.parseObject(bloBs.getRequest(), Feature.DisableSpecialKeyDetect);
                     ElementUtil.dataFormatting(element);
                     proxy = mapper.readValue(element.toJSONString(), new TypeReference<MsJDBCSampler>() {
                     });

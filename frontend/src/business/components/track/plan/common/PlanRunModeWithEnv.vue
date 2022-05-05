@@ -75,7 +75,19 @@
       </el-row>
     </div>
     <template v-slot:footer>
-      <ms-dialog-footer @cancel="close" @confirm="handleRunBatch"/>
+      <div class="dialog-footer" v-if="showSave">
+        <el-button @click="close" >{{$t('commons.cancel')}}</el-button>
+        <el-dropdown @command="handleCommand"  style="margin-left: 5px">
+          <el-button type="primary" >
+            {{$t('load_test.save_and_run')}}<i class="el-icon-arrow-down el-icon--right"></i>
+          </el-button>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="run">{{$t('load_test.save_and_run')}}</el-dropdown-item>
+            <el-dropdown-item command="save">{{$t('commons.save')}}</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </div>
+      <ms-dialog-footer v-else @cancel="close" @confirm="handleRunBatch"/>
     </template>
   </el-dialog>
 </template>
@@ -107,9 +119,27 @@ export default {
       projectEnvListMap: {},
       projectList: [],
       projectIds: new Set(),
+      options: [{
+        value: 'confirmAndRun',
+        label: this.$t('load_test.save_and_run')
+      }, {
+        value: 'save',
+        label: this.$t('commons.save')
+      }],
+      value: 'confirmAndRun'
     };
   },
-  props: ['planCaseIds', 'type', 'planId'],
+  props: {
+    planCaseIds: {
+      type: Array,
+    },
+    type: String,
+    planId: String,
+    showSave: {
+      type: Boolean,
+      default: false
+    },
+  },
   methods: {
     open(testType) {
       this.runModeVisible = true;
@@ -180,6 +210,19 @@ export default {
         }
         this.$refs.envPopover.openEnvSelect();
       });
+    },
+    handleCommand(command){
+      if (this.runConfig.runWithinResourcePool && this.runConfig.resourcePoolId == null) {
+        this.$warning(this.$t('workspace.env_group.please_select_run_within_resource_pool'));
+        return;
+      }
+      if (command === 'run') {
+        this.runConfig.isRun = true
+        this.handleRunBatch();
+      } else {
+        this.runConfig.isRun = false
+        this.handleRunBatch();
+      }
     }
   },
 };

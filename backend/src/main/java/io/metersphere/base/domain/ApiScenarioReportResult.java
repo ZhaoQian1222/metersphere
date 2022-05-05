@@ -23,7 +23,5 @@ public class ApiScenarioReportResult implements Serializable {
 
     private String errorCode;
 
-    private byte[] content;
-
     private static final long serialVersionUID = 1L;
 }

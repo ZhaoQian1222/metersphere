@@ -2,6 +2,7 @@ package io.metersphere.api.exec.scenario;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.parser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,13 +17,9 @@ import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
 import io.metersphere.api.dto.scenario.environment.EnvironmentConfig;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
 import io.metersphere.api.service.ApiDefinitionService;
-import io.metersphere.api.service.ApiTestCaseService;
 import io.metersphere.api.service.ApiTestEnvironmentService;
 import io.metersphere.base.domain.*;
-import io.metersphere.base.mapper.ApiScenarioMapper;
-import io.metersphere.base.mapper.ApiTestEnvironmentMapper;
-import io.metersphere.base.mapper.ProjectMapper;
-import io.metersphere.base.mapper.TestPlanApiScenarioMapper;
+import io.metersphere.base.mapper.*;
 import io.metersphere.commons.constants.ApiRunMode;
 import io.metersphere.commons.constants.MsTestElementConstants;
 import io.metersphere.commons.exception.MSException;
@@ -38,14 +35,16 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class ApiScenarioEnvService {
     @Resource
     private ApiDefinitionService apiDefinitionService;
-    @Resource
-    private ApiTestCaseService apiTestCaseService;
     @Resource
     private ApiScenarioMapper apiScenarioMapper;
     @Resource
@@ -57,164 +56,103 @@ public class ApiScenarioEnvService {
     @Resource
     private TestPlanApiScenarioMapper testPlanApiScenarioMapper;
     @Resource
+    private ApiTestCaseMapper apiTestCaseMapper;
+    @Resource
     private ObjectMapper mapper;
 
     public ScenarioEnv getApiScenarioEnv(String definition) {
         ScenarioEnv env = new ScenarioEnv();
+        if (StringUtils.isEmpty(definition)) {
+            return env;
+        }
         List<MsTestElement> hashTree = GenerateHashTreeUtil.getScenarioHashTree(definition);
-        for (int i = 0; i < hashTree.size(); i++) {
-            MsTestElement tr = hashTree.get(i);
-            if (!tr.isEnable()) {
-                continue;
-            }
-            String referenced = tr.getReferenced();
-            if (StringUtils.equals(MsTestElementConstants.REF.name(), referenced)) {
-                if (StringUtils.equals(tr.getType(), "HTTPSamplerProxy")) {
-                    MsHTTPSamplerProxy http = (MsHTTPSamplerProxy) tr;
-                    String refType = tr.getRefType();
-                    if (StringUtils.equals(refType, "CASE")) {
-                        http.setUrl(null);
-                    } else {
-                        ApiDefinition apiDefinition = apiDefinitionService.get(tr.getId());
-                        if (apiDefinition != null) {
-                            http.setUrl(apiDefinition.getPath());
-                        }
-                    }
-                    if (http.isEnable()) {
-                        if (StringUtils.isBlank(http.getUrl()) || (http.getIsRefEnvironment() != null && http.getIsRefEnvironment())) {
-                            env.getProjectIds().add(http.getProjectId());
-                            env.setFullUrl(false);
-                        }
-                    }
-                } else if (StringUtils.equals(tr.getType(), "JDBCSampler") || StringUtils.equals(tr.getType(), "TCPSampler")) {
-                    if (StringUtils.equals(tr.getRefType(), "CASE")) {
-                        ApiTestCaseWithBLOBs apiTestCaseWithBLOBs = apiTestCaseService.get(tr.getId());
-                        if (apiTestCaseWithBLOBs != null) {
-                            env.getProjectIds().add(apiTestCaseWithBLOBs.getProjectId());
-                            env.setFullUrl(false);
-                        }
-                    } else {
-                        ApiDefinition apiDefinition = apiDefinitionService.get(tr.getId());
-                        if (apiDefinition != null) {
-                            env.getProjectIds().add(apiDefinition.getProjectId());
-                            env.setFullUrl(false);
-                        }
-                    }
-                } else if (StringUtils.equals(tr.getType(), "scenario")) {
-                    if (tr.isEnable()) {
-                        ApiScenarioWithBLOBs apiScenario = apiScenarioMapper.selectByPrimaryKey(tr.getId());
-                        if (apiScenario != null) {
-                            env.getProjectIds().add(apiScenario.getProjectId());
-                            String scenarioDefinition = apiScenario.getScenarioDefinition();
-                            tr.setHashTree(GenerateHashTreeUtil.getScenarioHashTree(scenarioDefinition));
-                        }
-                    }
-                }
-            } else {
-                if (StringUtils.equals(tr.getType(), "HTTPSamplerProxy")) {
-                    // 校验是否是全路径
-                    MsHTTPSamplerProxy httpSamplerProxy = (MsHTTPSamplerProxy) tr;
-                    if (httpSamplerProxy.isEnable()) {
-                        if (StringUtils.isBlank(httpSamplerProxy.getUrl()) || (httpSamplerProxy.getIsRefEnvironment() != null && httpSamplerProxy.getIsRefEnvironment())) {
-                            env.getProjectIds().add(httpSamplerProxy.getProjectId());
-                            env.setFullUrl(false);
-                        }
-                    }
-                } else if (StringUtils.equals(tr.getType(), "JDBCSampler") || StringUtils.equals(tr.getType(), "TCPSampler")) {
-                    env.getProjectIds().add(tr.getProjectId());
-                    env.setFullUrl(false);
-                }
-            }
-            if (StringUtils.equals(tr.getType(), "scenario")) {
-                MsScenario scenario = (MsScenario) tr;
-                if (scenario.isEnvironmentEnable()) {
-                    continue;
-                }
-                env.getProjectIds().add(tr.getProjectId());
-            }
-            if (CollectionUtils.isNotEmpty(tr.getHashTree())) {
-                getHashTree(tr.getHashTree(), env);
+        if (CollectionUtils.isNotEmpty(hashTree)) {
+            // 过滤掉禁用的步骤
+            hashTree = hashTree.stream().filter(item -> item.isEnable()).collect(Collectors.toList());
+        }
+        for (MsTestElement testElement : hashTree) {
+            this.formatElement(testElement, env);
+            if (CollectionUtils.isNotEmpty(testElement.getHashTree())) {
+                getHashTree(testElement.getHashTree(), env);
             }
         }
         return env;
     }
 
+
     private void getHashTree(List<MsTestElement> tree, ScenarioEnv env) {
         try {
-            for (int i = 0; i < tree.size(); i++) {
-                MsTestElement tr = tree.get(i);
-                if (!tr.isEnable()) {
-                    continue;
+            // 过滤掉禁用的步骤
+            tree = tree.stream().filter(item -> item.isEnable()).collect(Collectors.toList());
+            for (MsTestElement element : tree) {
+                this.formatElement(element, env);
+                if (CollectionUtils.isNotEmpty(element.getHashTree())) {
+                    getHashTree(element.getHashTree(), env);
                 }
-                String referenced = tr.getReferenced();
-                if (StringUtils.equals(MsTestElementConstants.REF.name(), referenced)) {
-                    if (StringUtils.equals(tr.getType(), "HTTPSamplerProxy")) {
-                        MsHTTPSamplerProxy http = (MsHTTPSamplerProxy) tr;
-                        String refType = tr.getRefType();
-                        if (StringUtils.equals(refType, "CASE")) {
-                            http.setUrl(null);
-                        } else {
-                            ApiDefinition apiDefinition = apiDefinitionService.get(tr.getId());
-                            http.setUrl(apiDefinition.getPath());
-                        }
-                        if (http.isEnable()) {
-                            if (StringUtils.isBlank(http.getUrl()) || (http.getIsRefEnvironment() != null && http.getIsRefEnvironment())) {
-                                env.setFullUrl(false);
-                                env.getProjectIds().add(http.getProjectId());
-                            }
-                        }
-                    } else if (StringUtils.equals(tr.getType(), "JDBCSampler") || StringUtils.equals(tr.getType(), "TCPSampler")) {
-                        if (StringUtils.equals(tr.getRefType(), "CASE")) {
-                            ApiTestCaseWithBLOBs apiTestCaseWithBLOBs = apiTestCaseService.get(tr.getId());
-                            env.getProjectIds().add(apiTestCaseWithBLOBs.getProjectId());
+            }
+        } catch (Exception e) {
+            LogUtil.error(e);
+        }
+    }
+
+    private void formatElement(MsTestElement testElement, ScenarioEnv env) {
+        if (StringUtils.equals(MsTestElementConstants.REF.name(), testElement.getReferenced())) {
+            if (StringUtils.equals(testElement.getType(), "HTTPSamplerProxy")) {
+                MsHTTPSamplerProxy http = (MsHTTPSamplerProxy) testElement;
+                // 引用用例URL清空
+                http.setUrl(StringUtils.equals(testElement.getRefType(), "CASE") ? null : http.getUrl());
+
+                // 非全路径校验
+                if (!StringUtils.equalsIgnoreCase(http.getReferenced(), "Created") || (http.getIsRefEnvironment() != null &&
+                        http.getIsRefEnvironment())) {
+                    env.getProjectIds().add(http.getProjectId());
+                    env.setFullUrl(false);
+                }
+            } else if (StringUtils.equals(testElement.getType(), "JDBCSampler") || StringUtils.equals(testElement.getType(), "TCPSampler")) {
+                if (StringUtils.isEmpty(testElement.getProjectId())) {
+                    if (StringUtils.equals(testElement.getRefType(), "CASE")) {
+                        ApiTestCase testCase = apiTestCaseMapper.selectByPrimaryKey(testElement.getId());
+                        if (testCase != null) {
+                            env.getProjectIds().add(testCase.getProjectId());
                             env.setFullUrl(false);
-                        } else {
-                            ApiDefinition apiDefinition = apiDefinitionService.get(tr.getId());
+                        }
+                    } else {
+                        ApiDefinition apiDefinition = apiDefinitionService.get(testElement.getId());
+                        if (apiDefinition != null) {
                             env.getProjectIds().add(apiDefinition.getProjectId());
                             env.setFullUrl(false);
                         }
-                    } else if (StringUtils.equals(tr.getType(), "scenario")) {
-                        if (tr.isEnable()) {
-                            ApiScenarioWithBLOBs apiScenario = apiScenarioMapper.selectByPrimaryKey(tr.getId());
-                            if (apiScenario != null) {
-                                env.getProjectIds().add(apiScenario.getProjectId());
-                                String scenarioDefinition = apiScenario.getScenarioDefinition();
-                                JSONObject element1 = JSON.parseObject(scenarioDefinition);
-                                ElementUtil.dataFormatting(element1);
-                                LinkedList<MsTestElement> hashTree1 = mapper.readValue(element1.getString("hashTree"), new TypeReference<LinkedList<MsTestElement>>() {
-                                });
-                                tr.setHashTree(hashTree1);
-                            }
-                        }
                     }
                 } else {
-                    if (StringUtils.equals(tr.getType(), "HTTPSamplerProxy")) {
-                        // 校验是否是全路径
-                        MsHTTPSamplerProxy httpSamplerProxy = (MsHTTPSamplerProxy) tr;
-                        if (httpSamplerProxy.isEnable()) {
-                            if (StringUtils.isBlank(httpSamplerProxy.getUrl()) || !ElementUtil.isURL(httpSamplerProxy.getUrl())) {
-                                env.setFullUrl(false);
-                                env.getProjectIds().add(httpSamplerProxy.getProjectId());
-                            }
-                        }
-                    } else if (StringUtils.equals(tr.getType(), "JDBCSampler") || StringUtils.equals(tr.getType(), "TCPSampler")) {
-                        env.getProjectIds().add(tr.getProjectId());
-                        env.setFullUrl(false);
-                    }
+                    env.getProjectIds().add(testElement.getProjectId());
+                    env.setFullUrl(false);
                 }
-                if (StringUtils.equals(tr.getType(), "scenario")) {
-                    MsScenario scenario = (MsScenario) tr;
-                    if (scenario.isEnvironmentEnable()) {
-                        continue;
-                    }
-                    env.getProjectIds().add(tr.getProjectId());
-                }
-                if (CollectionUtils.isNotEmpty(tr.getHashTree())) {
-                    getHashTree(tr.getHashTree(), env);
+            } else if (StringUtils.equals(testElement.getType(), "scenario") && StringUtils.isEmpty(testElement.getProjectId())) {
+                ApiScenarioWithBLOBs apiScenario = apiScenarioMapper.selectByPrimaryKey(testElement.getId());
+                if (apiScenario != null) {
+                    env.getProjectIds().add(apiScenario.getProjectId());
+                    String scenarioDefinition = apiScenario.getScenarioDefinition();
+                    JSONObject element = JSON.parseObject(scenarioDefinition, Feature.DisableSpecialKeyDetect);
+                    ElementUtil.dataFormatting(element);
+                    testElement.setHashTree(GenerateHashTreeUtil.getScenarioHashTree(scenarioDefinition));
                 }
             }
-        } catch (JsonProcessingException e) {
-            LogUtil.error(e);
+        } else {
+            if (StringUtils.equals(testElement.getType(), "HTTPSamplerProxy")) {
+                // 校验是否是全路径
+                MsHTTPSamplerProxy httpSamplerProxy = (MsHTTPSamplerProxy) testElement;
+                if (!StringUtils.equalsIgnoreCase(httpSamplerProxy.getReferenced(), "Created") || (httpSamplerProxy.getIsRefEnvironment() != null &&
+                        httpSamplerProxy.getIsRefEnvironment())) {
+                    env.getProjectIds().add(httpSamplerProxy.getProjectId());
+                    env.setFullUrl(false);
+                }
+            } else if (StringUtils.equals(testElement.getType(), "JDBCSampler") || StringUtils.equals(testElement.getType(), "TCPSampler")) {
+                env.getProjectIds().add(testElement.getProjectId());
+                env.setFullUrl(false);
+            }
+        }
+        if (StringUtils.equals(testElement.getType(), "scenario") && !((MsScenario) testElement).isEnvironmentEnable()) {
+            env.getProjectIds().add(testElement.getProjectId());
         }
     }
 
@@ -234,7 +172,7 @@ public class ApiScenarioEnvService {
             environmentType = EnvironmentType.JSON.toString();
         }
         String definition = apiScenarioWithBLOBs.getScenarioDefinition();
-        MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class);
+        MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class, Feature.DisableSpecialKeyDetect);
         GenerateHashTreeUtil.parse(definition, scenario);
         // 添加csv版本控制台打印信息
         try {
@@ -262,7 +200,7 @@ public class ApiScenarioEnvService {
         boolean isEnv = true;
         if (apiScenarioWithBLOBs != null) {
             String definition = apiScenarioWithBLOBs.getScenarioDefinition();
-            MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class);
+            MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class, Feature.DisableSpecialKeyDetect);
             Map<String, String> envMap = scenario.getEnvironmentMap();
             if (testPlanApiScenarios != null) {
                 String envType = testPlanApiScenarios.getEnvironmentType();

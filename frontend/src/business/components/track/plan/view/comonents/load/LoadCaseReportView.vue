@@ -1,7 +1,8 @@
 <template>
   <ms-container>
-    <ms-main-container>
+    <el-main>
       <el-card v-loading="result.loading" v-if="show">
+
         <el-row v-if="isShare">
           <el-col :span="24">
             <div>
@@ -21,6 +22,7 @@
             </div>
           </el-col>
         </el-row>
+
         <el-row v-else>
           <el-col :span="16">
             <el-row v-if="!isPlanReport">
@@ -47,16 +49,23 @@
           </el-col>
           <el-col :span="8">
             <span class="ms-report-time-desc">
-              {{ $t('report.test_duration', [minutes, seconds]) }}
+              {{ $t('report.test_duration', [ templateMinutes ? templateMinutes : minutes,
+                                              templateSeconds ? templateSeconds : seconds]) }}
             </span>
             <span class="ms-report-time-desc" v-if="startTime !== '0'">
               {{ $t('report.test_start_time') }}：{{ startTime | timestampFormatDate }}
+            </span>
+            <span class="ms-report-time-desc" v-else-if="planReportTemplate && planReportTemplate.startTime">
+              {{ $t('report.test_start_time') }}：{{ planReportTemplate.startTime | timestampFormatDate }}
             </span>
             <span class="ms-report-time-desc" v-else>
               {{ $t('report.test_start_time') }}：-
             </span>
             <span class="ms-report-time-desc" v-if="report.status === 'Completed' && endTime !== '0'">
               {{ $t('report.test_end_time') }}：{{ endTime | timestampFormatDate }}
+            </span>
+            <span class="ms-report-time-desc" v-else-if="planReportTemplate && planReportTemplate.endTime">
+              {{ $t('report.test_end_time') }}：{{ planReportTemplate.endTime | timestampFormatDate }}
             </span>
             <span class="ms-report-time-desc" v-else>
               {{ $t('report.test_end_time') }}：-
@@ -114,7 +123,7 @@
           </el-button>
         </div>
       </el-dialog>
-    </ms-main-container>
+    </el-main>
   </ms-container>
 </template>
 
@@ -193,6 +202,22 @@ export default {
   watch: {
     reportId() {
       this.init();
+    }
+  },
+  computed: {
+    templateMinutes() {
+      if (this.planReportTemplate && this.planReportTemplate.duration) {
+        let duration = this.planReportTemplate.duration;
+        return Math.floor(duration / 60);
+      }
+      return null;
+    },
+    templateSeconds() {
+      if (this.planReportTemplate && this.planReportTemplate.duration) {
+        let duration = this.planReportTemplate.duration;
+        return duration % 60;
+      }
+      return null;
     }
   },
   methods: {

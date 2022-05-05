@@ -121,6 +121,7 @@
             :apiId="request.id"
             :response="response"
             :tab-type="'pre'"
+            :scenarioId="scenarioId"
             ref="preStep"
             v-if="activeName === 'preOperate'"
           />
@@ -137,6 +138,7 @@
             :apiId="request.id"
             :response="response"
             :tab-type="'post'"
+            :scenarioId="scenarioId"
             ref="postStep"
             v-if="activeName === 'postOperate'"
           />
@@ -151,6 +153,7 @@
           <ms-jmx-step
             :request="request"
             :apiId="request.id"
+            :scenarioId="scenarioId"
             :response="response"
             @reload="reloadBody"
             :tab-type="'assertionsRule'"
@@ -207,6 +210,7 @@ export default {
         return false;
       }
     },
+    scenarioId: String,
     showScript: {
       type: Boolean,
       default: true,
@@ -426,12 +430,12 @@ export default {
         let keyValues = [];
         params.forEach(item => {
           let line = item.split(/：|:/);
+          let values = item.split(line[0] + ":");
           let required = false;
           keyValues.unshift(new KeyValue({
             name: line[0],
             required: required,
-            value: line[1],
-            description: line[2],
+            value: values[1],
             type: "text",
             valid: false,
             file: false,
