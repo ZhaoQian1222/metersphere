@@ -5,6 +5,7 @@ import io.metersphere.api.dto.automation.TaskRequest;
 import io.metersphere.api.exec.queue.ExecThreadPoolExecutor;
 import io.metersphere.api.exec.queue.PoolExecBlockingQueueUtil;
 import io.metersphere.api.jmeter.JMeterService;
+import io.metersphere.api.jmeter.JmeterThreadUtils;
 import io.metersphere.api.service.ApiExecutionQueueService;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.ApiDefinitionExecResultMapper;
@@ -22,6 +23,7 @@ import io.metersphere.performance.service.PerformanceTestService;
 import io.metersphere.service.CheckPermissionService;
 import io.metersphere.task.dto.TaskCenterDTO;
 import io.metersphere.task.dto.TaskCenterRequest;
+import io.metersphere.utils.LoggerUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -101,124 +103,165 @@ public class TaskService {
 
     public void send(Map<String, List<String>> poolMap) {
         try {
-            for (String poolId : poolMap.keySet()) {
-                TestResourcePoolExample example = new TestResourcePoolExample();
-                example.createCriteria().andStatusEqualTo("VALID").andTypeEqualTo("NODE").andIdEqualTo(poolId);
-                List<TestResourcePool> pools = testResourcePoolMapper.selectByExample(example);
-                if (CollectionUtils.isNotEmpty(pools)) {
-                    List<String> poolIds = pools.stream().map(pool -> pool.getId()).collect(Collectors.toList());
-                    TestResourceExample resourceExample = new TestResourceExample();
-                    resourceExample.createCriteria().andTestResourcePoolIdIn(poolIds);
-                    List<TestResource> testResources = testResourceMapper.selectByExampleWithBLOBs(resourceExample);
-                    for (TestResource testResource : testResources) {
-                        String configuration = testResource.getConfiguration();
-                        NodeDTO node = JSON.parseObject(configuration, NodeDTO.class);
-                        String nodeIp = node.getIp();
-                        Integer port = node.getPort();
-                        String uri = String.format(JMeterService.BASE_URL + "/jmeter/stop", nodeIp, port);
-                        restTemplate.postForEntity(uri, poolMap.get(poolId), void.class);
+            LoggerUtil.info("结束所有NODE中执行的资源");
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Thread.currentThread().setName("STOP-NODE");
+                    for (String poolId : poolMap.keySet()) {
+                        TestResourcePoolExample example = new TestResourcePoolExample();
+                        example.createCriteria().andStatusEqualTo("VALID").andTypeEqualTo("NODE").andIdEqualTo(poolId);
+                        List<TestResourcePool> pools = testResourcePoolMapper.selectByExample(example);
+                        if (CollectionUtils.isNotEmpty(pools)) {
+                            List<String> poolIds = pools.stream().map(pool -> pool.getId()).collect(Collectors.toList());
+                            TestResourceExample resourceExample = new TestResourceExample();
+                            resourceExample.createCriteria().andTestResourcePoolIdIn(poolIds);
+                            List<TestResource> testResources = testResourceMapper.selectByExampleWithBLOBs(resourceExample);
+                            for (TestResource testResource : testResources) {
+                                String configuration = testResource.getConfiguration();
+                                NodeDTO node = JSON.parseObject(configuration, NodeDTO.class);
+                                String nodeIp = node.getIp();
+                                Integer port = node.getPort();
+                                String uri = String.format(JMeterService.BASE_URL + "/jmeter/stop", nodeIp, port);
+                                restTemplate.postForEntity(uri, poolMap.get(poolId), void.class);
+                            }
+                        }
                     }
                 }
-            }
+            });
+            thread.start();
         } catch (Exception e) {
             LogUtil.error(e.getMessage());
         }
     }
 
-    public String stop(List<TaskRequest> reportIds) {
-        if (CollectionUtils.isNotEmpty(reportIds)) {
+    public String stop(List<TaskRequest> taskRequests) {
+        if (CollectionUtils.isNotEmpty(taskRequests)) {
+            List<TaskRequest> stopTasks = taskRequests.stream().filter(s -> StringUtils.isNotEmpty(s.getReportId())).collect(Collectors.toList());
             // 聚类，同一批资源池的一批发送
             Map<String, List<String>> poolMap = new HashMap<>();
-            for (TaskRequest request : reportIds) {
-                String actuator = null;
-                if (StringUtils.isNotEmpty(request.getReportId())) {
-                    // 从队列移除
-                    execThreadPoolExecutor.removeQueue(request.getReportId());
-                    apiExecutionQueueService.stop(request.getReportId());
-                    PoolExecBlockingQueueUtil.offer(request.getReportId());
-                    if (StringUtils.equals(request.getType(), "API")) {
-                        ApiDefinitionExecResult result = apiDefinitionExecResultMapper.selectByPrimaryKey(request.getReportId());
-                        if (result != null) {
-                            result.setStatus("STOP");
-                            apiDefinitionExecResultMapper.updateByPrimaryKeySelective(result);
-                            actuator = result.getActuator();
-                        }
-                    } else if (StringUtils.equals(request.getType(), "SCENARIO")) {
-                        ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(request.getReportId());
-                        if (report != null) {
-                            report.setStatus("STOP");
-                            apiScenarioReportMapper.updateByPrimaryKeySelective(report);
-                            actuator = report.getActuator();
-                        }
-                    } else if (StringUtils.equals(request.getType(), "PERFORMANCE")) {
-                        performanceTestService.stopTest(request.getReportId(), false);
+            // 单条停止
+            if (CollectionUtils.isNotEmpty(stopTasks) && stopTasks.size() == 1) {
+                // 从队列移除
+                TaskRequest request = stopTasks.get(0);
+                execThreadPoolExecutor.removeQueue(request.getReportId());
+                apiExecutionQueueService.stop(request.getReportId());
+                PoolExecBlockingQueueUtil.offer(request.getReportId());
+                if (StringUtils.equals(request.getType(), "API")) {
+                    ApiDefinitionExecResult result = apiDefinitionExecResultMapper.selectByPrimaryKey(request.getReportId());
+                    if (result != null) {
+                        result.setStatus("STOP");
+                        apiDefinitionExecResultMapper.updateByPrimaryKeySelective(result);
+                        extracted(poolMap, request.getReportId(), result.getActuator());
                     }
-                    extracted(poolMap, request, actuator);
-                } else {
-                    if (StringUtils.equals(request.getType(), "API")) {
-                        List<ApiDefinitionExecResult> result = extApiDefinitionExecResultMapper.selectApiResultByProjectId(request.getProjectId());
-                        if (CollectionUtils.isNotEmpty(result)) {
-                            for (ApiDefinitionExecResult item : result) {
-                                item.setStatus("STOP");
-                                apiDefinitionExecResultMapper.updateByPrimaryKeySelective(item);
-                                actuator = item.getActuator();
-                                request.setReportId(item.getId());
-                                extracted(poolMap, request, actuator);
+                }
+                if (StringUtils.equals(request.getType(), "SCENARIO")) {
+                    ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(request.getReportId());
+                    if (report != null) {
+                        report.setStatus("STOP");
+                        apiScenarioReportMapper.updateByPrimaryKeySelective(report);
+                        extracted(poolMap, request.getReportId(), report.getActuator());
+                    }
+                }
+                if (StringUtils.equals(request.getType(), "PERFORMANCE")) {
+                    performanceTestService.stopTest(request.getReportId(), false);
+                }
+
+            } else {
+                try {
+                    LoggerUtil.info("进入批量停止方法");
+                    // 全部停止
+                    Map<String, TaskRequest> taskRequestMap = taskRequests.stream().collect(Collectors.toMap(TaskRequest::getType, taskRequest -> taskRequest));
+                    // 获取工作空间项目
+                    LoggerUtil.info("获取工作空间对应的项目");
+                    TaskCenterRequest taskCenterRequest = new TaskCenterRequest();
+                    taskCenterRequest.setProjects(this.getOwnerProjectIds(taskRequestMap.get("SCENARIO").getUserId()));
+
+                    // 结束掉未分发完成的任务
+                    LoggerUtil.info("结束正在进行中的计划任务队列");
+                    JmeterThreadUtils.stop("PLAN-CASE");
+                    JmeterThreadUtils.stop("API-CASE-RUN");
+                    JmeterThreadUtils.stop("SCENARIO-PARALLEL-THREAD");
+
+                    if (taskRequestMap.containsKey("API")) {
+                        List<ApiDefinitionExecResult> results = extApiDefinitionExecResultMapper.findByProjectIds(taskCenterRequest);
+                        LoggerUtil.info("查询API进行中的报告：" + results.size());
+                        if (CollectionUtils.isNotEmpty(results)) {
+                            for (ApiDefinitionExecResult item : results) {
+                                extracted(poolMap, item.getId(), item.getActuator());
                                 // 从队列移除
                                 execThreadPoolExecutor.removeQueue(item.getId());
-                                apiExecutionQueueService.stop(item.getId());
                                 PoolExecBlockingQueueUtil.offer(item.getId());
                             }
+                            LoggerUtil.info("结束API进行中的报告");
+                            extTaskMapper.stopApi(taskCenterRequest);
+                            // 清理队列并停止测试计划报告
+                            LoggerUtil.info("清理API执行链");
+                            List<String> ids = results.stream().map(ApiDefinitionExecResult::getId).collect(Collectors.toList());
+                            apiExecutionQueueService.stop(ids);
                         }
-                    } else if (StringUtils.equals(request.getType(), "SCENARIO")) {
-                        List<ApiScenarioReport> reports = extApiScenarioReportMapper.selectReportByProjectId(request.getProjectId());
+                    }
+                    if (taskRequestMap.containsKey("SCENARIO")) {
+                        List<ApiScenarioReport> reports = extApiScenarioReportMapper.findByProjectIds(taskCenterRequest);
+                        LoggerUtil.info("查询到执行中的场景报告：" + reports.size());
                         if (CollectionUtils.isNotEmpty(reports)) {
                             for (ApiScenarioReport report : reports) {
-                                report.setStatus("STOP");
-                                apiScenarioReportMapper.updateByPrimaryKeySelective(report);
-                                actuator = report.getActuator();
-                                request.setReportId(report.getId());
-                                extracted(poolMap, request, actuator);
+
+                                extracted(poolMap, report.getId(), report.getActuator());
                                 // 从队列移除
                                 execThreadPoolExecutor.removeQueue(report.getId());
-                                apiExecutionQueueService.stop(report.getId());
                                 PoolExecBlockingQueueUtil.offer(report.getId());
                             }
+
+                            // 清理队列并停止测试计划报告
+                            LoggerUtil.info("结束所有进行中的场景报告 ");
+                            List<String> ids = reports.stream().map(ApiScenarioReport::getId).collect(Collectors.toList());
+                            extTaskMapper.stopScenario(taskCenterRequest);
+                            // 清理队列并停止测试计划报告
+                            LoggerUtil.info("清理队列并停止测试计划报告 ");
+                            apiExecutionQueueService.stop(ids);
                         }
-                    } else if (StringUtils.equals(request.getType(), "PERFORMANCE")) {
-                        List<LoadTestReport> loadTestReports = extLoadTestReportMapper.selectReportByProjectId(request.getProjectId());
+                    }
+                    if (taskRequestMap.containsKey("PERFORMANCE")) {
+                        LoggerUtil.info("开始结束性能测试报告 ");
+                        List<LoadTestReport> loadTestReports = extLoadTestReportMapper.selectReportByProjectId(taskRequestMap.get("PERFORMANCE").getProjectId());
                         if (CollectionUtils.isNotEmpty(loadTestReports)) {
                             for (LoadTestReport loadTestReport : loadTestReports) {
                                 performanceTestService.stopTest(loadTestReport.getId(), false);
-                                request.setReportId(loadTestReport.getId());
-                                extracted(poolMap, request, actuator);
                                 // 从队列移除
                                 execThreadPoolExecutor.removeQueue(loadTestReport.getId());
                                 apiExecutionQueueService.stop(loadTestReport.getId());
                                 PoolExecBlockingQueueUtil.offer(loadTestReport.getId());
                             }
                         }
+                        LoggerUtil.info("结束性能测试报告完成");
                     }
+                } catch (Exception e) {
+                    LogUtil.error(e);
                 }
-                if (!poolMap.isEmpty()) {
-                    this.send(poolMap);
-                }
+            }
+            if (!poolMap.isEmpty()) {
+                this.send(poolMap);
             }
         }
         return "SUCCESS";
     }
 
-    private void extracted(Map<String, List<String>> poolMap, TaskRequest request, String actuator) {
+    private void extracted(Map<String, List<String>> poolMap, String reportId, String actuator) {
+        if (StringUtils.isEmpty(reportId)) {
+            return;
+        }
         if (StringUtils.isNotEmpty(actuator) && !StringUtils.equals(actuator, "LOCAL")) {
             if (poolMap.containsKey(actuator)) {
-                poolMap.get(actuator).add(request.getReportId());
+                poolMap.get(actuator).add(reportId);
             } else {
                 poolMap.put(actuator, new ArrayList<String>() {{
-                    this.add(request.getReportId());
+                    this.add(reportId);
                 }});
             }
         } else {
-            new LocalRunner().stop(request.getReportId());
+            new LocalRunner().stop(reportId);
+            JmeterThreadUtils.stop(reportId);
         }
     }
 }

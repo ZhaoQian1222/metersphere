@@ -305,7 +305,15 @@ export default {
         this.$get('/api/environment/list/' + this.projectId, response => {
           this.environments = response.data;
           // 获取原数据源名称
-          this.getTargetSourceName(this.environments, obj);
+          if(env === obj.originalEnvironmentId && obj.originalDataSourceId){
+            obj.dataSourceId = obj.originalDataSourceId;
+            obj.environmentId = env;
+            this.getTargetSourceName(this.environments, obj);
+          }
+          if(!obj.targetDataSourceName){
+            this.getTargetSourceName(this.environments, obj);
+          }
+
           // 设置新环境
           obj.environmentId = env;
           // 设置新数据源
@@ -316,7 +324,14 @@ export default {
         });
       } else {
         // 获取原数据源名称
-        this.getTargetSourceName(this.environments, obj);
+        if(env === obj.originalEnvironmentId && obj.originalDataSourceId){
+          obj.dataSourceId = obj.originalDataSourceId;
+          obj.environmentId = env;
+          this.getTargetSourceName(this.environments, obj);
+        }
+        if(!obj.targetDataSourceName){
+          this.getTargetSourceName(this.environments, obj);
+        }
         // 设置新环境
         obj.environmentId = env;
         // 设置新数据源
@@ -358,8 +373,8 @@ export default {
       this.singleRunId = "";
       this.apiCaseList[0].active = true;
       if (data) {
-        let status = data.error > 0 ? "error" : "success";
-        this.apiCaseList[0].execResult = status
+        let status = data.status === 'errorReportResult' ? data.status : data.error > 0 ? "error" : "success";
+        this.apiCaseList[0].execResult = status;
         this.apiCaseList[0].responseData = data;
         this.$refs.apiCaseItem.runLoading = false;
         this.$store.state.currentApiCase = {refresh: true, id: data.id, status: status};

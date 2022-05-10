@@ -748,6 +748,8 @@ export default {
         if (item && map.has(item.resourceId)) {
           item.domain = map.get(item.resourceId);
           item.resourceId = getUUID();
+        }else{
+          item.domain = "";
         }
         if (item && item.hashTree && item.hashTree.length > 0) {
           this.margeDomain(item.hashTree, map);
@@ -1269,6 +1271,7 @@ export default {
       request.versionEnable = item.versionEnable;
       request.versionId = item.versionId;
       request.versionName = item.versionName;
+      request.domain = "";
       request.requestResult = [];
       if (!request.url) {
         request.url = "";
@@ -1664,6 +1667,11 @@ export default {
     dataProcessing(stepArray) {
       if (stepArray) {
         for (let i in stepArray) {
+          let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
+          if (typeArray.indexOf(stepArray[i].type) !== -1) {
+            stepArray[i].originalDataSourceId = stepArray[i].dataSourceId;
+            stepArray[i].originalEnvironmentId = stepArray[i].environmentId;
+          }
           if (!stepArray[i].hashTree) {
             stepArray[i].hashTree = [];
           }

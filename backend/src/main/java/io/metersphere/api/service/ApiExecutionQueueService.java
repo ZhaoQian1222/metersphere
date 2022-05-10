@@ -70,6 +70,8 @@ public class ApiExecutionQueueService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public DBTestQueue add(Object runObj, String poolId, String type, String reportId, String reportType, String runMode, RunModeConfigDTO config) {
+        LoggerUtil.info("开始生成执行链");
+
         ApiExecutionQueue executionQueue = new ApiExecutionQueue();
         executionQueue.setId(UUID.randomUUID().toString());
         executionQueue.setCreateTime(System.currentTimeMillis());
@@ -133,6 +135,8 @@ public class ApiExecutionQueueService {
             extApiExecutionQueueMapper.sqlInsert(queueDetails);
         }
         resQueue.setDetailMap(detailMap);
+
+        LoggerUtil.info("生成执行链结束");
         return resQueue;
     }
 
@@ -454,6 +458,33 @@ public class ApiExecutionQueueService {
             }
         });
     }
+
+    public void stop(List<String> reportIds) {
+        if (CollectionUtils.isEmpty(reportIds)) {
+            return;
+        }
+        ApiExecutionQueueDetailExample example = new ApiExecutionQueueDetailExample();
+        example.createCriteria().andReportIdIn(reportIds);
+        List<ApiExecutionQueueDetail> details = executionQueueDetailMapper.selectByExample(example);
+
+        List<String> queueIds = new ArrayList<>();
+        details.forEach(item -> {
+            if (!queueIds.contains(item.getQueueId())) {
+                queueIds.add(item.getQueueId());
+            }
+        });
+        executionQueueDetailMapper.deleteByExample(example);
+
+        for (String queueId : queueIds) {
+            ApiExecutionQueue queue = queueMapper.selectByPrimaryKey(queueId);
+            // 更新测试计划报告
+            if (queue != null && StringUtils.isNotEmpty(queue.getReportId())) {
+                CommonBeanFactory.getBean(TestPlanReportService.class).finishedTestPlanReport(queue.getReportId(), "Stopped");
+                queueMapper.deleteByPrimaryKey(queueId);
+            }
+        }
+    }
+
 
     /**
      * 性能测试监听检查

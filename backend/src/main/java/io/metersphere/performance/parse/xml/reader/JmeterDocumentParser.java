@@ -42,6 +42,7 @@ public class JmeterDocumentParser implements EngineSourceParser {
     private final static String BACKEND_LISTENER = "BackendListener";
     private final static String CONFIG_TEST_ELEMENT = "ConfigTestElement";
     private final static String ARGUMENTS = "Arguments";
+    private final static String KEYSTORE_CONFIG = "KeystoreConfig";
     private final static String RESPONSE_ASSERTION = "ResponseAssertion";
     private final static String HTTP_SAMPLER_PROXY = "HTTPSamplerProxy";
     private final static String CSV_DATA_SET = "CSVDataSet";
@@ -109,6 +110,8 @@ public class JmeterDocumentParser implements EngineSourceParser {
                     processAutoStopListener(ele);
                 } else if (nodeNameEquals(ele, HTTP_SAMPLER_PROXY)) {
                     // 处理http上传的附件
+                    processArgumentFiles(ele);
+                } else if (nodeNameEquals(ele, KEYSTORE_CONFIG)) {
                     processArgumentFiles(ele);
                 }
 
@@ -201,6 +204,9 @@ public class JmeterDocumentParser implements EngineSourceParser {
                 filename = extractFilename(filename);
                 item.addAttribute("name", filename);
             }
+            if (StringUtils.equals("MS-KEYSTORE-FILE-PATH", item.attributeValue("name"))) {
+                handleFilename(item);
+            }
         }
     }
 
@@ -209,7 +215,8 @@ public class JmeterDocumentParser implements EngineSourceParser {
         if (!StringUtils.contains(filename, "/")) {
             separator = "\\";
         }
-        filename = filename.substring(filename.lastIndexOf(separator) + 1);
+        // 改成绝对路径，keystore 不能使用相对路径
+        filename = "/test/" + filename.substring(filename.lastIndexOf(separator) + 1);
         return filename;
     }
 

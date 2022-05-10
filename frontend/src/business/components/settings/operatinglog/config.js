@@ -60,31 +60,33 @@ export function LOG_MODULE_MAP(_this) {
     let LOG_MODULE_MAP = new Map([
         ['SYSTEM_PARAMETER_SETTING', _this.$t('operating_log.system_parameter_setting')],
         ['SYSTEM_TEST_RESOURCE', _this.$t('operating_log.system_test_resource')],
-        ['SYSTEM_USER', _this.$t('operating_log.system_user')],
-        ['SYSTEM_WORKSPACE', _this.$t('operating_log.system_workspace')],
-        ['WORKSPACE_TEMPLATE_SETTINGS', _this.$t('operating_log.workspace_template_settings')],
-        ['WORKSPACE_MESSAGE_SETTINGS', _this.$t('operating_log.workspace_message_settings')],
-        ['WORKSPACE_TEMPLATE_SETTINGS_FIELD', _this.$t('operating_log.workspace_template_settings_field')],
-        ['WORKSPACE_TEMPLATE_SETTINGS_ISSUE', _this.$t('operating_log.workspace_template_settings_issue')],
-        ['WORKSPACE_SERVICE_INTEGRATION', _this.$t('operating_log.workspace_service_integration')],
-        ['WORKSPACE_TEMPLATE_SETTINGS_CASE', _this.$t('operating_log.workspace_template_settings_case')],
-        ['WORKSPACE_TEMPLATE_SETTINGS_API', _this.$t('operating_log.workspace_template_settings_api')],
-        ['WORKSPACE_MEMBER', _this.$t('operating_log.workspace_member')],
-        ['API_AUTOMATION', _this.$t('operating_log.api_automation')],
-        ['API_AUTOMATION_REPORT', _this.$t('operating_log.api_automation_report')],
-        ['API_DEFINITION', _this.$t('operating_log.api_definition')],
-        ['API_DEFINITION_CASE', _this.$t('operating_log.api_definition_case')],
-        ['TRACK_TEST_PLAN', _this.$t('operating_log.track_test_plan')],
-        ['TRACK_BUG', _this.$t('operating_log.track_bug')],
-        ['TRACK_TEST_CASE_REVIEW', _this.$t('operating_log.track_test_case_review')],
-        ['TRACK_TEST_CASE', _this.$t('operating_log.track_test_case')],
-        ['TRACK_REPORT', _this.$t('operating_log.track_report')],
-        ['AUTH_TITLE', _this.$t('operating_log.auth_title')],
-        ['PROJECT_PROJECT_JAR', _this.$t('operating_log.project_project_jar')],
-        ['PROJECT_ENVIRONMENT_SETTING', _this.$t('operating_log.project_environment_setting')],
-        ['PROJECT_PROJECT_MANAGER', _this.$t('operating_log.project_project_manager')],
-        ['PROJECT_FILE_MANAGEMENT', _this.$t('operating_log.project_file_management')],
-        ['PROJECT_PROJECT_MEMBER', _this.$t('operating_log.project_project_member')],
+      ['SYSTEM_USER', _this.$t('operating_log.system_user')],
+      ['SYSTEM_WORKSPACE', _this.$t('operating_log.system_workspace')],
+      ['WORKSPACE_TEMPLATE_SETTINGS', _this.$t('operating_log.workspace_template_settings')],
+      ['WORKSPACE_MESSAGE_SETTINGS', _this.$t('operating_log.workspace_message_settings')],
+      ['WORKSPACE_TEMPLATE_SETTINGS_FIELD', _this.$t('operating_log.workspace_template_settings_field')],
+      ['WORKSPACE_TEMPLATE_SETTINGS_ISSUE', _this.$t('operating_log.workspace_template_settings_issue')],
+      ['WORKSPACE_SERVICE_INTEGRATION', _this.$t('operating_log.workspace_service_integration')],
+      ['WORKSPACE_TEMPLATE_SETTINGS_CASE', _this.$t('operating_log.workspace_template_settings_case')],
+      ['WORKSPACE_TEMPLATE_SETTINGS_API', _this.$t('operating_log.workspace_template_settings_api')],
+      ['WORKSPACE_MEMBER', _this.$t('operating_log.workspace_member')],
+      ['API_AUTOMATION', _this.$t('operating_log.api_automation')],
+      ['API_AUTOMATION_SCHEDULE', _this.$t('operating_log.api_automation_schedule')],
+      ['API_AUTOMATION_REPORT', _this.$t('operating_log.api_automation_report')],
+      ['API_DEFINITION', _this.$t('operating_log.api_definition')],
+      ['API_DEFINITION_CASE', _this.$t('operating_log.api_definition_case')],
+      ['TRACK_TEST_PLAN', _this.$t('operating_log.track_test_plan')],
+      ['TRACK_TEST_PLAN_SCHEDULE', _this.$t('operating_log.track_test_plan_schedule')],
+      ['TRACK_BUG', _this.$t('operating_log.track_bug')],
+      ['TRACK_TEST_CASE_REVIEW', _this.$t('operating_log.track_test_case_review')],
+      ['TRACK_TEST_CASE', _this.$t('operating_log.track_test_case')],
+      ['TRACK_REPORT', _this.$t('operating_log.track_report')],
+      ['AUTH_TITLE', _this.$t('operating_log.auth_title')],
+      ['PROJECT_PROJECT_JAR', _this.$t('operating_log.project_project_jar')],
+      ['PROJECT_ENVIRONMENT_SETTING', _this.$t('operating_log.project_environment_setting')],
+      ['PROJECT_PROJECT_MANAGER', _this.$t('operating_log.project_project_manager')],
+      ['PROJECT_FILE_MANAGEMENT', _this.$t('operating_log.project_file_management')],
+      ['PROJECT_PROJECT_MEMBER', _this.$t('operating_log.project_project_member')],
         ['PERSONAL_INFORMATION_PERSONAL_SETTINGS', _this.$t('operating_log.personal_information_personal_settings')],
         ['PERSONAL_INFORMATION_APIKEYS', _this.$t('operating_log.personal_information_apikeys')],
         ['GROUP_PERMISSION', _this.$t('operating_log.group_permission')],
@@ -107,22 +109,27 @@ export function SYSLIST() {
                     value: [i18n.t('permission.project_track_case.name'), 'TRACK_TEST_CASE'],
                     leaf: true
                 },
-                {
-                    label: i18n.t('test_track.review.test_review'),
-                    value: [i18n.t('test_track.review.test_review'), 'TRACK_TEST_CASE_REVIEW'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('test_track.plan.test_plan'),
-                    value: [i18n.t('test_track.plan.test_plan'), 'TRACK_TEST_PLAN'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('test_track.issue.issue_management'),
-                    value: [i18n.t('test_track.issue.issue_management'), 'TRACK_BUG'],
-                    leaf: true
-                },
-                {label: i18n.t('commons.report'), value: [i18n.t('commons.report'), 'TRACK_REPORT'], leaf: true}]
+            {
+              label: i18n.t('test_track.review.test_review'),
+              value: [i18n.t('test_track.review.test_review'), 'TRACK_TEST_CASE_REVIEW'],
+              leaf: true
+            },
+            {
+              label: i18n.t('test_track.plan.test_plan'),
+              value: [i18n.t('test_track.plan.test_plan'), 'TRACK_TEST_PLAN'],
+              leaf: true
+            },
+            {
+              label: i18n.t('operating_log.track_test_plan_schedule'),
+              value: [i18n.t('operating_log.track_test_plan_schedule'), 'TRACK_TEST_PLAN_SCHEDULE'],
+              leaf: true
+            },
+            {
+              label: i18n.t('test_track.issue.issue_management'),
+              value: [i18n.t('test_track.issue.issue_management'), 'TRACK_BUG'],
+              leaf: true
+            },
+            {label: i18n.t('commons.report'), value: [i18n.t('commons.report'), 'TRACK_REPORT'], leaf: true}]
         },
         {
             label: i18n.t('commons.api'), value: i18n.t('commons.api'), children: [
@@ -131,21 +138,26 @@ export function SYSLIST() {
                     value: [i18n.t('workstation.table_name.api_definition'), 'API_DEFINITION'],
                     leaf: true
                 },
-                {
-                    label: i18n.t('operating_log.api_definition_case'),
-                    value: [i18n.t('operating_log.api_definition_case'), 'API_DEFINITION_CASE'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('workstation.table_name.api_automation'),
-                    value: [i18n.t('workstation.table_name.api_automation'), 'API_AUTOMATION'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('permission.project_api_report.name'),
-                    value: [i18n.t('permission.project_api_report.name'), 'API_AUTOMATION_REPORT'],
-                    leaf: true
-                }]
+            {
+              label: i18n.t('operating_log.api_definition_case'),
+              value: [i18n.t('operating_log.api_definition_case'), 'API_DEFINITION_CASE'],
+              leaf: true
+            },
+            {
+              label: i18n.t('workstation.table_name.api_automation'),
+              value: [i18n.t('workstation.table_name.api_automation'), 'API_AUTOMATION'],
+              leaf: true
+            },
+            {
+              label: i18n.t('operating_log.api_automation_schedule'),
+              value: [i18n.t('operating_log.api_automation_schedule'), 'API_AUTOMATION_SCHEDULE'],
+              leaf: true
+            },
+            {
+              label: i18n.t('permission.project_api_report.name'),
+              value: [i18n.t('permission.project_api_report.name'), 'API_AUTOMATION_REPORT'],
+              leaf: true
+            }]
         },
         {
             label: i18n.t('workstation.table_name.performance'),
@@ -216,61 +228,279 @@ export function SYSLIST() {
                     leaf: true
                 },
                 {
-                    label: i18n.t('commons.project') + "-" + i18n.t('project.manager'),
-                    value: [i18n.t('commons.project') + "-" + i18n.t('project.manager'), 'PROJECT_PROJECT_MANAGER'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'),
-                    value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'), 'PROJECT_PROJECT_MEMBER'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'),
-                    value: [i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'), 'PROJECT_PROJECT_JAR'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'),
-                    value: [i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'), 'PROJECT_ENVIRONMENT_SETTING'],
-                    leaf: true
-                },
-                {
-                    label: i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'),
-                    value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'), 'PROJECT_FILE_MANAGEMENT'],
-                    leaf: true
-                },
-
-                {
                     label: i18n.t('commons.personal_information') + "-" + i18n.t('commons.personal_setting'),
                     value: [i18n.t('commons.personal_information') + "-" + i18n.t('commons.personal_setting'), 'PERSONAL_INFORMATION_PERSONAL_SETTINGS'],
                     leaf: true
                 },
                 {
                     label: i18n.t('commons.personal_information') + "-API Keys",
-                    value: [i18n.t('commons.personal_information') + "-API Keys", 'PERSONAL_INFORMATION_APIKEYS'],
-                    leaf: true
+                  value: [i18n.t('commons.personal_information') + "-API Keys", 'PERSONAL_INFORMATION_APIKEYS'],
+                  leaf: true
                 },
-                {
-                    label: i18n.t('operating_log.auth_title'),
-                    value: [i18n.t('operating_log.auth_title'), 'AUTH_TITLE'],
-                    leaf: true
-                }
-            ]
+            {
+              label: i18n.t('operating_log.auth_title'),
+              value: [i18n.t('operating_log.auth_title'), 'AUTH_TITLE'],
+              leaf: true
+            }
+          ]
         },
+      {
+        label: i18n.t('commons.project_setting'), value: i18n.t('commons.project_setting'), children: [
+          {
+            label: i18n.t('commons.project') + "-" + i18n.t('project.manager'),
+            value: [i18n.t('commons.project') + "-" + i18n.t('project.manager'), 'PROJECT_PROJECT_MANAGER'],
+            leaf: true
+          },
+          {
+            label: i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'),
+            value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'), 'PROJECT_PROJECT_MEMBER'],
+            leaf: true
+          },
+          {
+            label: i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'),
+            value: [i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'), 'PROJECT_PROJECT_JAR'],
+            leaf: true
+          },
+          {
+            label: i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'),
+            value: [i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'), 'PROJECT_ENVIRONMENT_SETTING'],
+            leaf: true
+          },
+          {
+            label: i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'),
+            value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'), 'PROJECT_FILE_MANAGEMENT'],
+            leaf: true
+          },
+        ]
+      },
     ];
-    return sysList;
+  return sysList;
+}
+
+export function WORKSYSLIST() {
+  let worksysList = [
+    {
+      label: i18n.t('test_track.test_track'), value: i18n.t('test_track.test_track'), children: [
+        {
+          label: i18n.t('permission.project_track_case.name'),
+          value: [i18n.t('permission.project_track_case.name'), 'TRACK_TEST_CASE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('test_track.review.test_review'),
+          value: [i18n.t('test_track.review.test_review'), 'TRACK_TEST_CASE_REVIEW'],
+          leaf: true
+        },
+        {
+          label: i18n.t('test_track.plan.test_plan'),
+          value: [i18n.t('test_track.plan.test_plan'), 'TRACK_TEST_PLAN'],
+          leaf: true
+        },
+        {
+          label: i18n.t('operating_log.track_test_plan_schedule'),
+          value: [i18n.t('operating_log.track_test_plan_schedule'), 'TRACK_TEST_PLAN_SCHEDULE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('test_track.issue.issue_management'),
+          value: [i18n.t('test_track.issue.issue_management'), 'TRACK_BUG'],
+          leaf: true
+        },
+        {label: i18n.t('commons.report'), value: [i18n.t('commons.report'), 'TRACK_REPORT'], leaf: true}]
+    },
+    {
+      label: i18n.t('commons.api'), value: i18n.t('commons.api'), children: [
+        {
+          label: i18n.t('workstation.table_name.api_definition'),
+          value: [i18n.t('workstation.table_name.api_definition'), 'API_DEFINITION'],
+          leaf: true
+        },
+        {
+          label: i18n.t('operating_log.api_definition_case'),
+          value: [i18n.t('operating_log.api_definition_case'), 'API_DEFINITION_CASE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('workstation.table_name.api_automation'),
+          value: [i18n.t('workstation.table_name.api_automation'), 'API_AUTOMATION'],
+          leaf: true
+        },
+        {
+          label: i18n.t('operating_log.api_automation_schedule'),
+          value: [i18n.t('operating_log.api_automation_schedule'), 'API_AUTOMATION_SCHEDULE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('permission.project_api_report.name'),
+          value: [i18n.t('permission.project_api_report.name'), 'API_AUTOMATION_REPORT'],
+          leaf: true
+        }]
+    },
+    {
+      label: i18n.t('workstation.table_name.performance'),
+      value: i18n.t('workstation.table_name.performance'),
+      children: [
+        {
+          label: i18n.t('workstation.table_name.performance'),
+          value: [i18n.t('workstation.table_name.performance'), 'PERFORMANCE_TEST'],
+          leaf: true
+        },
+        {
+          label: i18n.t('report.load_test_report'),
+          value: [i18n.t('report.load_test_report'), 'PERFORMANCE_TEST_REPORT'],
+          leaf: true
+        }]
+    },
+    {
+      label: i18n.t('commons.project_setting'), value: i18n.t('commons.project_setting'), children: [
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('project.manager'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('project.manager'), 'PROJECT_PROJECT_MANAGER'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'), 'PROJECT_PROJECT_MEMBER'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'), 'PROJECT_PROJECT_JAR'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'), 'PROJECT_ENVIRONMENT_SETTING'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'), 'PROJECT_FILE_MANAGEMENT'],
+          leaf: true
+        },
+      ]
+    },
+  ];
+  return worksysList;
+}
+
+export function PROJECTSYSLIST() {
+  let projectsysList = [
+    {
+      label: i18n.t('test_track.test_track'), value: i18n.t('test_track.test_track'), children: [
+        {
+          label: i18n.t('permission.project_track_case.name'),
+          value: [i18n.t('permission.project_track_case.name'), 'TRACK_TEST_CASE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('test_track.review.test_review'),
+          value: [i18n.t('test_track.review.test_review'), 'TRACK_TEST_CASE_REVIEW'],
+          leaf: true
+        },
+        {
+          label: i18n.t('test_track.plan.test_plan'),
+          value: [i18n.t('test_track.plan.test_plan'), 'TRACK_TEST_PLAN'],
+          leaf: true
+        },
+        {
+          label: i18n.t('operating_log.track_test_plan_schedule'),
+          value: [i18n.t('operating_log.track_test_plan_schedule'), 'TRACK_TEST_PLAN_SCHEDULE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('test_track.issue.issue_management'),
+          value: [i18n.t('test_track.issue.issue_management'), 'TRACK_BUG'],
+          leaf: true
+        },
+        {label: i18n.t('commons.report'), value: [i18n.t('commons.report'), 'TRACK_REPORT'], leaf: true}]
+    },
+    {
+      label: i18n.t('commons.api'), value: i18n.t('commons.api'), children: [
+        {
+          label: i18n.t('workstation.table_name.api_definition'),
+          value: [i18n.t('workstation.table_name.api_definition'), 'API_DEFINITION'],
+          leaf: true
+        },
+        {
+          label: i18n.t('operating_log.api_definition_case'),
+          value: [i18n.t('operating_log.api_definition_case'), 'API_DEFINITION_CASE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('workstation.table_name.api_automation'),
+          value: [i18n.t('workstation.table_name.api_automation'), 'API_AUTOMATION'],
+          leaf: true
+        },
+        {
+          label: i18n.t('operating_log.api_automation_schedule'),
+          value: [i18n.t('operating_log.api_automation_schedule'), 'API_AUTOMATION_SCHEDULE'],
+          leaf: true
+        },
+        {
+          label: i18n.t('permission.project_api_report.name'),
+          value: [i18n.t('permission.project_api_report.name'), 'API_AUTOMATION_REPORT'],
+          leaf: true
+        }]
+    },
+    {
+      label: i18n.t('workstation.table_name.performance'),
+      value: i18n.t('workstation.table_name.performance'),
+      children: [
+        {
+          label: i18n.t('workstation.table_name.performance'),
+          value: [i18n.t('workstation.table_name.performance'), 'PERFORMANCE_TEST'],
+          leaf: true
+        },
+        {
+          label: i18n.t('report.load_test_report'),
+          value: [i18n.t('report.load_test_report'), 'PERFORMANCE_TEST_REPORT'],
+          leaf: true
+        }]
+    },
+
+    {
+      label: i18n.t('commons.project_setting'), value: i18n.t('commons.project_setting'), children: [
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('project.manager'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('project.manager'), 'PROJECT_PROJECT_MANAGER'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_user.name'), 'PROJECT_PROJECT_MEMBER'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('api_test.jar_config.jar_manage'), 'PROJECT_PROJECT_JAR'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('permission.workspace_project_environment.name'), 'PROJECT_ENVIRONMENT_SETTING'],
+          leaf: true
+        },
+        {
+          label: i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'),
+          value: [i18n.t('commons.project') + "-" + i18n.t('permission.project_file.name'), 'PROJECT_FILE_MANAGEMENT'],
+          leaf: true
+        },
+      ]
+    },
+  ];
+  return projectsysList;
 }
 
 
 export function getUrl(d, _this) {
-    let url = "/#";
-    let resourceId = d.sourceId;
-    if (resourceId && (resourceId.startsWith("\"") || resourceId.startsWith("["))) {
-        resourceId = JSON.parse(d.sourceId);
-    }
-    if (resourceId instanceof Array) {
-        if (resourceId.length === 1) {
+  let url = "/#";
+  let resourceId = d.sourceId;
+  if (resourceId && (resourceId.startsWith("\"") || resourceId.startsWith("["))) {
+    resourceId = JSON.parse(d.sourceId);
+  }
+  if (resourceId instanceof Array) {
+    if (resourceId.length === 1) {
             resourceId = resourceId[0];
         } else {
             return url;

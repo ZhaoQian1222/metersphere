@@ -248,7 +248,7 @@ public class ApiAutomationController {
 
     @PostMapping("/batch/copy")
     @RequiresPermissions(value = {PermissionConstants.PROJECT_API_SCENARIO_READ_CREATE, PermissionConstants.PROJECT_API_SCENARIO_READ_COPY}, logical = Logical.OR)
-    @MsAuditLog(module = "api_automation", type = OperLogConstants.BATCH_ADD, beforeEvent = "#msClass.getLogDetails(#request.ids)", content = "#msClass.getLogDetails(#request.ids)", msClass = ApiAutomationService.class)
+    @MsAuditLog(module = OperLogModule.API_AUTOMATION, type = OperLogConstants.BATCH_ADD, beforeEvent = "#msClass.getLogDetails(#request.ids)", content = "#msClass.getLogDetails(#request.ids)", msClass = ApiAutomationService.class)
     public void batchCopy(@RequestBody ApiScenarioBatchRequest request) {
         apiAutomationService.batchCopy(request);
     }
@@ -282,11 +282,13 @@ public class ApiAutomationController {
     }
 
     @PostMapping(value = "/schedule/update")
+    @MsAuditLog(module = OperLogModule.API_AUTOMATION_SCHEDULE, type = OperLogConstants.UPDATE, title = "#request.name", beforeEvent = "#msClass.getLogDetails(#request.id)", content = "#msClass.getLogDetails(#request.id)", msClass = ApiAutomationService.class)
     public void updateSchedule(@RequestBody Schedule request) {
         apiAutomationService.updateSchedule(request);
     }
 
     @PostMapping(value = "/schedule/create")
+    @MsAuditLog(module = OperLogModule.API_AUTOMATION_SCHEDULE, type = OperLogConstants.CREATE, title = "#request.name", content = "#msClass.getLogDetails(#request)", msClass = ApiAutomationService.class)
     public void createSchedule(@RequestBody ScheduleRequest request) {
         apiAutomationService.createSchedule(request);
     }

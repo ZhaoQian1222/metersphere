@@ -5,11 +5,9 @@ import io.metersphere.api.exec.queue.ExecThreadPoolExecutor;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
 import io.metersphere.api.jmeter.utils.ServerConfig;
 import io.metersphere.api.jmeter.utils.SmoothWeighted;
-import io.metersphere.api.service.ApiScenarioReportService;
 import io.metersphere.api.service.RemakeReportService;
 import io.metersphere.base.domain.TestResource;
 import io.metersphere.commons.constants.ApiRunMode;
-import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.config.JmeterProperties;
 import io.metersphere.config.KafkaConfig;
@@ -114,6 +112,7 @@ public class JMeterService {
             JMeterBase.addBackendListener(request, request.getHashTree(), APISingleResultListener.class.getCanonicalName());
         }
 
+        LoggerUtil.info("报告：[" + request.getReportId() + "] 资源：[" + request.getTestId() + "] 加入JMETER中开始执行");
         LocalRunner runner = new LocalRunner(request.getHashTree());
         runner.run(request.getReportId());
     }
@@ -127,17 +126,16 @@ public class JMeterService {
                 final Engine engine = EngineFactory.createApiEngine(request);
                 engine.start();
             } catch (Exception e) {
+                RemakeReportService apiScenarioReportService = CommonBeanFactory.getBean(RemakeReportService.class);
+                apiScenarioReportService.testEnded(request, e.getMessage());
                 LoggerUtil.error("调用K8S执行请求[ " + request.getTestId() + " ] 失败：", e);
-                ApiScenarioReportService apiScenarioReportService = CommonBeanFactory.getBean(ApiScenarioReportService.class);
-                apiScenarioReportService.delete(request.getReportId());
-                MSException.throwException(e.getMessage());
             }
         } else {
             this.send(request);
         }
     }
 
-    private void send(JmeterRunRequestDTO request) {
+    private synchronized void send(JmeterRunRequestDTO request) {
         try {
             if (redisTemplate.opsForValue().get(SmoothWeighted.EXEC_INDEX + request.getPoolId()) != null) {
                 long index = Long.parseLong(redisTemplate.opsForValue().get(SmoothWeighted.EXEC_INDEX + request.getPoolId()).toString());
