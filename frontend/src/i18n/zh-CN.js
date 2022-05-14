@@ -102,6 +102,7 @@ export default {
     personal_info: '个人信息',
     api_keys: 'API Keys',
     third_account: '第三方平台账号',
+    ui_setting: 'UI设置',
     quota: '配额管理',
     status: '状态',
     show_all: '显示全部',
@@ -123,6 +124,7 @@ export default {
     view_settings: '显示设置',
     functional: '功能测试',
     my_workstation: '我的工作台',
+    ui_test: 'UI测试',
     input_content: '请输入内容',
     create: '新建',
     edit: '编辑',
@@ -451,6 +453,7 @@ export default {
     repositoryName: 'Git存储库名称',
     repositoryUsername: '用户名',
     ui: 'UI 测试',
+    not_eligible_for_deletion:'不符合删除条件'
   },
   login: {
     normal_Login: "普通登录",
@@ -925,6 +928,7 @@ export default {
     permission: '权限',
     please_select_group: '请选择用户组',
     global: '全局',
+    unable_to_remove_current_member: '无法移除当前登录用户！',
     ws_admin_global: '工作空间管理员才可以创建全局用户组'
   },
   role: {
@@ -1158,6 +1162,7 @@ export default {
     please_select_case: "请选择用例",
     fail_to_stop: "失败停止",
     batch_add_parameter: "格式：参数名:参数值 <br/> 如：Accept-Encoding:utf-8",
+    create_performance_test_tips: '没有创建性能测试的权限，无法完成此操作',
     jar_config: {
       title: "上传jar包",
       jar_file: "jar包",
@@ -1276,6 +1281,7 @@ export default {
         delete_case_confirm: "确认删除用例",
         delete_confirm_step: "确认删除步骤",
         assertions_rule: "断言规则",
+        scenario_assertions: "场景断言",
         pre_operation: "前置操作",
         post_operation: "后置操作",
         response_header: "响应头",
@@ -1638,6 +1644,7 @@ export default {
         set_failure_msg: "设置失败消息",
         suggest_tip: "点击便签添加JSONPath断言",
         regex_info: '特殊字符"$ ( ) * + . [ ] \\ ^ { } |"需转义为"\\ "+"特殊字符",如"\\$"',
+        xpath_info: '根据请求响应内容格式，选择提取方式',
         regular_match: '正则匹配',
         none: '不校验[]',
         value_eq: '值-等于[value=]',
@@ -2476,6 +2483,10 @@ export default {
     usage: '用途',
     backend_listener: '后置监听器',
     batch_add_resource_tips: '格式：IP,Port,Monitor,最大并发数<br/>如：192.168.1.52,8082,9100,500',
+    k8s_sa_tips: '使用K8S资源池需要的权限',
+    k8s_sa_download_tips: '下载SA执行文件',
+    k8s_deploy_type_tips: '执行接口测试需要部署 DaemonSet 或 Deployment',
+    k8s_deploy_download_tips: '下载YAML执行文件',
   },
   system_parameter_setting: {
     mailbox_service_settings: '邮件设置',
@@ -2554,6 +2565,7 @@ export default {
     generate_expression: "自动生成",
     cron_expression_format_error: "Cron 表达式格式错误",
     cron_expression_interval_short_error: "间隔时间小于 3 分钟, 请避免执行耗时过长的测试",
+    cron_expression_interval_error: "间隔时间不能小于 1 分钟",
     cron: {
       seconds: "秒",
       minutes: "分钟",
@@ -3156,6 +3168,7 @@ export default {
       api_keys: 'API Keys',
       edit_password: "修改密码",
       third_account: '第三方平台账号',
+      ui_setting: 'UI设置',
     },
     other: {
       track: "测试跟踪",
@@ -3248,6 +3261,9 @@ export default {
     cmdExtraction: "数据提取",
     cmdExtractWindow: "提取窗口信息",
     cmdExtractElement: "提取元素信息",
-    valiate_fail: "校验失败，请检查必填项"
+    valiate_fail: "校验失败，请检查必填项",
+    ui_debug_mode: 'UI自动化调试方式',
+    ui_local_debug: '本地调试',
+    ui_server_debug: '后端调试',
   }
 };

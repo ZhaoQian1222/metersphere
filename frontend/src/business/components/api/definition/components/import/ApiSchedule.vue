@@ -188,7 +188,10 @@ export default {
         callback(new Error(this.$t('schedule.cron_expression_format_error')));
       } else if (!customValidate.pass) {
         callback(new Error(customValidate.info));
-      } else {
+      }else if(!this.intervalValidate()){
+        callback(new Error(this.$t('schedule.cron_expression_interval_error')));
+      }
+      else {
         callback();
       }
     };
@@ -374,6 +377,12 @@ export default {
           });
         }
       });
+    },
+    intervalValidate() {
+      if (this.getIntervalTime() < 1 * 60 * 1000) {
+        return false;
+      }
+      return true;
     },
     intervalShortValidate() {
       if (this.getIntervalTime() < 3 * 60 * 1000) {

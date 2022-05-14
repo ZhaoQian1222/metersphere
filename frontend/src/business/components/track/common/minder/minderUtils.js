@@ -86,7 +86,9 @@ export function loadSelectNodes(param, getCaseFuc, setParamCallback, getExtraNod
   let minder = window.minder;
   let selectNodes = minder.getSelectedNodes();
   selectNodes.forEach(node => {
-    loadNode(node, param, getCaseFuc, setParamCallback, getExtraNodeFuc);
+    if (node.children && node.children.length > 0) {
+      loadNode(node, param, getCaseFuc, setParamCallback, getExtraNodeFuc);
+    }
   });
 }
 
@@ -563,8 +565,12 @@ export function handleMinderIssueDelete(commandName, isPlan) {
 export function openMinderConfirm(vueObj, activeDom) {
   let isTestCaseMinderChanged = vueObj.$store.state.isTestCaseMinderChanged;
   if (vueObj.activeDom !== 'left' && activeDom === 'left' && isTestCaseMinderChanged) {
-    vueObj.$refs.isChangeConfirm.open();
-    vueObj.tmpActiveDom = activeDom;
+    if (vueObj.planStatus !=='Archived') {
+      vueObj.$refs.isChangeConfirm.open();
+      vueObj.tmpActiveDom = activeDom;
+    } else {
+      vueObj.activeDom = activeDom;
+    }
     return;
   }
   vueObj.activeDom = activeDom;

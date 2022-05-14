@@ -2,21 +2,24 @@ package io.metersphere.api.parse;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.api.dto.definition.request.processors.pre.MsJSR223PreProcessor;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
+import io.metersphere.api.dto.definition.response.HttpResponse;
 import io.metersphere.api.dto.parse.postman.*;
 import io.metersphere.api.dto.scenario.Body;
 import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.commons.constants.MsRequestBodyType;
 import io.metersphere.commons.constants.PostmanRequestBodyMode;
+import io.metersphere.commons.utils.BeanUtils;
 import io.metersphere.commons.utils.LogUtil;
+import io.metersphere.plugin.core.MsTestElement;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,7 +33,7 @@ public abstract class PostmanAbstractParserParser<T> extends ApiImportAbstractPa
         }
         requestDesc.getAuth(); // todo 认证方式等待优化
         PostmanUrl url = requestDesc.getUrl();
-        MsHTTPSamplerProxy request = buildRequest(requestItem.getName(), url == null ? "" : url.getRaw(), requestDesc.getMethod());
+        MsHTTPSamplerProxy request = buildRequest(requestItem.getName(), url == null ? "" : url.getRaw(), requestDesc.getMethod(), Optional.ofNullable(requestDesc.getBody()).orElse(new JSONObject()).getString("jsonSchema"));
         request.setRest(parseKeyValue(requestDesc.getUrl().getVariable()));
         if (StringUtils.isNotBlank(request.getPath())) {
             String path = request.getPath().split("\\?")[0];
@@ -48,10 +51,44 @@ public abstract class PostmanAbstractParserParser<T> extends ApiImportAbstractPa
         return request;
     }
 
+    protected HttpResponse parsePostmanResponse(PostmanItem requestItem) {
+        List<PostmanResponse> requestList = requestItem.getResponse();
+        if (CollectionUtils.isEmpty(requestList)) {
+            return new HttpResponse();
+        }
+        PostmanResponse requestDesc = requestItem.getResponse().get(0);
+        if (requestDesc == null) {
+            return null;
+        }
+        PostmanUrl url = requestDesc.getOriginalRequest().getUrl();
+        MsHTTPSamplerProxy request = buildRequest(requestItem.getName(), null, null, requestDesc.getJsonSchema());
+        request.setRest(parseKeyValue(requestDesc.getOriginalRequest().getUrl().getVariable()));
+        if (StringUtils.isNotBlank(requestDesc.getBody())) {
+            request.getBody().setRaw(requestDesc.getBody());
+        }
+        if (StringUtils.isNotBlank(request.getPath())) {
+            String path = request.getPath().split("\\?")[0];
+            path = parseVariable(path);
+            request.setPath(path);
+        } else {
+            request.setPath("/");
+        }
+        //todo response 后续支持更多类型导入
+        request.getBody().setType(Body.JSON_STR);
+        request.setArguments(parseKeyValue(url == null ? new ArrayList<>() : url.getQuery()));
+        request.setHeaders(parseKeyValue(requestDesc.getHeader()));
+        addBodyHeader(request);
+        HttpResponse response = new HttpResponse();
+        BeanUtils.copyBean(response, request);
+        response.setType("HTTP");
+        return response;
+    }
+
 
     /**
-     *  将postman的变量转换成ms变量
-     *  {{xxx}} -> ${xxx}
+     * 将postman的变量转换成ms变量
+     * {{xxx}} -> ${xxx}
+     *
      * @param value
      * @return
      */

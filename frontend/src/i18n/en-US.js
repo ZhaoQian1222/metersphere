@@ -109,6 +109,7 @@ export default {
     personal_setting: 'Personal Setting',
     api_keys: 'API Keys',
     third_account: 'Third Account',
+    ui_setting: 'UI Setting',
     quota: 'Quota',
     test_resource_pool: 'Resource Pool',
     system_setting: 'Settings',
@@ -118,6 +119,7 @@ export default {
     follow_api: 'Follow API definition',
     response_time_delay: 'Response delay time',
     my_workstation: 'MyWorkstation',
+    ui_test: 'UiTest',
     performance: 'Performance',
     enable_settings: 'Enable Settings',
     view_settings: 'View Settings',
@@ -445,6 +447,7 @@ export default {
     delete_all_version: 'All versions',
     change_password_tips: 'Your password is the initial system password, please change it as soon as possible',
     ui: 'UI TEST',
+    not_eligible_for_deletion:'Not Eligible For Deletion',
     git_repository: 'Git Repository',
     repositoryUrl: 'Git Repository Url',
     repositoryName: 'Git Repository Name',
@@ -920,6 +923,7 @@ export default {
     permission: 'Permission',
     please_select_group: 'Please Select Group',
     global: 'Global',
+    unable_to_remove_current_member: 'Unable to remove currently logged in user!',
     ws_admin_global: 'Only workspace administrators can create global user groups'
   },
   role: {
@@ -1151,6 +1155,7 @@ export default {
     please_select_case: "Please select case",
     fail_to_stop: "Fail to stop",
     batch_add_parameter: "Format: parameter name: parameter value <br/> like：Accept-Encoding:utf-8",
+    create_performance_test_tips: 'This operation cannot be completed without permission to create performance tests',
     jar_config: {
       title: "Upload jar package",
       jar_file: "Jar Package",
@@ -1269,6 +1274,7 @@ export default {
         delete_case_confirm: "Confirm case deletion",
         delete_confirm_step: "Confirm deletion step",
         assertions_rule: "Assertion rule",
+        scenario_assertions: "Scenario assertion rule",
         pre_operation: "Pre operation",
         post_operation: "Post operation",
         response_header: "Response header",
@@ -1632,6 +1638,7 @@ export default {
         debug_first: "First, debug to get the response",
         suggest_tip: "Click the note to add the JSONPath assertion",
         regex_info: 'Special characters "$ () * +. [] \\ ^ {} |" need to be escaped as "\\ "+"special characters", such as "\\$"',
+        xpath_info: 'Select the extraction method according to the content format of the request response',
         regular_match: 'Regular match',
         none: 'Do not verify []',
         value_eq: 'Value-equal to [value=]',
@@ -2471,6 +2478,10 @@ export default {
     usage: 'Usage',
     backend_listener: 'Backend Listener',
     batch_add_resource_tips: 'Format: IP, Port, Monitor, maximum concurrent number<br/>such as: 192.168.1.52,8082,9100,500',
+    k8s_sa_tips: 'Permissions required to use the K8S resource pool',
+    k8s_sa_download_tips: 'Download SA executable file',
+    k8s_deploy_type_tips: 'A DaemonSet or Deployment needs to be deployed to perform interface testing',
+    k8s_deploy_download_tips: 'Download the YAML executable file',
   },
   system_parameter_setting: {
     mailbox_service_settings: 'Mailbox Settings',
@@ -2549,6 +2560,7 @@ export default {
     generate_expression: "Generate Expression",
     cron_expression_format_error: "Cron Expression Format Error",
     cron_expression_interval_short_error: "Interval time shorter than 3 minutes, please avoid running tests that take too long",
+    cron_expression_interval_error: "The interval cannot be less than 1 minute",
     cron: {
       seconds: "Seconds",
       minutes: "Minutes",
@@ -3150,6 +3162,7 @@ export default {
       api_keys: 'API Keys',
       edit_password: "EDIT PASSWORD",
       third_account: 'Third Account',
+      ui_setting: 'UI Setting',
     },
     other: {
       track: "Track",
@@ -3195,5 +3208,8 @@ export default {
     ui_automation: "UI Automation",
     ui_element: "UI Element Library",
     report: "Test Report",
+    ui_debug_mode: 'UI debugging mode',
+    ui_local_debug: 'local',
+    ui_server_debug: 'server',
   }
 };

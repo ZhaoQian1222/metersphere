@@ -112,10 +112,6 @@
       saveApi() {
         this.$refs['httpForm'].validate((valid) => {
           if (valid) {
-            if (this.httpForm.path) {
-              this.$error(this.$t("api_test.definition.request.path_valid_info"));
-              return false;
-            }
             this.save(this.httpForm);
           } else {
             return false;
@@ -151,6 +147,7 @@
         if (!data.method) {
           data.method = data.protocol;
         }
+        data.request.path = this.httpForm.path;
       },
       getBodyUploadFiles(data) {
         let bodyUploadFiles = [];
@@ -275,7 +272,17 @@
             data.protocol = "DUBBO";
           }
           data.id = getUUID();
-          this.httpForm = {id: data.id, name: data.name, protocol: data.protocol, path: data.path, method: api.method, userId: getCurrentUser().id, request: data, moduleId: "default-module"};
+          data.path = this.httpForm.path;
+          this.httpForm = {
+            id: data.id,
+            name: data.name,
+            protocol: data.protocol,
+            path: data.path ? data.path : data.url,
+            method: api.method,
+            userId: getCurrentUser().id,
+            request: data,
+            moduleId: "default-module"
+          };
           this.getMaintainerOptions();
           this.list(data);
           this.httpVisible = true;

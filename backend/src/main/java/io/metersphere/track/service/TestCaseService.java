@@ -477,7 +477,8 @@ public class TestCaseService {
             criteria.andNameEqualTo(testCase.getName())
                     .andProjectIdEqualTo(testCase.getProjectId())
                     .andNodePathEqualTo(nodePath)
-                    .andTypeEqualTo(testCase.getType());
+                    .andTypeEqualTo(testCase.getType())
+                    .andStatusNotEqualTo("Trash");
             if (StringUtils.isNotBlank(testCase.getPriority())) {
                 criteria.andPriorityEqualTo(testCase.getPriority());
             }
@@ -1485,7 +1486,6 @@ public class TestCaseService {
             data.setPrerequisite(t.getPrerequisite());
             data.setTags(t.getTags());
             if (StringUtils.equals(t.getMethod(), "manual") || StringUtils.isBlank(t.getMethod())) {
-
                 if (StringUtils.equals(data.getStepModel(), TestCaseConstants.StepModel.TEXT.name())) {
                     data.setStepDesc(t.getStepDescription());
                     data.setStepResult(t.getExpectedResult());
@@ -1508,8 +1508,16 @@ public class TestCaseService {
                     if (CollectionUtils.isNotEmpty(jsonArray)) {
                         for (int j = 0; j < jsonArray.size(); j++) {
                             int num = j + 1;
-                            step.append(num + "." + jsonArray.getJSONObject(j).getString("desc") + "\n");
-                            result.append(num + "." + jsonArray.getJSONObject(j).getString("result") + "\n");
+                            String stepItem = jsonArray.getJSONObject(j).getString("desc");
+                            if(StringUtils.isEmpty(stepItem)){
+                                stepItem = "";
+                            }
+                            step.append(num + "." + stepItem + "\n");
+                            String resultItem = jsonArray.getJSONObject(j).getString("result");
+                            if(StringUtils.isEmpty(resultItem)){
+                                resultItem = "";
+                            }
+                            result.append(num + "." + resultItem + "\n");
 
                         }
                     }
@@ -2197,16 +2205,39 @@ public class TestCaseService {
         ServiceUtils.getSelectAllIds(request, request.getCondition(),
                 (query) -> extTestCaseMapper.selectPublicIds(query));
         List<String> ids = request.getIds();
+        List<String> needDelete = new ArrayList<>();
+        List<String> noDelete = new ArrayList<>();
+        SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
+        TestCaseMapper mapper = sqlSession.getMapper(TestCaseMapper.class);
         if (CollectionUtils.isNotEmpty(ids)) {
             for (String id : ids) {
                 TestCase testCase = testCaseMapper.selectByPrimaryKey(id);
                 if ((StringUtils.isNotEmpty(testCase.getMaintainer()) && testCase.getMaintainer().equals(SessionUtils.getUserId())) ||
                         (StringUtils.isNotEmpty(testCase.getCreateUser()) && testCase.getCreateUser().equals(SessionUtils.getUserId()))) {
-                    this.deleteTestCasePublic(null, testCase.getRefId());
+                    needDelete.add(testCase.getRefId());
                 } else {
-                    MSException.throwException(Translator.get("check_owner_case"));
+                    noDelete.add(testCase.getName());
                 }
             }
+        }
+        try {
+            if (CollectionUtils.isNotEmpty(needDelete)) {
+                for (int i = 0; i < needDelete.size(); i++) {
+                    TestCaseExample e = new TestCaseExample();
+                    e.createCriteria().andRefIdEqualTo(needDelete.get(i));
+                    TestCaseWithBLOBs t = new TestCaseWithBLOBs();
+                    t.setCasePublic(false);
+                    mapper.updateByExampleSelective(t, e);
+                    if (i % 50 == 0)
+                        sqlSession.flushStatements();
+                }
+                sqlSession.flushStatements();
+            }
+        } finally {
+            SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
+        }
+        if (CollectionUtils.isNotEmpty(noDelete)) {
+            MSException.throwException(Translator.get("check_owner_case"));
         }
     }
 

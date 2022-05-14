@@ -24,7 +24,7 @@
 <script>
 import MsReferenceView from "@/business/components/api/automation/scenario/ReferenceView";
 import MsScheduleMaintain from "@/business/components/api/automation/schedule/ScheduleMaintain";
-import {getCurrentProjectID, getUUID} from "@/common/js/utils";
+import {getCurrentProjectID, getUUID, hasPermission} from "@/common/js/utils";
 
 export default {
   name: "MsScenarioExtendButtons",
@@ -34,6 +34,7 @@ export default {
     request: {}
   },
   methods: {
+    hasPermission,
     handleCommand(cmd) {
       switch (cmd) {
         case  "ref":
@@ -49,6 +50,10 @@ export default {
       }
     },
     createPerformance(row) {
+      if (!hasPermission('PROJECT_PERFORMANCE_TEST:READ+CREATE')) {
+        this.$warning(this.$t('api_test.create_performance_test_tips'));
+        return;
+      }
       this.infoDb = false;
       let url = "/api/automation/genPerformanceTestJmx";
       let run = {};

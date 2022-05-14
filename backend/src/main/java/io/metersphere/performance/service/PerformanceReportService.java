@@ -152,6 +152,11 @@ public class PerformanceReportService {
         example.createCriteria().andReportIdEqualTo(reportId);
         loadTestReportDetailMapper.deleteByExample(example);
 
+        // delete load_test_report_log
+        LoadTestReportLogExample loadTestReportLogExample = new LoadTestReportLogExample();
+        loadTestReportLogExample.createCriteria().andReportIdEqualTo(reportId);
+        loadTestReportLogMapper.deleteByExample(loadTestReportLogExample);
+
         // delete jtl file
         fileService.deleteFileById(loadTestReport.getFileId());
 
@@ -214,6 +219,9 @@ public class PerformanceReportService {
         String reportValue = getContent(id, ReportKeys.RequestStatistics);
         // 确定顺序
         List<Statistics> statistics = JSON.parseArray(reportValue, Statistics.class);
+        if (CollectionUtils.isEmpty(statistics)) {
+            return Collections.emptyList();
+        }
         List<LoadTestExportJmx> jmxContent = getJmxContent(id);
         String jmx = jmxContent.get(0).getJmx();
         // 按照JMX顺序重新排序

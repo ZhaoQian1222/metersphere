@@ -102,6 +102,7 @@ export default {
     personal_info: '個人信息',
     api_keys: 'API Keys',
     third_account: '第三方平臺賬號',
+    ui_setting: 'UI 設置',
     quota: '配額管理',
     status: '狀態',
     show_all: '顯示全部',
@@ -123,6 +124,7 @@ export default {
     view_settings: '顯示設置',
     functional: '功能測試',
     my_workstation: '我的工作臺',
+    ui_test: 'UI測試',
     input_content: '請輸入內容',
     create: '新建',
     edit: '編輯',
@@ -451,6 +453,7 @@ export default {
     repositoryName: 'Git存儲庫名稱',
     repositoryUsername: '用戶名',
     ui: 'UI 測試',
+    not_eligible_for_deletion:'不符合删除條件'
   },
   login: {
     normal_Login: "普通登錄",
@@ -924,6 +927,7 @@ export default {
     permission: '權限',
     please_select_group: '請選擇用戶組',
     global: '全局',
+    unable_to_remove_current_member: '無法移除當前登錄用戶！',
     ws_admin_global: '工作空間管理員才可以創建全局用戶組'
   },
   role: {
@@ -1157,6 +1161,7 @@ export default {
     please_select_case: "請選擇用例",
     fail_to_stop: "失敗停止",
     batch_add_parameter: "格式：參數名:參數值 <br/> 如：Accept-Encoding:utf-8",
+    create_performance_test_tips: '沒有創建性能測試的權限，無法完成此操作',
     jar_config: {
       title: "上傳jar包",
       jar_file: "jar包",
@@ -1275,6 +1280,7 @@ export default {
         delete_case_confirm: "確認刪除用例",
         delete_confirm_step: "確認刪除步驟",
         assertions_rule: "斷言規則",
+        scenario_assertions: "場景斷言",
         pre_operation: "前置操作",
         post_operation: "後置操作",
         response_header: "響應頭",
@@ -1637,6 +1643,7 @@ export default {
         set_failure_msg: "設置失敗消息",
         suggest_tip: "點擊便簽添加JSONPath斷言",
         regex_info: '特殊字符"$ ( ) * + . [ ] \\ ^ { } |"需轉義為"\\ "+"特殊字符",如"\\$"',
+        xpath_info: '根據請求響應內容格式，選擇提取方式',
         regular_match: '正則匹配',
         none: '不校驗[]',
         value_eq: '值-等於[value=]',
@@ -2474,6 +2481,10 @@ export default {
     usage: '用途',
     backend_listener: '後置監聽器',
     batch_add_resource_tips: '格式：IP,Port,Monitor,最大並發數<br/>如：192.168.1.52,8082,9100,500',
+    k8s_sa_tips: '使用K8S資源池需要的權限',
+    k8s_sa_download_tips: '下載SA執行文件',
+    k8s_deploy_type_tips: '執行接口測試需要部署 DaemonSet 或 Deployment',
+    k8s_deploy_download_tips: '下載YAML執行文件',
   },
   system_parameter_setting: {
     mailbox_service_settings: '郵件設置',
@@ -2552,6 +2563,7 @@ export default {
     generate_expression: "自动生成",
     cron_expression_format_error: "Cron 表達式格式錯誤",
     cron_expression_interval_short_error: "間隔時間小於 3 分鐘, 請避免執行耗時過長的測試",
+    cron_expression_interval_error: "間隔時間不能小於 1 分鐘",
     cron: {
       seconds: "秒",
       minutes: "分鐘",
@@ -3154,6 +3166,7 @@ export default {
       api_keys: 'API Keys',
       edit_password: "修改密碼",
       third_account: '第三方平臺賬號',
+      ui_setting: 'UI 設置',
     },
     other: {
       track: "測試跟蹤",
@@ -3199,5 +3212,8 @@ export default {
     ui_automation: "UI 自動化",
     ui_element: "元素庫",
     report: "測試報告",
+    ui_debug_mode: 'UI自動化調試管道',
+    ui_local_debug: '本地調試',
+    ui_server_debug: '後端調試',
   }
 };
