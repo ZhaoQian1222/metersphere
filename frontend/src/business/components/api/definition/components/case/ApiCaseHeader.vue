@@ -102,8 +102,6 @@ export default {
     setEnvironment(data) {
       if (data) {
         this.$emit('setEnvironment', data.id);
-        this.$store.state.scenarioEnvMap = new Map();
-        this.$store.state.scenarioEnvMap.set(getCurrentProjectID(), data.id);
       }
     },
 
