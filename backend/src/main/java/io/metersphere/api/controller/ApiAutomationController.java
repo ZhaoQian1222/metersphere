@@ -118,6 +118,11 @@ public class ApiAutomationController {
         return apiAutomationService.update(request, bodyFiles, scenarioFiles, repositoryFiles);
     }
 
+    @PostMapping("/updateCsvFileBatchByCondition")
+    @MsAuditLog(module = OperLogModule.API_AUTOMATION, type = OperLogConstants.BATCH_UPDATECSVFILE, beforeEvent = "#msClass.getLogDetails(#request.ids)", msClass = ApiAutomationService.class)
+    public String updateCsvFileBatchByCondition(@RequestBody ApiScenarioBatchRequest  request) {
+        return apiAutomationService.updateCsvFileBatchByCondition(request);
+    }
 
     @PostMapping("/edit/order")
     public void orderCase(@RequestBody ResetOrderRequest request) {
