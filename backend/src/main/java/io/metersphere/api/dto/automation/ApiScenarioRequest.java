@@ -25,6 +25,10 @@ public class ApiScenarioRequest extends BaseQueryRequest {
     private String reviewId;
     private String versionId;
     private String refId;
+    //仓库文件路径
+    private String repositoryFilePath;
+    //仓库文件分支
+    private String repositoryBranch;
 
     //操作人
     private String operator;
