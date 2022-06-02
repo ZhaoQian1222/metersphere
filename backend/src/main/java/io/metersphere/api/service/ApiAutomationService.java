@@ -16,6 +16,8 @@ import io.metersphere.api.dto.definition.RunDefinitionRequest;
 import io.metersphere.api.dto.definition.request.*;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
 import io.metersphere.api.dto.definition.request.unknown.MsJmeterElement;
+import io.metersphere.api.dto.definition.request.variable.ScenarioVariable;
+import io.metersphere.api.dto.scenario.request.BodyFile;
 import io.metersphere.api.exec.scenario.ApiScenarioEnvService;
 import io.metersphere.api.exec.scenario.ApiScenarioExecuteService;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
@@ -50,6 +52,7 @@ import io.metersphere.track.request.testplan.FileOperationRequest;
 import io.metersphere.track.service.TestPlanScenarioCaseService;
 import io.metersphere.utils.LoggerUtil;
 import io.metersphere.xpack.repository.dto.SaveApiScenarioRepositoryFile;
+import io.metersphere.xpack.repository.utils.JGitUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -81,6 +84,10 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class ApiAutomationService {
+    @Resource
+    private WorkspaceRepositoryFileVersionMapper workspaceRepositoryFileVersionMapper;
+    @Resource
+    private WorkspaceRepositoryMapper workspaceRepositoryMapper;
     @Resource
     ApiScenarioModuleMapper apiScenarioModuleMapper;
     @Resource
@@ -291,6 +298,7 @@ public class ApiAutomationService {
                 method.invoke(CommonBeanFactory.getBean("repositoryApiAutomationService"), request, repositoryFiles);
             }
         } catch (Exception exception) {
+            exception.printStackTrace();
             LoggerUtil.error("不存在GitRepositoryService类");
         }
     }
@@ -415,7 +423,7 @@ public class ApiAutomationService {
         uploadFiles(request, bodyFiles, scenarioFiles);
 
         // 处理git仓库文件
-        dealwithCsvGitFile(request, repositoryFiles);
+        //dealwithCsvGitFile(request, repositoryFiles);
 
         // 存储依赖关系
         ApiAutomationRelationshipEdgeService relationshipEdgeService = CommonBeanFactory.getBean(ApiAutomationRelationshipEdgeService.class);
@@ -2091,5 +2099,78 @@ public class ApiAutomationService {
             });
         }
         return returnMap;
+    }
+
+    public String updateCsvFileBatchByCondition(ApiScenarioBatchRequest request) {
+        //没有仓库文件的场景数
+        int noRepositoryFile = 0;
+        //错误仓库文件的场景数
+        int errorRepositoryFile = 0;
+        //错误场景名称
+        ArrayList<String> errorScanceArray = new ArrayList<>();
+        //成功更新的场景数
+        int successRepositoryFile = 0;
+        String fileId = "";
+        //查询出ids所在的场景列表
+        ServiceUtils.getSelectAllIds(request, request.getCondition(),
+                (query) -> extApiScenarioMapper.selectIdsByQuery(query));
+        List<String> ids = request.getIds();
+        List<ApiScenarioDTO> apiScenarioDTOList = extApiScenarioMapper.selectIds(ids);
+        if (CollectionUtils.isNotEmpty(apiScenarioDTOList)) {
+            for (ApiScenarioDTO apiScenarioDTO : apiScenarioDTOList) {
+                Integer csv_count = 0;
+                //判断场景是否有csv变量
+                MsScenario scenario = JSONObject.parseObject(apiScenarioDTO.getScenarioDefinition(), MsScenario.class, Feature.DisableSpecialKeyDetect);
+                List<ScenarioVariable> variables = scenario.getVariables();
+                if (CollectionUtils.isNotEmpty(variables)) {
+                    for (ScenarioVariable variable : variables) {
+                        if (variable.getType().equals("CSV")) {
+                            csv_count += 1;
+                            List<BodyFile> files = variable.getFiles();
+                            BodyFile bodyFile = files.get(0);
+                            fileId = bodyFile.getId();
+                            String repositoryId = variable.getRepositoryId();
+                            WorkspaceRepository workspaceRepository = workspaceRepositoryMapper.selectByPrimaryKey(repositoryId);
+                            if (workspaceRepository != null) {
+                                try {
+                                    // 校验并拉取git仓库中的文件
+                                    String directoryPath = JGitUtils.pullLatestRevision(workspaceRepository.getRepositoryUrl(), workspaceRepository.getUsername(), workspaceRepository.getPassword(), variable.getRepositoryBranch(), workspaceRepository.getRepositoryName(), workspaceRepository.getWorkspaceId());
+                                    if (JGitUtils.validateFileExists(directoryPath, variable.getRepositoryFilePath())) {
+                                        //复制文件到本地路径下
+                                        FileUtils.createBodyFileByCopy(fileId, directoryPath + "/" + variable.getRepositoryFilePath());
+                                        //根据repositoryId和分支、文件路径查询文件版本信息
+                                        WorkspaceRepositoryFileVersionExample example = new WorkspaceRepositoryFileVersionExample();
+                                        example.createCriteria().andRepositoryIdEqualTo(repositoryId);
+                                        example.createCriteria().andBranchEqualTo(variable.getRepositoryBranch());
+                                        example.createCriteria().andPathEqualTo(variable.getRepositoryFilePath());
+                                        List<WorkspaceRepositoryFileVersion> workspaceRepositoryFileVersions = workspaceRepositoryFileVersionMapper.selectByExample(example);
+                                        if (CollectionUtils.isNotEmpty(workspaceRepositoryFileVersions)) {
+                                            for (WorkspaceRepositoryFileVersion workspaceRepositoryFileVersion : workspaceRepositoryFileVersions) {
+                                                // 获取此文件的最新修改记录
+                                                String commitId = JGitUtils.getLatestCommitId(variable.getRepositoryBranch(), workspaceRepository.getRepositoryName(), workspaceRepository.getWorkspaceId(), variable.getRepositoryFilePath());
+                                                //修改仓库文件版本
+                                                workspaceRepositoryFileVersion.setCommitId(commitId);
+                                                int i = workspaceRepositoryFileVersionMapper.updateByPrimaryKey(workspaceRepositoryFileVersion);
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    errorRepositoryFile += 1;
+                                    errorScanceArray.add(apiScenarioDTO.getName());
+                                    break;
+                                }
+                            }
+                            if (csv_count == 0) {
+                                noRepositoryFile += 1;
+                            }
+                        }
+                    }
+                } else {
+                    noRepositoryFile += 1;
+                }
+            }
+        }
+        successRepositoryFile = ids.size() - errorRepositoryFile - noRepositoryFile;
+        return "共选中" + ids.size() + "个场景;成功更新场景数" + successRepositoryFile + "个;" + errorRepositoryFile + "个场景有更新错误:" + errorScanceArray.toString() + ";" + noRepositoryFile + "个场景无git存储文件，无更新";
     }
 }

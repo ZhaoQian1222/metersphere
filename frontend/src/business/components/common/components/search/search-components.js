@@ -64,6 +64,27 @@ export const NAME = {
   },
 }
 
+export const GITPATH = {
+  key: "repositoryFilePath", // 返回结果Map的key
+  name: 'MsTableSearchInput', // Vue控件名称
+  label: 'commons.repositoryFilePath', // 显示名称
+  operator: { // 运算符设置
+    value: OPERATORS.LIKE.value, // 如果未设置value初始值，则value初始值为options[0]
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE] // 运算符候选项
+  },
+}
+
+export const GITBRANCH = {
+  key: "repositoryBranch", // 返回结果Map的key
+  name: 'MsTableSearchInput', // Vue控件名称
+  label: 'commons.repositoryBranch', // 显示名称
+  operator: { // 运算符设置
+    value: OPERATORS.LIKE.value, // 如果未设置value初始值，则value初始值为options[0]
+    options: [OPERATORS.LIKE, OPERATORS.NOT_LIKE] // 运算符候选项
+  },
+}
+
+
 export const UPDATE_TIME = {
   key: "updateTime",
   name: 'MsTableSearchDateTimePicker',
@@ -314,9 +335,9 @@ export const EXECUTOR = {
 
 export const ISREFERENCE = {
   key: "isReference",
-      name: 'MsTableSearchSelect',
-      label: 'api_test.scenario.reference',
-      operator: {
+  name: 'MsTableSearchSelect',
+  label: 'api_test.scenario.reference',
+  operator: {
     options: [OPERATORS.IN]
   },
   options: [
@@ -324,7 +345,7 @@ export const ISREFERENCE = {
     {value: 'true', label: 'commons.yes'},
     {value: 'false', label: 'commons.no'}
   ],
-      props: { // 尾部控件的props，一般为element ui控件的props
+  props: { // 尾部控件的props，一般为element ui控件的props
     multiple: false
   }
 }
@@ -588,11 +609,11 @@ export const TEST_PLAN_CONFIGS = [NAME, UPDATE_TIME, CREATE_TIME, PRINCIPAL, TES
 
 export const API_DEFINITION_CONFIGS = [NAME, API_METHOD, API_PATH, API_STATUS, API_TAGS, UPDATE_TIME, CREATE_TIME, PRINCIPALAPI, ISREFERENCE];
 
-export const API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_CASE_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR,ISREFERENCE];
+export const API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_CASE_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR, ISREFERENCE];
 
-export const API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_SCENARIO_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR];
+export const API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_SCENARIO_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR, GITBRANCH, GITPATH];
 
-export const TEST_PLAN_REPORT_CONFIGS = [NAME, TEST_PLAN_NAME,CREATOR, CREATE_TIME, TEST_PLAN_TRIGGER_MODE, TEST_PLAN_REPORT_STATUS];
+export const TEST_PLAN_REPORT_CONFIGS = [NAME, TEST_PLAN_NAME, CREATOR, CREATE_TIME, TEST_PLAN_TRIGGER_MODE, TEST_PLAN_REPORT_STATUS];
 
 // 测试计划 功能用例
 export const TEST_PLAN_TEST_CASE_CONFIGS = [NAME, API_TAGS, MODULE, PRIORITY, CREATE_TIME, UPDATE_TIME, EXECUTOR, CASE_REVIEW_STATUS, PLAN_CASE_STATUS];
@@ -602,9 +623,9 @@ export const TEST_PLAN_RELEVANCE_FUNC_CONFIGS = [NAME, API_TAGS, CREATE_TIME, UP
 export const TEST_PLAN_RELEVANCE_API_DEFINITION_CONFIGS = [NAME, API_METHOD, API_PATH, API_TAGS, UPDATE_TIME, CREATE_TIME, CREATOR];
 export const TEST_PLAN_RELEVANCE_API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, UPDATE_TIME, CREATOR];
 export const TEST_PLAN_RELEVANCE_API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_SCENARIO_RESULT, CREATE_TIME, UPDATE_TIME, CREATOR];
-export const TEST_PLAN_RELEVANCE_LOAD_CASE= [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
+export const TEST_PLAN_RELEVANCE_LOAD_CASE = [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
 
 // 测试用例关联测试
 export const TEST_CASE_RELEVANCE_API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, CREATOR];
 export const TEST_CASE_RELEVANCE_API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, CREATOR];
-export const TEST_CASE_RELEVANCE_LOAD_CASE= [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
+export const TEST_CASE_RELEVANCE_LOAD_CASE = [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];

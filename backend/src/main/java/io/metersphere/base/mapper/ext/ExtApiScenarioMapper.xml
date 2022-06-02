@@ -139,6 +139,20 @@
             </include>
         </if>
 
+        <if test="${condition}.repositoryFilePath != null">
+            and workspace_repository.path
+            <include refid="condition">
+                <property name="object" value="${condition}.repositoryFilePath"/>
+            </include>
+        </if>
+
+        <if test="${condition}.repositoryBranch != null">
+            and workspace_repository.branch
+            <include refid="condition">
+                <property name="object" value="${condition}.repositoryBranch"/>
+            </include>
+        </if>
+
     </sql>
     <select id="listModule" resultType="java.lang.Integer">
         select count(api_scenario.id) from api_scenario
@@ -167,6 +181,8 @@
         api_scenario.create_user as creator , user.name as creator_name
         from api_scenario
         left join project on api_scenario.project_id = project.id
+        LEFT JOIN workspace_repository_file_version workspace_repository ON api_scenario.id =
+        workspace_repository.scenario_id
         left join user on api_scenario.user_id = user.id and api_scenario.create_user = user.id
         left join user deleteUser on api_scenario.delete_user_id = deleteUser.id
         left join user u2 on api_scenario.principal = u2.id
