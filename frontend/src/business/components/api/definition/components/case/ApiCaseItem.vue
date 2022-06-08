@@ -149,7 +149,7 @@
           :showScript="true"
           :request="apiCase.request"
           :response="apiCase.responseData"
-          v-if="api.protocol==='SQL'"/>
+          v-if="api.method==='SQL'"/>
         <ms-dubbo-basis-parameters
           :showScript="true"
           :request="apiCase.request"
@@ -311,6 +311,14 @@ export default {
     if (requireComponent != null && JSON.stringify(esbDefinition) != '{}' && JSON.stringify(esbDefinitionResponse) != '{}') {
       this.isXpack = true;
     }
+    if (this.apiCase.request && this.apiCase.request.hashTree && this.apiCase.request.hashTree.length > 0) {
+      this.apiCase.request.hashTree.forEach(item => {
+        if (item.type === 'Assertions') {
+          item.document.nodeType = 'Case';
+          item.document.apiDefinitionId = this.apiCase.apiDefinitionId;
+        }
+      })
+    }
     this.readonly = !hasPermission('PROJECT_API_DEFINITION:READ+EDIT_CASE');
     if (this.apiCase && this.apiCase.id) {
       this.showFollow = false;
@@ -423,7 +431,8 @@ export default {
       });
     },
     singleRun(data) {
-      if (data.apiMethod !== "SQL" && data.apiMethod !== "DUBBO" && data.apiMethod !== "dubbo://" && data.apiMethod !== "TCP" && !this.environment) {
+      let methods =["SQL","DUBBO","dubbo://","TCP" ];
+      if (data.apiMethod && methods.indexOf(data.apiMethod) === -1 && !this.environment) {
         this.$warning(this.$t('api_test.environment.select_environment'));
         return;
       }
@@ -469,6 +478,7 @@ export default {
         this.currentApi.request = item.request;
         this.currentApi.request.changeId = getUUID();
       }
+      this.$emit("setSelectedCaseId", item.id);
     },
     changePriority(row) {
       if (row.id) {

@@ -87,8 +87,9 @@
               <test-case-edit-other-info :read-only="readOnly" :project-id="projectIds" :form="form"
                                          :is-copy="currentTestCaseInfo.isCopy"
                                          :label-width="formLabelWidth" :case-id="form.id"
-                                         :type="type" :comments="comments"
+                                         :type="type" :comments.sync="comments"
                                          @openComment="openComment"
+                                         :is-click-attachment-tab.sync="isClickAttachmentTab"
                                          :version-enable="versionEnable"
                                          ref="otherInfo"/>
               <test-case-comment :case-id="form.id"
@@ -282,6 +283,7 @@ export default {
       selectedOtherInfo: null,
       currentProjectId: "",
       casePublic: false,
+      isClickAttachmentTab: false,
     };
   },
   props: {
@@ -796,6 +798,7 @@ export default {
         param.fileIds = [];
         param.updatedFileList = [];
       }
+      param.handleAttachment = this.isClickAttachmentTab;
 
       let requestJson = JSON.stringify(param, function (key, value) {
         return key === "file" ? undefined : value

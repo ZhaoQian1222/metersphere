@@ -156,6 +156,13 @@
         return !(this.editData.name && this.editData.name !== "");
       }
     },
+    watch: {
+      'editData.name': {
+        handler(v) {
+          this.handleClick();
+        }
+      }
+    },
     methods: {
       hasLicense,
       complete(results) {
@@ -170,16 +177,25 @@
         }
         this.loading = false;
       },
+      cleanPreview() {
+        this.allData = [];
+        this.columns = [];
+        this.previewData = [];
+      },
       step(results, parser) {
-        if(this.allData.length < 500) {
+        if (this.allData.length < 500) {
           this.allData.push(results.data);
-        }else{
+        } else {
           this.showMessage = true;
         }
       },
 
       handleClick() {
-        let config = {complete: this.complete, step: this.step, delimiter: this.editData.delimiter ? this.editData.delimiter : ","};
+        let config = {
+          complete: this.complete,
+          step: this.step,
+          delimiter: this.editData.delimiter ? this.editData.delimiter : ","
+        };
         this.allData = [];
         // 本地文件
         if (this.editData.files &&  this.editData.files.length > 0 && this.editData.files[0].file) {

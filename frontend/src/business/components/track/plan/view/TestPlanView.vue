@@ -150,7 +150,7 @@ export default {
         this.redirectCharType = this.$route.query.charType;
       }
       this.clickType = this.$route.params.clickType;
-      if (this.redirectCharType != "") {
+      if (this.redirectCharType) {
         if (this.redirectCharType == 'scenario') {
           this.activeIndex = 'api';
         } else if (this.redirectCharType != null && this.redirectCharType != '') {
@@ -233,5 +233,9 @@ export default {
 
 .plan-report >>> .report-content {
   height: calc(100vh - 140px);
+}
+
+.el-menu-item {
+  padding: 0 10px;
 }
 </style>

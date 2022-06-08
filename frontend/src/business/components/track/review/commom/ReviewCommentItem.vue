@@ -20,7 +20,7 @@
       </span>
       <span class="comment-delete">
         <el-link icon="el-icon-edit" style="font-size: 9px;margin-right: 6px;" @click="openEdit" :disabled="readOnly"/>
-        <el-link icon="el-icon-close" @click="deleteComment" :disabled="readOnly"/>
+        <el-link icon="el-icon-close" v-prevent-link-re-click="1300" @click="deleteComment" :disabled="readOnly"/>
       </span>
       <br/>
 
@@ -48,7 +48,7 @@
       <div>
         <div class="editors_div_style">
           <div id="editorsDiv">
-            <ms-mark-down-text prop="description" :data="comment" :toolbars="toolbars"/>
+            <ms-mark-down-text prop="description" :data="comment" :toolbars="toolbars" :custom-min-height="200"/>
           </div>
         </div>
         <div>

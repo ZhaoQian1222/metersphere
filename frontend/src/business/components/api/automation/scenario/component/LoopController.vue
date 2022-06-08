@@ -23,7 +23,7 @@
         <el-row>
           <el-col :span="8">
             <span class="ms-span ms-radio">{{ $t('loop.loops') }}</span>
-            <el-input-number size="small" v-model="controller.countController.loops" :placeholder="$t('commons.millisecond')" :max="100000000" :min="0"/>
+            <el-input size="small" v-model="controller.countController.loops" :placeholder="$t('commons.millisecond')" style="width: 200px"/>
             <span class="ms-span ms-radio">次</span>
           </el-col>
           <el-col :span="8">
@@ -188,6 +188,7 @@ export default {
     onDebugMessage(e) {
       if (e.data && e.data.startsWith("result_")) {
         let data = JSON.parse(e.data.substring(7));
+        this.debugCode(data);
         let resourceId = data.resourceId.split("_")[0];
         if (this.requestResult.has(resourceId)) {
           this.requestResult.get(resourceId).push(data);
@@ -203,6 +204,16 @@ export default {
         this.$store.state.currentApiCase = {debugLoop: getUUID()};
         this.reload();
       }
+    },
+    debugCode(data){
+      if(data && this.node && this.node.data) {
+        if (data.error > 0) {
+          this.node.data.code = "error";
+        } else {
+          this.node.data.code = this.node.data.code !== 'error' ? "success" : "error";
+        }
+      }
+      this.reload();
     },
     getCode() {
       if (this.node && this.node.data.code && this.node.data.debug) {
@@ -279,6 +290,9 @@ export default {
         this.node.data.debug = true;
       }
       this.reportId = getUUID().substring(0, 8);
+      this.node.data.code="";
+      this.node.data.testing = false;
+      this.node.data.debug = true;
     },
 
     remove() {

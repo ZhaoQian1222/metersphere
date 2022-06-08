@@ -221,7 +221,7 @@
 
     <test-case-preview ref="testCasePreview" :loading="rowCaseResult.loading"/>
 
-    <relationship-graph-drawer :graph-data="graphData" ref="relationshipGraph"/>
+    <relationship-graph-drawer v-xpack :graph-data="graphData" ref="relationshipGraph"/>
 
     <!--高级搜索-->
     <ms-table-adv-search-bar :condition.sync="condition" :showLink="false" ref="searchBar" @search="search"/>
@@ -366,56 +366,56 @@ export default {
         {
           name: this.$t('test_track.case.batch_edit_case'),
           handleClick: this.handleBatchEdit,
-          permissions: ['PROJECT_TRACK_CASE:READ+EDIT']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_EDIT']
         },
         {
           name: this.$t('test_track.case.batch_move_case'),
           handleClick: this.handleBatchMove,
-          permissions: ['PROJECT_TRACK_CASE:READ+EDIT']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_MOVE']
         },
         {
           name: this.$t('api_test.batch_copy'),
           handleClick: this.handleBatchCopy,
-          permissions: ['PROJECT_TRACK_CASE:READ+COPY']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_COPY']
         },
         {
           name: this.$t('test_track.case.batch_delete_case'),
           handleClick: this.handleDeleteBatchToGc,
-          permissions: ['PROJECT_TRACK_CASE:READ+DELETE']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_DELETE']
         },
         {
           name: this.$t('test_track.case.generate_dependencies'),
           isXPack: true,
           handleClick: this.generateGraph,
-          permissions: ['PROJECT_API_DEFINITION:READ+EDIT_API']
+          permissions: ['PROJECT_TRACK_CASE:READ+GENERATE_DEPENDENCIES']
         },
         {
           name: this.$t('test_track.case.batch_add_public'),
           isXPack: true,
           handleClick: this.handleBatchAddPublic,
-          permissions: ['PROJECT_API_DEFINITION:READ+EDIT_API'],
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_ADD_PUBLIC'],
         }
       ],
       publicButtons: [
         {
           name: this.$t('test_track.case.batch_copy'),
           handleClick: this.handleBatchMove,
-          permissions: ['PROJECT_TRACK_CASE:READ+EDIT']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_COPY']
         }, {
           name: this.$t('test_track.case.batch_delete_case'),
           handleClick: this.handleDeleteBatchToPublic,
-          permissions: ['PROJECT_TRACK_CASE:READ+DELETE'],
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_DELETE'],
         },
       ],
       trashButtons: [
         {
           name: this.$t('commons.reduction'),
           handleClick: this.batchReduction,
-          permissions: ['PROJECT_TRACK_CASE:READ+RECOVER']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_REDUCTION']
         }, {
           name: this.$t('test_track.case.batch_delete_case'),
           handleClick: this.handleDeleteBatch,
-          permissions: ['PROJECT_TRACK_CASE:READ+DELETE']
+          permissions: ['PROJECT_TRACK_CASE:READ+BATCH_DELETE']
         }
       ],
       operators: [],
@@ -510,6 +510,9 @@ export default {
     },
     selectNodeIds() {
       return this.$store.state.testCaseSelectNodeIds;
+    },
+    selectNode() {
+      return this.$store.state.testCaseSelectNode;
     },
     moduleOptions() {
       return this.$store.state.testCaseModuleOptions;
@@ -708,20 +711,21 @@ export default {
     initTableData() {
       this.condition.planId = "";
       this.condition.nodeIds = [];
-      //initCondition(this.condition);
       initCondition(this.condition, this.condition.selectAll);
       this.condition.orders = getLastTableSortField(this.tableHeaderKey);
       this.condition.versionId = this.currentVersion || null;
       this.enableOrderDrag = this.condition.orders.length > 0 ? false : true;
 
       if (this.planId) {
-        // param.planId = this.planId;
         this.condition.planId = this.planId;
       }
+
       if (!this.trashEnable && !this.publicEnable) {
         if (this.selectNodeIds && this.selectNodeIds.length > 0) {
-          // param.nodeIds = this.selectNodeIds;
-          this.condition.nodeIds = this.selectNodeIds;
+          if (!this.selectNode || this.selectNode.data.id !== 'root') {
+            // 优化：如果当前选中节点是root节点，则不添加过滤条件
+            this.condition.nodeIds = this.selectNodeIds;
+          }
         }
       }
       this.getData();
@@ -964,7 +968,7 @@ export default {
     _handleDeleteToGc(testCase) {
       let testCaseId = testCase.id;
       this.$post('/test/case/deleteToGc/' + testCaseId, {}, () => {
-        this.$emit('refreshTable');
+        this.$emit('refreshAll');
         this.initTableData();
         this.$success(this.$t('commons.delete_success'));
       });
@@ -1119,13 +1123,13 @@ export default {
           this.$get('/test/case/deletePublic/' + testCase.versionId + '/' + testCase.refId, () => {
             this.$success(this.$t('commons.delete_success'));
             this.$refs.apiDeleteConfirm.close();
-            this.$emit("refreshTable");
+            this.$emit("refreshAll");
           });
         } else {
           this.$get('/test/case/delete/' + testCase.versionId + '/' + testCase.refId, () => {
             this.$success(this.$t('commons.delete_success'));
             this.$refs.apiDeleteConfirm.close();
-            this.$emit("refreshTable");
+            this.$emit("refreshAll");
           });
         }
       }
@@ -1137,7 +1141,7 @@ export default {
             this.$success(this.$t('commons.delete_success'));
             // this.initTable();
             this.$refs.apiDeleteConfirm.close();
-            this.$emit("refreshTable");
+            this.$emit("refreshAll");
 
           });
         } else {

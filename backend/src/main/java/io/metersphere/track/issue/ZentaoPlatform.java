@@ -10,9 +10,9 @@ import io.metersphere.commons.constants.IssuesStatus;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.dto.UserDTO;
-import io.metersphere.i18n.Translator;
 import io.metersphere.track.dto.DemandDTO;
 import io.metersphere.track.issue.client.ZentaoClient;
+import io.metersphere.track.issue.client.ZentaoGetClient;
 import io.metersphere.track.issue.domain.PlatformUser;
 import io.metersphere.track.issue.domain.zentao.AddIssueResponse;
 import io.metersphere.track.issue.domain.zentao.GetIssueResponse;
@@ -32,6 +32,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -397,20 +400,30 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
         while (matcher.find()) {
             // get file name
             String originSubUrl = matcher.group(1);
-            String fileName = originSubUrl.substring(10);
-            fileName = resourceService.decodeFileName(fileName);
-            // get file
-            ResponseEntity<FileSystemResource> mdImage = resourceService.getMdImage(fileName);
-            // upload zentao
-            String id = uploadFile(mdImage.getBody());
-            // todo delete local file
-            int index = fileName.lastIndexOf(".");
-            String suffix = "";
-            if (index != -1) {
-                suffix = fileName.substring(index);
+            if (originSubUrl.contains("/url?url=")) {
+                String path = URLDecoder.decode(originSubUrl, StandardCharsets.UTF_8);
+                String fileName;
+                if (path.indexOf("fileID") > 0) {
+                    fileName = path.substring(path.indexOf("fileID") + 7);
+                } else {
+                    fileName = path.substring(path.indexOf("file-read-") + 10);
+                }
+                zentaoSteps = zentaoSteps.replaceAll(Pattern.quote(originSubUrl), fileName);
+            } else {
+                String fileName = originSubUrl.substring(10);
+                // get file
+                ResponseEntity<FileSystemResource> mdImage = resourceService.getMdImage(fileName);
+                // upload zentao
+                String id = uploadFile(mdImage.getBody());
+                // todo delete local file
+                int index = fileName.lastIndexOf(".");
+                String suffix = "";
+                if (index != -1) {
+                    suffix = fileName.substring(index);
+                }
+                // replace id
+                zentaoSteps = zentaoSteps.replaceAll(Pattern.quote(originSubUrl), id + suffix);
             }
-            // replace id
-            zentaoSteps = zentaoSteps.replaceAll(Pattern.quote(originSubUrl), id + suffix);
         }
         // image link
         String netImgRegex = "!\\[(.*?)]\\((http.*?)\\)";
@@ -448,8 +461,7 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
                 }
 
                 if (Arrays.stream(imgArray).anyMatch(imgType -> StringUtils.equals(imgType, srcContent.substring(srcContent.indexOf('.') + 1)))) {
-                    if (zentaoClient.getBaseUrl().contains("biz")) {
-                        // 禅道企业版
+                    if (zentaoClient instanceof ZentaoGetClient) {
                         path = zentaoClient.getBaseUrl() + "/index.php?m=file&f=read&fileID=" + srcContent;
                     } else {
                         // 禅道开源版
@@ -458,7 +470,11 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
                 } else {
                     return result;
                 }
+            } else {
+                name = name.replaceAll("&amp;", "&");
+                path = zentaoClient.getBaseUrl() + path.replaceAll("&amp;", "&");
             }
+            path = "/resource/md/get/url?url=" + URLEncoder.encode(path, StandardCharsets.UTF_8);
             // 图片与描述信息之间需换行，否则无法预览图片
             result = "\n\n![" + name + "](" + path + ")";
         }

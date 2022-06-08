@@ -82,6 +82,8 @@ public class PerformanceReportService {
     private RedissonClient redissonClient;
     @Resource
     private ProjectMapper projectMapper;
+    @Resource
+    private LoadTestReportFileMapper loadTestReportFileMapper;
 
     public List<ReportDTO> getRecentReportList(ReportRequest request) {
         List<OrderRequest> orders = new ArrayList<>();
@@ -151,6 +153,11 @@ public class PerformanceReportService {
         LoadTestReportDetailExample example = new LoadTestReportDetailExample();
         example.createCriteria().andReportIdEqualTo(reportId);
         loadTestReportDetailMapper.deleteByExample(example);
+
+        // delete load_test_report_file
+        LoadTestReportFileExample loadTestReportFileExample = new LoadTestReportFileExample();
+        loadTestReportFileExample.createCriteria().andReportIdEqualTo(reportId);
+        loadTestReportFileMapper.deleteByExample(loadTestReportFileExample);
 
         // delete load_test_report_log
         LoadTestReportLogExample loadTestReportLogExample = new LoadTestReportLogExample();
@@ -536,5 +543,9 @@ public class PerformanceReportService {
         DeleteReportRequest request = new DeleteReportRequest();
         request.setIds(ids);
         deleteReportBatch(request);
+    }
+
+    public List<FileMetadata> getFileMetadataByReportId(String reportId) {
+        return extLoadTestReportMapper.getFileMetadataById(reportId);
     }
 }

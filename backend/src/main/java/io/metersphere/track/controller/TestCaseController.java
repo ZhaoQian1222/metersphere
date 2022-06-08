@@ -43,6 +43,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -88,9 +90,16 @@ public class TestCaseController {
     }
 
     @PostMapping("/list/minder")
-    public List<TestCaseDTO> listDetail(@RequestBody QueryTestCaseRequest request) {
+    public List<TestCaseDTO> listForMinder(@RequestBody QueryTestCaseRequest request) {
         checkPermissionService.checkProjectOwner(request.getProjectId());
         return testCaseService.listTestCaseForMinder(request);
+    }
+
+    @PostMapping("/list/minder/{goPage}/{pageSize}")
+    public Pager<List<TestCaseDTO>> listForMinder(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody QueryTestCaseRequest request) {
+        checkPermissionService.checkProjectOwner(request.getProjectId());
+        Page<Object> page = PageHelper.startPage(goPage, pageSize, true);
+        return PageUtils.setPageInfo(page, testCaseService.listTestCaseForMinder(request));
     }
 
     /*jenkins项目下所有接口和性能测试用例*/
@@ -353,7 +362,7 @@ public class TestCaseController {
         byte[] bytes = fileService.loadFileAsBytes(fileOperationRequest.getId());
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/octet-stream"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileOperationRequest.getName() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + URLEncoder.encode(fileOperationRequest.getName(), StandardCharsets.UTF_8) + "\"")
                 .body(bytes);
     }
 

@@ -30,11 +30,11 @@
       </template>
 
       <template v-slot:behindHeaderLeft>
-        <el-tag size="mini" class="ms-tag" v-if="request.referenced==='Deleted'" type="danger">
+        <el-tag size="small" class="ms-tag" v-if="request.referenced==='Deleted'" type="danger">
           {{ $t('api_test.automation.reference_deleted') }}
         </el-tag>
-        <el-tag size="mini" class="ms-tag" v-if="request.referenced==='Copy'">{{ $t('commons.copy') }}</el-tag>
-        <el-tag size="mini" class="ms-tag" v-if="request.referenced ==='REF'">{{
+        <el-tag size="small" class="ms-tag" v-if="request.referenced==='Copy'">{{ $t('commons.copy') }}</el-tag>
+        <el-tag size="small" class="ms-tag" v-if="request.referenced ==='REF'">{{
             $t('api_test.scenario.reference')
           }}
         </el-tag>
@@ -59,7 +59,7 @@
       </template>
       <template v-slot:button v-if="!ifFromVariableAdvance">
         <el-tooltip :content="$t('api_test.run')" placement="top" v-if="!loading">
-          <el-button :disabled="!request.enable" @click="run" icon="el-icon-video-play" style="padding: 5px" class="ms-btn" size="mini" circle/>
+          <el-button :disabled="!request.enable" @click="run" icon="el-icon-video-play" class="ms-btn" size="mini" circle/>
         </el-tooltip>
         <el-tooltip :content="$t('report.stop_btn')" placement="top" :enterable="false" v-else>
           <el-button @click.once="stop" size="mini" style="color:white;padding: 0 0.1px;width: 24px;height: 24px;"
@@ -235,6 +235,7 @@ export default {
       environmentMap: this.envMap,
       isShowNum: false,
       response: {},
+      currentScenarioData: {},
     }
   },
   created() {
@@ -499,6 +500,8 @@ export default {
       this.reload();
     },
     run() {
+      this.currentScenarioData = undefined;
+      this.getParentVariables(this.node);
       let selectEnvId;
       // 自定义请求
       if (this.isApiImport || this.request.isRefEnvironment) {
@@ -527,16 +530,47 @@ export default {
         this.request.environmentId = selectEnvId;
       }
       this.request.customizeReq = this.isCustomizeReq;
+      // 场景变量
+      let variables = [];
+      if(this.currentScenario && this.currentScenario.variables) {
+        variables = JSON.parse(JSON.stringify(this.currentScenario.variables));
+      }
       let debugData = {
         id: this.currentScenario.id, name: this.currentScenario.name, type: "scenario",
-        variables: this.currentScenario.variables, referenced: 'Created', headers: this.currentScenario.headers,
+        variables: variables, referenced: 'Created', headers: this.currentScenario.headers,
         enableCookieShare: this.enableCookieShare, environmentId: selectEnvId, hashTree: [this.request],
       };
+      // 合并自身依赖场景变量
+      if(this.currentScenarioData && this.currentScenarioData.variableEnable && this.currentScenarioData.variables){
+        if(!debugData.variables || debugData.variables.length === 0){
+          debugData.variables = this.currentScenarioData.variables;
+        }else if(this.currentScenarioData.variables){
+           // 同名合并
+          debugData.variables.forEach(data =>{
+            this.currentScenarioData.variables.forEach(item =>{
+              if(data.type === item.type && data.name === item.name){
+                Object.assign(data,item);
+              }
+            })
+          });
+        }
+      }
       this.runData.push(debugData);
       this.request.requestResult = [];
       this.request.result = undefined;
       /*触发执行操作*/
       this.reportId = getUUID();
+    },
+    getParentVariables(node){
+      if(!this.currentScenarioData) {
+        if (node && node.data && node.data.type === "scenario") {
+          this.currentScenarioData = node.data;
+        } else {
+          if (node.parent && node.parent.data) {
+            this.getParentVariables(node.parent);
+          }
+        }
+      }
     },
     stop() {
       let url = "/api/automation/stop/" + this.reportId;
@@ -672,10 +706,6 @@ export default {
   color: #409EFF;
 }
 
-/deep/ .el-card__body {
-  padding: 6px 10px;
-}
-
 .icon.is-active {
   transform: rotate(90deg);
 }
@@ -686,17 +716,18 @@ export default {
 }
 
 .ms-btn {
+  padding: 5px;
   background-color: #409EFF;
   color: white;
 }
 
-.ms-btn-flot {
+.ms-btn-float {
   margin: 20px;
   float: right;
 }
 
 .ms-step-name-api {
-  padding-left: 10px;
+  padding-left: 5px;
 }
 
 .ms-tag {

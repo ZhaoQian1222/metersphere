@@ -104,11 +104,12 @@
               ref="testCaseList">
             </test-case-list>
             <test-case-minder
+              :current-version="currentVersion"
               :tree-nodes="treeNodes"
               :project-id="projectId"
               :condition="condition"
               v-if="activeDom === 'right'"
-              @refresh="refreshTable"
+              @refresh="refreshAll"
               ref="minder"/>
           </ms-tab-button>
         </el-tab-pane>
@@ -122,7 +123,7 @@
             <test-case-edit
               :currentTestCaseInfo="item.testCaseInfo"
               :version-enable="versionEnable"
-              @refresh="refreshTable"
+              @refresh="refreshAll"
               @caseEdit="handleCaseCreateOrEdit($event,'edit')"
               @caseCreate="handleCaseCreateOrEdit($event,'add')"
               @checkout="checkout($event, item)"
@@ -140,7 +141,7 @@
             <test-case-edit-show
               :currentTestCaseInfo="item.testCaseInfo"
               :version-enable="versionEnable"
-              @refresh="refreshTable"
+              @refresh="refreshAll"
               @caseEdit="handleCaseCreateOrEdit($event,'edit')"
               @caseCreate="handleCaseCreateOrEdit($event,'add')"
               :read-only="testCaseReadOnly"
@@ -309,6 +310,11 @@ export default {
       } else {
         this.activeName = 'default';
       }
+    },
+    '$store.state.temWorkspaceId'() {
+      if (this.$store.state.temWorkspaceId) {
+        this.$refs.isChangeConfirm.open(null, this.$store.state.temWorkspaceId);
+      }
     }
   },
   computed: {
@@ -363,8 +369,12 @@ export default {
     updateActiveDom(activeDom) {
       openMinderConfirm(this, activeDom);
     },
-    changeConfirm(isSave) {
+    changeConfirm(isSave, temWorkspaceId) {
       saveMinderConfirm(this, isSave);
+      if (temWorkspaceId) {
+        // 如果是切换工作空间提示的保存，则保存完后跳转到对应的工作空间
+        this.$EventBus.$emit('changeWs', temWorkspaceId);
+      }
     },
     changeRedirectParam(redirectIDParam) {
       this.redirectID = redirectIDParam;
@@ -534,13 +544,6 @@ export default {
       this.publicEnable = false;
       this.activeName = "default";
     },
-    refreshTable(data) {
-      if (this.$refs.testCaseList) {
-        this.$refs.testCaseList.initTableData();
-      }
-      this.$refs.nodeTree.list();
-      this.setTable(data);
-    },
     increase(id) {
       this.$refs.nodeTree.increase(id);
     },
@@ -614,9 +617,11 @@ export default {
       this.testCaseReadOnly = true;
     },
     refresh(data) {
-      this.$store.commit('setTestCaseSelectNode', {});
-      this.$store.commit('setTestCaseSelectNodeIds', []);
-      this.refreshTable(data);
+      if (this.selectNodeIds && this.selectNodeIds.length > 0) {
+        this.$store.commit('setTestCaseSelectNode', {});
+        this.$store.commit('setTestCaseSelectNodeIds', []);
+      }
+      this.refreshAll(data);
     },
     setTable(data) {
       if (data) {
@@ -629,25 +634,12 @@ export default {
         }
       }
     },
-    refreshAll() {
-      this.$refs.nodeTree.list();
-      this.refresh();
-    },
-    openRecentTestCaseEditDialog(caseId) {
-      if (caseId) {
-        // this.getProjectByCaseId(caseId);
-        this.$get('/test/case/get/' + caseId, response => {
-          if (response.data) {
-            /*
-                        this.$refs.testCaseEditDialog.open(response.data);
-            */
-          }
-        });
-      } else {
-        /*
-                this.$refs.testCaseEditDialog.open();
-        */
+    refreshAll(data) {
+      if (this.$refs.testCaseList) {
+        this.$refs.testCaseList.initTableData();
       }
+      this.$refs.nodeTree.list();
+      this.setTable(data);
     },
     setTreeNodes(data) {
       this.treeNodes = data;

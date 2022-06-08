@@ -220,6 +220,13 @@ export default {
       // 来自场景步骤，请求id为用例id
       if (this.document && this.document.nodeType && this.document.nodeType === "scenario") {
         this.getCase();
+      } else if (this.document && this.document.nodeType && this.document.nodeType === "Case" && this.document.apiDefinitionId) {
+        this.getAPI(this.document.apiDefinitionId);
+        if (this.document.type === "JSON") {
+          this.document.data.jsonFollowAPI = this.document.apiDefinitionId;
+        } else {
+          this.document.data.xmlFollowAPI = this.document.apiDefinitionId;
+        }
       } else {
         this.getAPI();
       }

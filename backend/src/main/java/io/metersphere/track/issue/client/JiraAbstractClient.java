@@ -127,6 +127,11 @@ public abstract class JiraAbstractClient extends BaseClient {
         return (JiraAddIssueResponse) getResultForObject(JiraAddIssueResponse.class, response);
     }
 
+    public List<JiraTransitionsResponse.Transitions> getTransitions(String issueKey) {
+        ResponseEntity<String> response = restTemplate.exchange(getBaseUrl() + "/issue/{1}/transitions", HttpMethod.GET, getAuthHttpEntity(), String.class, issueKey);
+        return ((JiraTransitionsResponse) getResultForObject(JiraTransitionsResponse.class, response)).getTransitions();
+    }
+
     public void updateIssue(String id, String body) {
         LogUtil.info("addIssue: " + body);
         HttpHeaders headers = getAuthHeader();
@@ -182,8 +187,12 @@ public abstract class JiraAbstractClient extends BaseClient {
     }
 
     public void auth() {
+        ResponseEntity<String> response = null;
         try {
-            restTemplate.exchange(getBaseUrl() + "/myself", HttpMethod.GET, getAuthHttpEntity(), String.class);
+            response = restTemplate.exchange(getBaseUrl() + "/myself", HttpMethod.GET, getAuthHttpEntity(), String.class);
+            if (StringUtils.isNotBlank(response.getBody()) && !response.getBody().startsWith("{\"self\"")) {
+                MSException.throwException(Translator.get("jira_auth_url_error"));
+            }
         } catch (HttpClientErrorException e) {
             if (e.getRawStatusCode() == 401) {
                 MSException.throwException(Translator.get("jira_auth_error"));
@@ -203,6 +212,12 @@ public abstract class JiraAbstractClient extends BaseClient {
 
     protected HttpHeaders getAuthHeader() {
         return getBasicHttpHeaders(USER_NAME, PASSWD);
+    }
+
+    protected HttpHeaders getAuthJsonHeader() {
+        HttpHeaders headers = getAuthHeader();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
     }
 
     protected String getBaseUrl() {
@@ -232,5 +247,18 @@ public abstract class JiraAbstractClient extends BaseClient {
         responseEntity = restTemplate.exchange(getBaseUrl() + "/search?startAt={1}&maxResults={2}&jql=project={3}+AND+issuetype={4}",
                 HttpMethod.GET, getAuthHttpEntity(), String.class, startAt, maxResults, projectKey, issueType);
         return  (JiraIssueListResponse)getResultForObject(JiraIssueListResponse.class, responseEntity);
+    }
+
+    public void setTransitions(String jiraKey, JiraTransitionsResponse.Transitions transitions) {
+        LogUtil.info("setTransitions: " + transitions);
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("transition", transitions);
+        HttpEntity<String> requestEntity = new HttpEntity<>(jsonObject.toJSONString(), getAuthJsonHeader());
+        try {
+            restTemplate.exchange(getBaseUrl() + "/issue/{1}/transitions", HttpMethod.POST, requestEntity, String.class, jiraKey);
+        } catch (Exception e) {
+            LogUtil.error(e.getMessage(), e);
+            MSException.throwException(e.getMessage());
+        }
     }
 }

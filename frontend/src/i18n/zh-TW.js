@@ -196,6 +196,7 @@ export default {
     please_upload: '請上傳文件',
     please_fill_path: '請填寫ur路徑',
     formatErr: '格式錯誤',
+    response_time_warning: '回應時間應該是大於0的整數',
     please_save: '請先保存',
     reference_documentation: "參考文檔",
     id: 'ID',
@@ -1369,6 +1370,10 @@ export default {
       batch_disable_steps: "批量禁用步驟",
       all: "全部",
       constant: "常量",
+      number: "數值",
+      string: "字符串",
+      array: "數組",
+      json: "json",
       counter: "計數器",
       random: "隨機數",
       view_scene_variables: "查看場景變量",
@@ -1446,6 +1451,7 @@ export default {
       request_success: "成功",
       request_error: "失敗",
       generate_report: "生成報告",
+      rerun: "失敗重跑",
     },
     environment: {
       id: '環境ID',
@@ -1476,6 +1482,7 @@ export default {
       repeat_warning: "啟用條件為 '無' 的域名已經存在！",
       copy_warning: "啟用條件為 '無' 的域名不支持複製！",
       path_warning: "路徑不能為空",
+      project_warning: "項目不能為空",
       module_warning: "模塊不能為空"
     },
     scenario: {
@@ -2103,7 +2110,7 @@ export default {
       cancel_relevance_project: "取消項目關聯會同時取消該項目下已關聯的測試用例",
       img_loading_fail: "圖片加載失敗",
       pdf_loading_fail: "PDF加載失敗",
-      upload_tip: "只能上傳jpg、jpeg、png、docx、doc、pdf、xlsx、txt文件",
+      upload_tip: "只能上傳jpg、jpeg、png、docx、doc、pdf、xlsx、txt、json、jmx、side文件",
       attachment: "附件",
       upload_time: "上傳時間",
       total: "用例總數",
@@ -2481,6 +2488,7 @@ export default {
     status_change_failed: '狀態修改失敗, 校驗不通過!',
     check_in: '校驗中',
     node_selector_invalid: 'nodeSelector 必須是有效的JSON',
+    node_selector_tip: '配置性能測試Pod的 nodeSelector',
     pod_thread_limit: '單POD最大線程數',
     usage: '用途',
     backend_listener: '後置監聽器',
@@ -2724,6 +2732,10 @@ export default {
     set_report: "集合報告",
     report_name: "報告名稱",
     run_with_resource_pool: "資源池運行",
+    retry_on_failure: "失敗重試",
+    retry_message: "重試接口/UI用例，重試n次後，仍然失敗，則用失敗用例",
+    retry: "重試",
+    retry_frequency: "次"
   },
   operating_log: {
     title: "操作日誌",

@@ -103,6 +103,7 @@
                 </el-col>
               </el-row>
             </div>
+
             <el-dialog width="60%" :title="$t('schedule.generate_expression')" :visible.sync="showCron"
                        :modal="false">
               <crontab @hide="showCron=false" @fill="crontabFill" :expression="schedule.value"
@@ -121,6 +122,7 @@
 
 <script>
 import {
+  hasLicense,
   getCurrentProjectID,
   getCurrentUser,
   getCurrentWorkspaceId,
@@ -196,6 +198,7 @@ export default {
       }
     };
     return {
+      isHasLicense: hasLicense(),
       result: {},
       scheduleReceiverOptions: [],
       operation: true,
@@ -222,7 +225,6 @@ export default {
         onSampleError: false,
         runWithinResourcePool: false,
         resourcePoolId: null,
-        environmentType: ENV_TYPE.JSON
       },
       projectList: [],
       testType: 'API',
@@ -321,6 +323,9 @@ export default {
           this.schedule = response.data;
           if (response.data.config) {
             this.runConfig = JSON.parse(response.data.config);
+            if (this.runConfig.environmentType) {
+              delete this.runConfig.environmentType;
+            }
           }
         } else {
           this.schedule = {
@@ -501,5 +506,7 @@ export default {
   left: -42px;
   padding-top: 0px;
 }
-
+.ms-failure-div-right {
+  padding-right: 10px;
+}
 </style>

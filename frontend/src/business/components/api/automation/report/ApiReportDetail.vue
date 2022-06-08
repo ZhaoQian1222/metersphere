@@ -16,6 +16,8 @@
                   <ms-scenario-results :treeData="fullTreeNodes"
                                        :console="content.console"
                                        :report="report"
+                                       :is-share="isShare"
+                                       :share-id="shareId"
                                        v-on:requestResult="requestResult"
                                        ref="resultsTree"/>
                 </el-tab-pane>
@@ -26,6 +28,8 @@
                   <ms-scenario-results v-on:requestResult="requestResult"
                                        :console="content.console"
                                        :report="report"
+                                       :is-share="isShare"
+                                       :share-id="shareId"
                                        :treeData="fullTreeNodes" ref="failsTree"
                                        :errorReport="content.error"/>
                 </el-tab-pane>
@@ -36,15 +40,21 @@
                   <ms-scenario-results v-on:requestResult="requestResult"
                                        :report="report"
                                        :console="content.console"
+                                       :is-share="isShare"
+                                       :share-id="shareId"
                                        :treeData="fullTreeNodes" ref="errorReportTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="unExecute" v-if="content.unExecute > 0">
                   <template slot="label">
-                    <span class="fail" style="color: #9C9B9A">{{ $t('api_test.home_page.detail_card.unexecute') }}</span>
+                    <span class="fail" style="color: #9C9B9A">{{
+                        $t('api_test.home_page.detail_card.unexecute')
+                      }}</span>
                   </template>
                   <ms-scenario-results v-on:requestResult="requestResult"
                                        :report="report"
                                        :console="content.console"
+                                       :is-share="isShare"
+                                       :share-id="shareId"
                                        :treeData="fullTreeNodes" ref="unExecuteTree"/>
                 </el-tab-pane>
                 <el-tab-pane name="console">
@@ -58,6 +68,7 @@
               </el-tabs>
             </div>
             <ms-api-report-export v-if="reportExportVisible" id="apiTestReport" :title="report.name"
+                                  :report="report"
                                   :content="content" :total-time="totalTime"/>
           </main>
         </section>
@@ -79,7 +90,7 @@ import MsApiReportExport from "./ApiReportExport";
 import MsApiReportViewHeader from "./ApiReportViewHeader";
 import {RequestFactory} from "../../definition/model/ApiTestModel";
 import {windowPrint, getUUID, getCurrentProjectID} from "@/common/js/utils";
-import {getScenarioReport, getShareScenarioReport} from "@/network/api";
+import {getScenarioReport, getScenarioReportAll, getShareScenarioReport} from "@/network/api";
 import {STEP} from "@/business/components/api/automation/scenario/Setting";
 import MsCodeEdit from "@/business/components/common/components/MsCodeEdit";
 
@@ -109,6 +120,7 @@ export default {
       requestType: undefined,
       fullTreeNodes: [],
       stepFilter: new STEP,
+      exportReportIsOk: false,
     }
   },
   activated() {
@@ -139,7 +151,7 @@ export default {
       if (this.isTemplate) {
         this.getReport();
       }
-    }
+    },
   },
   methods: {
     filter(index) {
@@ -147,7 +159,7 @@ export default {
         this.$refs.failsTree.filter(index);
       } else if (this.activeName === "errorReport") {
         this.$refs.errorReportTree.filter("errorReport");
-      } else if(this.activeName === "unExecute"){
+      } else if (this.activeName === "unExecute") {
         this.$refs.unExecuteTree.filter("unexecute");
       }
     },
@@ -156,7 +168,6 @@ export default {
       this.report = {};
       this.content = {};
       this.fails = [];
-      this.report = {};
       this.fullTreeNodes = [];
       this.failsTreeNodes = [];
       this.isRequestResult = false;
@@ -339,13 +350,33 @@ export default {
         }
       }
     },
+    getReportByExport() {
+      if (this.exportReportIsOk) {
+        this.startExport();
+      } else {
+        getScenarioReportAll(this.reportId, (data) => {
+          if (data && data.content) {
+            let report = JSON.parse(data.content);
+            this.content = report;
+            this.fullTreeNodes = report.steps;
+            this.content.console = report.console;
+            this.content.error = report.error;
+            let successCount = (report.total - report.error - report.errorCode - report.unExecute);
+            this.content.success = successCount;
+            this.totalTime = report.totalTime;
+          }
+          this.exportReportIsOk = true;
+          setTimeout(this.startExport, 500)
+        });
+      }
+    },
     getReport() {
       this.init();
       if (this.isTemplate) {
         // 测试计划报告导出
-        if(this.templateReport){
+        if (this.templateReport) {
           this.handleGetScenarioReport(this.templateReport);
-        }else {
+        } else {
           this.report = this.templateReport;
           this.buildReport();
         }
@@ -380,7 +411,8 @@ export default {
               this.fullTreeNodes = report.steps;
               this.content.console = report.console;
               this.content.error = report.error;
-              this.content.success = (report.total - report.error - report.errorCode);
+              let successCount = (report.total - report.error - report.errorCode - report.unExecute);
+              this.content.success = successCount;
               this.totalTime = report.totalTime;
             }
             this.loading = false;
@@ -483,7 +515,7 @@ export default {
     formatExportApi(array, scenario) {
       array.forEach(item => {
         if (this.stepFilter && this.stepFilter.get("AllSamplerProxy").indexOf(item.type) !== -1) {
-          if(item.errorCode){
+          if (item.errorCode) {
             item.value.errorCode = item.errorCode;
           }
           scenario.requestResults.push(item.value);
@@ -493,7 +525,11 @@ export default {
         }
       })
     },
+
     handleExport() {
+      this.getReportByExport();
+    },
+    startExport() {
       if (this.report.reportVersion && this.report.reportVersion > 1) {
         if (this.report.reportType === 'API_INTEGRATED' || this.report.reportType === 'UI_INTEGRATED') {
           let scenario = {name: "", requestResults: []};
@@ -550,7 +586,7 @@ export default {
     this.getReport();
     this.$EventBus.$on('projectChange', this.handleProjectChange);
   },
-  destroyed () {
+  destroyed() {
     this.$EventBus.$off('projectChange', this.handleProjectChange);
   },
   computed: {

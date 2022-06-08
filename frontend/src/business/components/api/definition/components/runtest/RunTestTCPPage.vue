@@ -128,6 +128,9 @@ export default {
   props: {apiData: {}, currentProtocol: String, syncTabs: Array, projectId: String},
   watch: {
     '$store.state.useEnvironment': function () {
+      if(this.api && this.api.request) {
+        this.api.request.useEnvironment = this.$store.state.useEnvironment;
+      }
       this.api.environmentId = this.$store.state.useEnvironment;
     }
   },
@@ -335,6 +338,9 @@ export default {
       this.getResult();
       if (requireComponent != null && JSON.stringify(esbDefinition) !== '{}') {
         this.showXpackCompnent = true;
+      }
+      if(this.api.environmentId) {
+        this.api.request.useEnvironment = this.api.environmentId;
       }
       this.checkVersionEnable();
     }

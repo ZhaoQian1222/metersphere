@@ -190,6 +190,7 @@ export default {
     incorrect_input: 'Incorrect input',
     delete_confirm: 'Please enter the following to confirm deletion:',
     login_username: 'ID or email',
+    response_time_warning: 'Reply time should be greater than 0 for members',
     input_login_username: 'Please input the user ID or email',
     input_name: 'Please enter name',
     please_save: 'Please save first',
@@ -1364,6 +1365,10 @@ export default {
       batch_disable_steps: "Batch disable steps",
       all: "all",
       constant: "constant",
+      number: "number",
+      string: "string",
+      array: "array",
+      json: "json",
       counter: "counter",
       random: "random",
       view_scene_variables: "View scene variables",
@@ -1441,6 +1446,7 @@ export default {
       request_success: "success",
       request_error: "error",
       generate_report: "Generate report",
+      rerun: "fail and rerun",
     },
     environment: {
       id: 'Environment ID',
@@ -1471,6 +1477,7 @@ export default {
       repeat_warning: "The domain name whose activation condition is'None' already exists!",
       copy_warning: "Domain names whose enabling conditions are'none' do not support copying!",
       path_warning: "The path cannot be empty",
+      project_warning: "project id cannot be empty",
       module_warning: "The path cannot be empty"
     },
     scenario: {
@@ -2105,7 +2112,7 @@ export default {
       cancel_relevance_project: "Disassociating the project will also cancel the associated test cases under the project",
       img_loading_fail: "Image failed to load",
       pdf_loading_fail: "PDF loading failed",
-      upload_tip: "Only jpg, jpeg, png, docx, doc, pdf, xlsx, txt files can be uploaded",
+      upload_tip: "Only jpg, jpeg, png, docx, doc, pdf, xlsx, txt, json, jmx, side files can be uploaded",
       attachment: "Attachment",
       upload_time: "Upload Time",
       total: "Total Case",
@@ -2478,6 +2485,7 @@ export default {
     status_change_failed: 'Failed to change the status, resource pool is invalid!',
     check_in: 'Check in',
     node_selector_invalid: 'nodeSelector must be JSON',
+    node_selector_tip: 'Configure the nodeSelector of the load test Pod',
     pod_thread_limit: 'Maximum number of threads per POD',
     usage: 'Usage',
     backend_listener: 'Backend Listener',
@@ -2721,6 +2729,10 @@ export default {
     set_report: "Set report",
     report_name: "Report name",
     run_with_resource_pool: "Run Within Resource pool",
+    retry_on_failure: "retry on failure",
+    retry_message: "Retry the interface/UI use case, if it still fails after retries n times, use the failed use case",
+    retry: "Retry",
+    retry_frequency: "Frequency"
   },
   operating_log: {
     title: "Operating Log",

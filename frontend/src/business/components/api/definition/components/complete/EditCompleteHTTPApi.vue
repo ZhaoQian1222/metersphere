@@ -61,7 +61,7 @@
                   <el-option
                     v-for="item in maintainerOptions"
                     :key="item.id"
-                    :label="item.name + ' (' + item.id + ')'"
+                    :label="item.name + ' (' + item.email + ')'"
                     :value="item.id">
                   </el-option>
                 </el-select>
@@ -210,6 +210,7 @@ import MsDialogFooter from "@/business/components/common/components/MsDialogFoot
 import {getApiTemplate} from "@/network/custom-field-template";
 import CustomFiledFormItem from "@/business/components/common/components/form/CustomFiledFormItem";
 import {buildCustomFields, buildTestCaseOldFields, parseCustomField} from "@/common/js/custom_field";
+import {getProjectMemberOption} from "@/network/user";
 
 const {Body} = require("@/business/components/api/definition/model/ApiTestModel");
 const Sampler = require("@/business/components/api/definition/components/jmeter/components/sampler/sampler");
@@ -459,8 +460,8 @@ export default {
       });
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
-        this.maintainerOptions = response.data;
+      getProjectMemberOption(data => {
+        this.maintainerOptions = data;
       });
     },
     setParameter() {

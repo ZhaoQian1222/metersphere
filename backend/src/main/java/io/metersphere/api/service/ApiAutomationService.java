@@ -736,9 +736,13 @@ public class ApiAutomationService {
                 } else if (value instanceof JSONArray) {
                     JSONArray valueArray = (JSONArray) value;
                     for (int i = 0; i < valueArray.size(); i++) {
-                        JSONObject obj = (JSONObject) valueArray.get(i);
-                        JSONObject targetValue = jsonMerge(obj, (JSONObject) target.getJSONArray(key).get(i));
-                        target.getJSONArray(key).set(i, targetValue);
+                        try {
+                            JSONObject obj = (JSONObject) valueArray.get(i);
+                            JSONObject targetValue = jsonMerge(obj, (JSONObject) target.getJSONArray(key).get(i));
+                            target.getJSONArray(key).set(i, targetValue);
+                        } catch (Exception e) {
+                            LogUtil.error(e);
+                        }
                     }
                 } else {
                     target.put(key, value);
@@ -837,8 +841,7 @@ public class ApiAutomationService {
         config.setOperating(true);
         config.getExcludeScenarioIds().add(apiScenario.getId());
         try {
-
-            MsScenario scenario = JSONObject.parseObject(apiScenario.getScenarioDefinition(), MsScenario.class);
+            MsScenario scenario = JSONObject.parseObject(apiScenario.getScenarioDefinition(), MsScenario.class,Feature.DisableSpecialKeyDetect);
             if (scenario == null) {
                 return null;
             }
@@ -848,7 +851,7 @@ public class ApiAutomationService {
             String environmentJson = apiScenario.getEnvironmentJson();
             String environmentGroupId = apiScenario.getEnvironmentGroupId();
             if (StringUtils.equals(environmentType, EnvironmentType.JSON.name()) && StringUtils.isNotBlank(environmentJson)) {
-                scenario.setEnvironmentMap(JSON.parseObject(environmentJson, Map.class));
+                scenario.setEnvironmentMap(JSON.parseObject(environmentJson, Map.class,Feature.DisableSpecialKeyDetect));
             } else if (StringUtils.equals(environmentType, EnvironmentType.GROUP.name()) && StringUtils.isNotBlank(environmentGroupId)) {
                 Map<String, String> envMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
                 scenario.setEnvironmentMap(envMap);
@@ -1439,10 +1442,12 @@ public class ApiAutomationService {
                 return;
             }
             JSONObject element = JSON.parseObject(scenario.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
-            JSONArray hashTree = element.getJSONArray("hashTree");
-            ApiScenarioImportUtil.formatHashTree(hashTree);
-            setHashTree(hashTree);
-            scenario.setScenarioDefinition(JSONObject.toJSONString(element));
+            if (element != null) {
+                JSONArray hashTree = element.getJSONArray("hashTree");
+                ApiScenarioImportUtil.formatHashTree(hashTree);
+                setHashTree(hashTree);
+                scenario.setScenarioDefinition(JSONObject.toJSONString(element));
+            }
             names.add(scenario.getName());
             ids.add(scenario.getId());
         }
@@ -1484,6 +1489,8 @@ public class ApiAutomationService {
 
     public List<ApiScenarioExportJmxDTO> exportJmx(ApiScenarioBatchRequest request) {
         List<ApiScenarioWithBLOBs> apiScenarioWithBLOBs = getExportResult(request);
+        //检查运行环境
+        checkExportEnv(apiScenarioWithBLOBs);
         // 生成jmx
         List<ApiScenarioExportJmxDTO> resList = new ArrayList<>();
         apiScenarioWithBLOBs.forEach(item -> {
@@ -1511,6 +1518,8 @@ public class ApiAutomationService {
 
     public byte[] exportZip(ApiScenarioBatchRequest request) {
         List<ApiScenarioWithBLOBs> scenarios = getExportResult(request);
+        //环境检查
+        checkExportEnv(scenarios);
         // 生成jmx
         Map<String, byte[]> files = new LinkedHashMap<>();
         scenarios.forEach(item -> {
@@ -1531,6 +1540,23 @@ public class ApiAutomationService {
             request.setId(JSON.toJSONString(ids));
         }
         return FileUtils.listBytesToZip(files);
+    }
+
+    private void checkExportEnv(List<ApiScenarioWithBLOBs> scenarios) {
+        StringBuilder builder = new StringBuilder();
+        for (ApiScenarioWithBLOBs apiScenarioWithBLOBs : scenarios) {
+            try {
+                boolean haveEnv = apiScenarioEnvService.checkScenarioEnv(apiScenarioWithBLOBs, null);
+                if (!haveEnv) {
+                    builder.append(apiScenarioWithBLOBs.getName()).append("; ");
+                }
+            } catch (Exception e) {
+                MSException.throwException("场景：" + builder.toString() + "运行环境未配置，请检查!");
+            }
+        }
+        if (builder.length() > 0) {
+            MSException.throwException("场景：" + builder.toString() + "运行环境未配置，请检查!");
+        }
     }
 
     public void batchUpdateEnv(ApiScenarioBatchRequest request) {

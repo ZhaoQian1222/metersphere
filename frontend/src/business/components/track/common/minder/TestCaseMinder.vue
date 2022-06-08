@@ -87,6 +87,7 @@ name: "TestCaseMinder",
         return []
       }
     },
+    currentVersion: String,
     condition: Object,
     projectId: String,
   },
@@ -120,6 +121,9 @@ name: "TestCaseMinder",
       if (this.$refs.minder) {
         this.$refs.minder.handleNodeSelect(this.selectNode);
       }
+    },
+    currentVersion() {
+      this.$refs.minder.initData();
     }
   },
   mounted() {
@@ -174,6 +178,17 @@ name: "TestCaseMinder",
           // 这些情况则脑图有改变
           this.setIsChange(true);
         }
+
+        if ('removenode' === even.commandName) {
+          let nodes = window.minder.getSelectedNodes();
+          if (nodes) {
+            nodes.forEach((node) => {
+              if (isModuleNodeData(node.data) && node.children && node.children.length > 0) {
+                this.$warning('删除模块将删除模块下的所有资源');
+              }
+            });
+          }
+        }
       });
 
       addIssueHotBox(this);
@@ -182,6 +197,7 @@ name: "TestCaseMinder",
       return {
         request: {
           projectId: this.projectId,
+          versionId: this.currentVersion,
           orders: this.condition.orders
         },
         result: this.result,
@@ -330,12 +346,7 @@ name: "TestCaseMinder",
         this.saveExtraNode[parent.newId ? parent.newId : parent.id] = nodes;
       }
     },
-    buildSaveCase(node, parent, preNode, nextNode) {
-      let data = node.data;
-      if (!data.text) {
-        return;
-      }
-
+    validate(parent, data) {
       if (parent.id === 'root') {
         this.throwError(this.$t('test_track.case.minder_all_module_tip'));
       }
@@ -347,6 +358,14 @@ name: "TestCaseMinder",
       if (data.type === 'node') {
         this.throwError(this.$t('test_track.case.minder_is_module_tip', [data.text]));
       }
+    },
+    buildSaveCase(node, parent, preNode, nextNode) {
+      let data = node.data;
+      if (!data.text) {
+        return;
+      }
+
+      this.validate(parent, data);
 
       let isChange = false;
 
@@ -389,8 +408,14 @@ name: "TestCaseMinder",
           if (childData.type === 'issue') return;
           if (childData.resource && childData.resource.indexOf(this.$t('test_track.case.prerequisite')) > -1) {
             testCase.prerequisite = childData.text;
+            if (childNode.children && childNode.children.length > 0) {
+              this.throwError('[' + testCase.name + ']前置条件下不能添加子节点！');
+            }
           } else if (childData.resource && childData.resource.indexOf(this.$t('commons.remark')) > -1) {
             testCase.remark = childData.text;
+             if (childNode.children && childNode.children.length > 0) {
+               this.throwError('[' + testCase.name + ']备注下不能添加子节点！');
+             }
           } else {
             // 测试步骤
             let step = {};
@@ -400,7 +425,9 @@ name: "TestCaseMinder",
               let result = "";
               childNode.children.forEach((child) => {
                 result += child.data.text;
-                if (child.data.changed) isChange = true;
+                if (child.data.changed) {
+                  isChange = true;
+                }
               })
               step.result = result;
             }
@@ -411,7 +438,15 @@ name: "TestCaseMinder",
               testCase.expectedResult = step.result;
             }
           }
-          if (childData.changed) isChange = true;
+          if (childData.changed) {
+            isChange = true;
+          }
+
+          childNode.children.forEach((child) => {
+            if (child.children && child.children.length > 0) {
+              this.throwError('['+ testCase.name + ']用例下子节点不能超过两层！');
+            }
+          });
         })
       }
       testCase.steps = JSON.stringify(steps);
@@ -433,6 +468,8 @@ name: "TestCaseMinder",
             if (preId && preId.length > 15) {
               testCase.targetId = preId;
               testCase.moveMode = 'AFTER';
+            } else {
+              testCase.moveMode = 'APPEND';
             }
           } else if (this.isCaseNode(nextNode)) {
             let nextId = nextNode.data.id;

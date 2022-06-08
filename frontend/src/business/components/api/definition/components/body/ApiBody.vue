@@ -33,6 +33,7 @@
         :with-mor-setting="true"
         :is-read-only="isReadOnly"
         :parameters="body.kvs"
+        :urlEncode="body.type == 'WWW_FORM'"
         :isShowEnable="isShowEnable"
         :scenario-definition="scenarioDefinition"
         @editScenarioAdvance="editScenarioAdvance"
@@ -138,21 +139,6 @@ export default {
     'body.typeChange'() {
       this.reloadCodeEdit();
     },
-    'body.raw'() {
-      if (this.body.format !== 'JSON-SCHEMA' && this.body.raw && !this.body.jsonSchema) {
-        try {
-          const MsConvert = new Convert();
-          let data = MsConvert.format(JSON.parse(this.body.raw));
-          if (this.body.jsonSchema) {
-            this.body.jsonSchema = this.deepAssign(data);
-          } else {
-            this.body.jsonSchema = data;
-          }
-        } catch (ex) {
-          this.body.jsonSchema = "";
-        }
-      }
-    },
   },
   methods: {
     isObj(x) {
@@ -223,6 +209,9 @@ export default {
       if (this.body.format === 'JSON-SCHEMA') {
         if (this.body.raw && !this.body.jsonSchema) {
           this.body.jsonSchema = MsConvert.format(JSON.parse(this.body.raw));
+        }else{
+          let data = MsConvert.format(JSON.parse(this.body.raw));
+          this.body.jsonSchema = this.deepAssign(this.body.jsonSchema, data);
         }
       } else {
         if (this.body.jsonSchema) {
@@ -261,6 +250,11 @@ export default {
           isType = true;
         }
       })
+      if(this.body && this.body.kvs && value === "application/x-www-form-urlencoded") {
+        this.body.kvs.forEach(item => {
+          item.urlEncode = true;
+        });
+      }
       if (!isType) {
         this.headers.unshift(new KeyValue({name: "Content-Type", value: value}));
         this.$emit('headersChange');

@@ -11,6 +11,7 @@ import io.metersphere.jmeter.utils.ScriptEngineUtils;
 import io.metersphere.utils.LoggerUtil;
 import lombok.Data;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.jmeter.protocol.http.sampler.HTTPSamplerProxy;
@@ -72,9 +73,9 @@ public class Body {
             body = this.getKvs().stream().filter(KeyValue::isValid).collect(Collectors.toList());
             HTTPFileArg[] httpFileArgs = httpFileArgs(requestId);
             // 文件上传
-            if (httpFileArgs.length > 0) {
+            if (ArrayUtils.isNotEmpty(httpFileArgs)) {
                 sampler.setHTTPFiles(httpFileArgs(requestId));
-                sampler.setDoMultipart(true);
+                sampler.setDoMultipart(!StringUtils.equalsIgnoreCase(this.type, "BINARY"));
             }
         } else {
             if (StringUtils.isNotEmpty(this.getRaw()) || this.getJsonSchema() != null) {
@@ -97,7 +98,7 @@ public class Body {
             } else {
                 try {
                     if (StringUtils.isNotEmpty(this.getRaw())) {
-                        JSONObject jsonObject = JSON.parseObject(this.getRaw(), Feature.OrderedField,Feature.DisableSpecialKeyDetect);
+                        JSONObject jsonObject = JSON.parseObject(this.getRaw(), Feature.OrderedField, Feature.DisableSpecialKeyDetect);
                         if (!this.getRaw().contains("$ref")) {
                             jsonMockParse(jsonObject);
                         }
@@ -128,23 +129,24 @@ public class Body {
         List<HTTPFileArg> list = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(this.getKvs())) {
             this.getKvs().stream().filter(KeyValue::isFile).filter(KeyValue::isEnable).forEach(keyValue -> {
-                setFileArg(list, keyValue.getFiles(), keyValue, requestId);
+                setFileArg(list, keyValue.getFiles(), keyValue, requestId, false);
             });
         }
         if (CollectionUtils.isNotEmpty(this.getBinary())) {
             this.getBinary().stream().filter(KeyValue::isFile).filter(KeyValue::isEnable).forEach(keyValue -> {
-                setFileArg(list, keyValue.getFiles(), keyValue, requestId);
+                setFileArg(list, keyValue.getFiles(), keyValue, requestId, true);
             });
         }
         return list.toArray(new HTTPFileArg[0]);
     }
 
-    private void setFileArg(List<HTTPFileArg> list, List<BodyFile> files, KeyValue keyValue, String requestId) {
+    private void setFileArg(List<HTTPFileArg> list, List<BodyFile> files,
+                            KeyValue keyValue, String requestId, boolean isBinary) {
         if (files != null) {
             files.forEach(file -> {
                 String paramName = keyValue.getName() == null ? requestId : keyValue.getName();
                 String path = null;
-                if (StringUtils.isNotBlank(file.getId())) {
+                if (StringUtils.isNotBlank(file.getId()) && !isBinary) {
                     // 旧数据
                     path = FileUtils.BODY_FILE_DIR + '/' + file.getId() + '_' + file.getName();
                 } else if (StringUtils.isNotBlank(this.tmpFilePath)) {
@@ -156,7 +158,7 @@ public class Body {
                 if (StringUtils.isBlank(mimetype)) {
                     mimetype = ContentType.APPLICATION_OCTET_STREAM.getMimeType();
                 }
-                list.add(new HTTPFileArg(path, paramName, mimetype));
+                list.add(new HTTPFileArg(path, isBinary ? "" : paramName, mimetype));
             });
         }
     }

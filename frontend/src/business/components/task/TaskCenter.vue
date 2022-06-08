@@ -111,20 +111,32 @@
                 <el-col :span="4">
                   <span v-if="item.executionStatus && item.executionStatus.toLowerCase() === 'error'"
                         class="ms-task-error">
-                     error
+                     Error
                   </span>
                   <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'success'"
                         class="ms-task-success">
-                       success
+                       Success
                   </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'stop'">
-                      stopped
+                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'stop'"
+                        class="ms-task-stopped">
+                      Stopped
                   </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'errorreportresult'" class="ms-task-error-report-status">
+                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'unexecute'"
+                        class="ms-task-stopped">
+                      unexecute
+                  </span>
+                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'errorreportresult'"
+                        class="ms-task-error-report-status">
                       {{ $t('error_report_library.option.name') }}
                   </span>
+                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'running'"
+                        class="ms-task-running">
+                      Running
+                  </span>
                   <span v-else>
-                      {{ item.executionStatus ? item.executionStatus.toLowerCase() : item.executionStatus }}
+                      {{
+                      item.executionStatus ? item.executionStatus.toLowerCase()[0].toUpperCase() + item.executionStatus.toLowerCase().substr(1) : item.executionStatus
+                    }}
                   </span>
                 </el-col>
               </el-row>
@@ -182,16 +194,17 @@ export default {
       ],
       runStatus: [
         {id: '', label: this.$t('api_test.definition.document.data_set.all')},
-        {id: 'saved', label: 'saved'},
-        {id: 'starting', label: 'starting'},
-        {id: 'running', label: 'running'},
-        {id: 'reporting', label: 'reporting'},
-        {id: 'completed', label: 'completed'},
-        {id: 'error', label: 'error'},
-        {id: 'success', label: 'success'},
-        {id: 'waiting', label: 'waiting'},
-        {id: 'fail', label: 'fail'},
-        {id: 'stop', label: 'stopped'}
+        {id: 'saved', label: 'Saved'},
+        {id: 'starting', label: 'Starting'},
+        {id: 'running', label: 'Running'},
+        {id: 'reporting', label: 'Reporting'},
+        {id: 'completed', label: 'Completed'},
+        {id: 'error', label: 'Error'},
+        {id: 'success', label: 'Success'},
+        {id: 'waiting', label: 'Waiting'},
+        {id: 'fail', label: 'Fail'},
+        {id: 'unexecute', label: 'unexecute'},
+        {id: 'stop', label: 'Stopped'}
       ],
       condition: {triggerMode: "", executionStatus: ""},
       maintainerOptions: [],
@@ -317,7 +330,7 @@ export default {
         if (status === "waiting" || status === 'stop') {
           return 0;
         }
-        if (status === 'saved' || status === 'completed' || status === 'success' || status === 'error' || status === 'errorreportresult') {
+        if (status === 'saved' || status === 'completed' || status === 'success' || status === 'error' || status === 'unexecute' || status === 'errorreportresult') {
           return 100;
         }
       }
@@ -326,7 +339,7 @@ export default {
     showStop(status) {
       if (status) {
         status = status.toLowerCase();
-        if (status === "stop" || status === 'saved' || status === 'completed' || status === 'success' || status === 'error' || status === 'errorreportresult') {
+        if (status === "stop" || status === 'saved' || status === 'completed' || status === 'success' || status === 'error' || status === 'unexecute' || status === 'errorreportresult') {
           return false;
         }
       }
@@ -350,7 +363,7 @@ export default {
       let status = row.executionStatus;
       if (status) {
         status = row.executionStatus.toLowerCase();
-        if (status === 'saved' || status === 'completed' || status === 'success' || status === 'error' || status === 'errorreportresult') {
+        if (status === 'saved' || status === 'completed' || status === 'success' || status === 'error' || status === 'unexecute' || status === 'errorreportresult') {
           this.size = 1400;
           this.reportId = row.id;
           this.executionModule = row.executionModule;
@@ -546,6 +559,14 @@ export default {
 
 .ms-task-success {
   color: #67C23A;
+}
+
+.ms-task-stopped {
+  color: #909399;
+}
+
+.ms-task-running {
+  color: #783887;
 }
 
 .ms-task-name-width {

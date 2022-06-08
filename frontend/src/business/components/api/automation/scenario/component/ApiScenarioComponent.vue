@@ -31,9 +31,9 @@
     </template>
 
     <template v-slot:behindHeaderLeft>
-      <el-tag size="mini" class="ms-tag" v-if="scenario.referenced==='Deleted'" type="danger">{{ $t('api_test.automation.reference_deleted') }}</el-tag>
-      <el-tag size="mini" class="ms-tag" v-if="scenario.referenced==='Copy'">{{ $t('commons.copy') }}</el-tag>
-      <el-tag size="mini" class="ms-tag" v-if="scenario.referenced==='REF'">{{ $t('api_test.scenario.reference') }}</el-tag>
+      <el-tag size="small" class="ms-tag" v-if="scenario.referenced==='Deleted'" type="danger">{{ $t('api_test.automation.reference_deleted') }}</el-tag>
+      <el-tag size="small" class="ms-tag" v-if="scenario.referenced==='Copy'">{{ $t('commons.copy') }}</el-tag>
+      <el-tag size="small" class="ms-tag" v-if="scenario.referenced==='REF'">{{ $t('api_test.scenario.reference') }}</el-tag>
       <span class="ms-tag ms-step-name-api">{{ getProjectName(scenario.projectId) }}</span>
     </template>
     <template v-slot:debugStepCode>
@@ -148,6 +148,24 @@ export default {
       }
       this.scenario.run = true;
       let runScenario = JSON.parse(JSON.stringify(this.scenario));
+      let variables = JSON.parse(JSON.stringify(this.currentScenario.variables));
+
+      // 合并自身依赖场景变量
+      if(runScenario && runScenario.variableEnable && runScenario.variables){
+         if(variables){
+          // 同名合并
+           runScenario.variables.forEach(data =>{
+             variables.forEach(item =>{
+              if(data.type === item.type && data.name === item.name){
+                Object.assign(data,item);
+              }
+            })
+          });
+        }
+      }else{
+        runScenario.variables = variables;
+      }
+
       runScenario.hashTree = [this.scenario];
       runScenario.stepScenario = true;
       this.$emit('runScenario', runScenario);
@@ -321,7 +339,7 @@ export default {
 }
 
 .ms-step-name-api {
-  padding-left: 10px;
+  padding-left: 5px;
 }
 
 .ms-tag {

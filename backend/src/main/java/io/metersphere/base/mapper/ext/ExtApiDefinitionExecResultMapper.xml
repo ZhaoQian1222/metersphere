@@ -65,6 +65,7 @@
                  GROUP BY apiScene.api_scenario_id
              )apiScene ON apiScene.api_scenario_id = scene.id
             WHERE report.project_id = #{projectId}
+              AND scene.`status` != 'Trash'
               AND ( report.STATUS = 'Error' OR report.STATUS = 'Fail' )  AND report.create_time >= #{startTimestamp}
             GROUP BY scene.id
             UNION
@@ -123,13 +124,12 @@
     </select>
     <select id="list" resultType="io.metersphere.base.domain.ApiDefinitionExecResultExpand">
         SELECT a_r.name AS test_name,
-        a_r.end_time as end_time,
+        a_r.end_time,
         a_r.user_id,
         a_r.name,
         a_r.id,
         a_r.project_id,
         a_r.create_time,
-        a_r.create_time as update_time,
         a_r.status,
         a_r.trigger_mode,
         a_r.report_type,
@@ -181,7 +181,11 @@
         <if test="request.orders != null and request.orders.size() > 0">
             order by
             <foreach collection="request.orders" separator="," item="order">
-                ${order.name} ${order.type}
+                <choose>
+                    <otherwise>
+                        `${order.name}` ${order.type}
+                    </otherwise>
+                </choose>
             </foreach>
         </if>
     </select>

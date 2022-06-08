@@ -55,6 +55,7 @@ import io.metersphere.xmind.pojo.TestCaseXmindData;
 import io.metersphere.xmind.utils.XmindExportUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
@@ -1821,30 +1822,33 @@ public class TestCaseService {
             MSException.throwException(Translator.get("edit_load_test_not_found") + request.getId());
         }
 
-        // 新选择了一个文件，删除原来的文件
-        List<FileMetadata> updatedFiles = request.getUpdatedFileList();
-        List<FileMetadata> originFiles = fileService.getFileMetadataByCaseId(request.getId());
-        List<String> updatedFileIds = updatedFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
-        List<String> originFileIds = originFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
-        // 相减
-        List<String> deleteFileIds = ListUtils.subtract(originFileIds, updatedFileIds);
-        fileService.deleteFileRelatedByIds(deleteFileIds);
+        if (BooleanUtils.isTrue(request.isHandleAttachment())) {
+            // 新选择了一个文件，删除原来的文件
+            List<FileMetadata> updatedFiles = request.getUpdatedFileList();
+            List<FileMetadata> originFiles = fileService.getFileMetadataByCaseId(request.getId());
+            List<String> updatedFileIds = updatedFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
+            List<String> originFileIds = originFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
+            // 相减
+            List<String> deleteFileIds = ListUtils.subtract(originFileIds, updatedFileIds);
+            fileService.deleteFileRelatedByIds(deleteFileIds);
 
-        if (!CollectionUtils.isEmpty(deleteFileIds)) {
-            TestCaseFileExample testCaseFileExample = new TestCaseFileExample();
-            testCaseFileExample.createCriteria().andFileIdIn(deleteFileIds);
-            testCaseFileMapper.deleteByExample(testCaseFileExample);
+            if (!CollectionUtils.isEmpty(deleteFileIds)) {
+                TestCaseFileExample testCaseFileExample = new TestCaseFileExample();
+                testCaseFileExample.createCriteria().andFileIdIn(deleteFileIds);
+                testCaseFileMapper.deleteByExample(testCaseFileExample);
+            }
+
+            if (files != null) {
+                files.forEach(file -> {
+                    final FileMetadata fileMetadata = fileService.saveFile(file, testCaseWithBLOBs.getProjectId());
+                    TestCaseFile testCaseFile = new TestCaseFile();
+                    testCaseFile.setFileId(fileMetadata.getId());
+                    testCaseFile.setCaseId(request.getId());
+                    testCaseFileMapper.insert(testCaseFile);
+                });
+            }
         }
 
-        if (files != null) {
-            files.forEach(file -> {
-                final FileMetadata fileMetadata = fileService.saveFile(file, testCaseWithBLOBs.getProjectId());
-                TestCaseFile testCaseFile = new TestCaseFile();
-                testCaseFile.setFileId(fileMetadata.getId());
-                testCaseFile.setCaseId(request.getId());
-                testCaseFileMapper.insert(testCaseFile);
-            });
-        }
         this.setNode(request);
         return editTestCase(request);
     }
@@ -1909,6 +1913,7 @@ public class TestCaseService {
                 List<TestCaseWithBLOBs> testCaseWithBLOBs = testCaseMapper.selectByExampleWithBLOBs(example);
                 testCaseMap = testCaseWithBLOBs.stream().collect(Collectors.toMap(TestCaseWithBLOBs::getId, t -> t));
             }
+            String lastAddId = null;
 
             for (TestCaseMinderEditRequest.TestCaseMinderEditItem item : data) {
                 if (StringUtils.isBlank(item.getNodeId()) || item.getNodeId().equals("root")) {
@@ -1922,8 +1927,10 @@ public class TestCaseService {
                     }
                     EditTestCaseRequest editRequest = new EditTestCaseRequest();
                     BeanUtils.copyBean(editRequest, item);
+                    editRequest.setTags(null);
                     editTestCase(editRequest);
                     changeOrder(item, request.getProjectId());
+                    lastAddId = null;
                 } else {
                     if (StringUtils.isBlank(item.getMaintainer())) {
                         item.setMaintainer(SessionUtils.getUserId());
@@ -1931,6 +1938,11 @@ public class TestCaseService {
                     EditTestCaseRequest editTestCaseRequest = new EditTestCaseRequest();
                     BeanUtils.copyBean(editTestCaseRequest, item);
                     addTestCase(editTestCaseRequest);
+                    if (StringUtils.equals(item.getMoveMode(), ResetOrderRequest.MoveMode.APPEND.name()) && StringUtils.isNotBlank(lastAddId)) {
+                        item.setMoveMode(ResetOrderRequest.MoveMode.AFTER.name());
+                        item.setTargetId(lastAddId);
+                    }
+                    lastAddId = editTestCaseRequest.getId();
                     changeOrder(item, request.getProjectId());
                 }
             }

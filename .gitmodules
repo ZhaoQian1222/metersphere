@@ -1,8 +1,11 @@
 [submodule "backend/src/main/java/io/metersphere/xpack"]
 	path = backend/src/main/java/io/metersphere/xpack
-	url = git@github.com:metersphere/xpack-backend.git
+	url = https://github.com/metersphere/xpack-backend.git
 	branch = pr@v1.20@feature-csv-git-cicc
 [submodule "frontend/src/business/components/xpack"]
 	path = frontend/src/business/components/xpack
-	url = git@github.com:metersphere/xpack-frontend.git
+	url = https://github.com/metersphere/xpack-frontend.git
 	branch = pr@v1.20@feature-csv-git-cicc
+[submodule "frontend/src/business/components/xpack-frontend"]
+	path = frontend/src/business/components/xpack-frontend
+	url = https://github.com/metersphere/xpack-frontend.git

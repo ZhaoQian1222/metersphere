@@ -50,8 +50,6 @@ public class ApiScenarioReportStructureService {
     @Resource
     private ApiDefinitionExecResultMapper definitionExecResultMapper;
     @Resource
-    private ApiScenarioReportResultService apiScenarioReportResultService;
-    @Resource
     private ExtApiScenarioReportResultMapper extApiScenarioReportResultMapper;
 
     private static final List<String> requests = Arrays.asList("HTTPSamplerProxy", "DubboSampler", "JDBCSampler", "TCPSampler", "JSR223Processor", "AbstractSampler");
@@ -119,7 +117,7 @@ public class ApiScenarioReportStructureService {
     }
 
     public static StepTreeDTO dataFormatting(UiScenarioWithBLOBs uiScenario, String reportType) {
-        return dataFormatting(uiScenario.getId(), uiScenario.getName(), uiScenario.getScenarioDefinition(), reportType);
+        return dataFormatting(null, uiScenario.getName(), uiScenario.getScenarioDefinition(), reportType);
     }
 
     public static StepTreeDTO dataFormatting(String id, String name, String scenarioDefinition, String reportType) {
@@ -197,7 +195,7 @@ public class ApiScenarioReportStructureService {
             totalScenario.set(totalScenario.longValue() + 1);
             if (StringUtils.equalsIgnoreCase(step.getTotalStatus(), "fail")) {
                 scenarioError.set(scenarioError.longValue() + 1);
-            } else if (StringUtils.equalsIgnoreCase(step.getTotalStatus(), "errorCode")) {
+            } else if (StringUtils.equalsAnyIgnoreCase(step.getTotalStatus(), "errorCode", ExecuteResult.errorReportResult.name())) {
                 errorReport.set(errorReport.longValue() + 1);
             } else if (!StringUtils.equalsIgnoreCase(step.getTotalStatus(), "success")) {
                 unExecute.set(unExecute.longValue() + 1);
@@ -447,8 +445,7 @@ public class ApiScenarioReportStructureService {
                 RequestResultExpandDTO expandDTO = (RequestResultExpandDTO) vo.getRequestResult();
                 if (expandDTO.getAttachInfoMap() != null && expandDTO.getAttachInfoMap().get("errorReportResult") != null) {
                     treeDTO.setErrorCode(expandDTO.getAttachInfoMap().get("errorReportResult"));
-                    treeDTO.setTotalStatus("errorCode");
-                    vo.setStatus("errorReportResult");
+                    treeDTO.setTotalStatus(vo.getStatus());
                 } else if (StringUtils.isNotEmpty(expandDTO.getStatus())) {
                     vo.setStatus(expandDTO.getStatus());
                     treeDTO.setTotalStatus(expandDTO.getStatus());
@@ -586,6 +583,8 @@ public class ApiScenarioReportStructureService {
             AtomicLong allUnExecute = new AtomicLong();
             this.countAllUnexecute(stepList, allUnExecute);
             reportDTO.setUnExecute(allUnExecute.longValue());
+            //之前的total中请求数是按照获得报告的响应数来算的。这里要加上未执行的数量
+            reportDTO.setTotal(reportDTO.getTotal() + allUnExecute.longValue());
         }
         return reportDTO;
     }

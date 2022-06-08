@@ -13,9 +13,12 @@
       <el-col :span="8">
         <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
                       prop="demandId">
-
-          <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions" style="width: 100%"
-                       clearable filterable :filter-method="filterDemand"/>
+          <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions"
+                       clearable filterable :filter-method="filterDemand">
+            <template slot-scope="{ node, data }">
+              <span class="demand-span" :title="data.label">{{ data.label }}</span>
+            </template>
+          </el-cascader>
         </el-form-item>
       </el-col>
       <el-col :span="8" :offset="2">
@@ -49,7 +52,7 @@
       <el-row>
         <el-col :span="20" :offset="1">
           <el-upload
-            accept=".jpg,.jpeg,.png,.xlsx,.doc,.pdf,.docx,.txt"
+            accept=".jpg,.jpeg,.png,.xlsx,.doc,.pdf,.docx,.txt,.json,.jmx,.side"
             action=""
             :show-file-list="false"
             :before-upload="beforeUpload"
@@ -131,7 +134,7 @@ export default {
     ReviewCommentItem,
     FormRichTextItem, TestCaseIssueRelate, TestCaseAttachment, MsRichText, TestCaseRichText
   },
-  props: ['form', 'labelWidth', 'caseId', 'readOnly', 'projectId', 'isTestPlan', 'planId', 'versionEnable', 'isCopy', 'isTestPlanEdit', 'type', 'comments'],
+  props: ['form', 'labelWidth', 'caseId', 'readOnly', 'projectId', 'isTestPlan', 'planId', 'versionEnable', 'isCopy', 'isTestPlanEdit', 'type', 'comments', 'isClickAttachmentTab'],
   data() {
     return {
       result: {},
@@ -201,7 +204,7 @@ export default {
         id = this.form.id;
       }
       this.result = this.$get('/test/case/comment/list/' + id, res => {
-        this.comments = res.data;
+        this.$emit('update:comments', res.data);
       })
     },
     setRelationshipCount(count) {
@@ -291,6 +294,7 @@ export default {
       this.$error(this.$t('load_test.file_size_limit'));
     },
     getFileMetaData(id) {
+      this.$emit("update:isClickAttachmentTab", true);
       // 保存用例后传入用例id，刷新文件列表，可以预览和下载
       if (this.uploadList && this.uploadList.length > 0 && !id) {
         return;
@@ -402,5 +406,15 @@ export default {
   width: 18px;
   font-size: xx-small;
   border-radius: 50%;
+}
+
+.demand-span {
+  display: inline-block;
+  max-width: 400px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  word-break: break-all;
+  margin-right: 5px;
 }
 </style>

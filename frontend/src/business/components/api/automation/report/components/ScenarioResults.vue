@@ -16,7 +16,7 @@
              class="ms-tree ms-report-tree" ref="resultsTree">
           <span slot-scope="{ node, data}" style="width: 99%" @click="nodeClick(node)">
             <ms-scenario-result :node="data" :console="console" v-on:requestResult="requestResult"
-                                :isActive="isActive"/>
+                                :isActive="isActive" :is-share="isShare" :share-id="shareId"/>
           </span>
     </el-tree>
   </el-card>
@@ -37,7 +37,9 @@ export default {
     defaultExpand: {
       default: false,
       type: Boolean,
-    }
+    },
+    isShare:Boolean,
+    shareId: String,
   },
   data() {
     return {
@@ -73,7 +75,7 @@ export default {
           if (this.isUi) {
             return data.value.success === false && data.value.startTime > 0;
           } else {
-            return data.value.error > 0;
+            return data.totalStatus !== 'errorReportResult' && data.value.error > 0;
           }
         }
       }

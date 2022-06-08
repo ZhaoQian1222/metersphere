@@ -196,6 +196,7 @@ export default {
     please_upload: '请上传文件',
     please_fill_path: '请填写ur路径',
     formatErr: '格式错误',
+    response_time_warning: '响应时间应该是大于0的整数',
     please_save: '请先保存',
     reference_documentation: "参考文档",
     id: 'ID',
@@ -1370,6 +1371,10 @@ export default {
       batch_disable_steps: "批量禁用步骤",
       all: "全部",
       constant: "常量",
+      number: "数值",
+      string: "字符串",
+      array: "数组",
+      json: "json",
       counter: "计数器",
       random: "随机数",
       view_scene_variables: "查看场景变量",
@@ -1447,6 +1452,7 @@ export default {
       request_success: "成功",
       request_error: "失败",
       generate_report: "生成报告",
+      rerun: "失败重跑",
     },
     environment: {
       id: '环境ID',
@@ -1477,6 +1483,7 @@ export default {
       repeat_warning: "启用条件为 '无' 的域名已经存在！",
       copy_warning: "启用条件为 '无' 的域名不支持复制！",
       path_warning: "路径不能为空",
+      project_warning: "项目不能为空",
       module_warning: "模块不能为空"
     },
     scenario: {
@@ -2104,7 +2111,7 @@ export default {
       cancel_relevance_project: "取消项目关联会同时取消该项目下已关联的测试用例",
       img_loading_fail: "图片加载失败",
       pdf_loading_fail: "PDF加载失败",
-      upload_tip: "只能上传jpg、jpeg、png、docx、doc、pdf、xlsx、txt文件",
+      upload_tip: "只能上传jpg、jpeg、png、docx、doc、pdf、xlsx、txt、json、jmx、side文件",
       attachment: "附件",
       upload_time: "上传时间",
       total: "用例总数",
@@ -2483,6 +2490,7 @@ export default {
     status_change_failed: '状态修改失败, 校验不通过!',
     check_in: '校验中',
     node_selector_invalid: 'nodeSelector 必须是有效的JSON',
+    node_selector_tip: '配置性能测试Pod的 nodeSelector',
     pod_thread_limit: '单POD最大线程数',
     usage: '用途',
     backend_listener: '后置监听器',
@@ -2726,6 +2734,10 @@ export default {
     set_report: "集合报告",
     report_name: "报告名称",
     run_with_resource_pool: "资源池运行",
+    retry_on_failure: "失败重试",
+    retry_message: "重试接口/UI用例，重试n次后，仍然失败，则用失败用例",
+    retry: "重试",
+    retry_frequency: "次"
   },
   operating_log: {
     title: "操作日志",

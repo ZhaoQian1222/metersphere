@@ -180,7 +180,9 @@ export default {
     isActive: {
       type: Boolean,
       default: false
-    }
+    },
+    isShare: Boolean,
+    shareId: String,
   },
   created() {
     this.showActive = this.isActive;
@@ -234,25 +236,25 @@ export default {
   },
   methods: {
     loadRequestInfoExpand() {
-      if (!this.requestInfo.hasData) {
-        if (this.request.responseResult && this.request.responseResult.body) {
-          this.requestInfo = this.request;
-          this.requestInfo.hasData = true;
-        }
-      }
-      if (!this.requestInfo.hasData) {
-        this.$get("/api/scenario/report/selectReportContent/" + this.stepId, response => {
-          let requestResult = response.data;
-          if (requestResult) {
-            this.requestInfo = requestResult;
-          }
-          this.$nextTick(() => {
-            this.requestInfo.loading = false;
-            this.requestInfo.hasData = true;
+      if (!this.request.responseResult || this.request.responseResult.body === null || this.request.responseResult.body === undefined) {
+        if (this.isShare) {
+          this.$get("/share/" + this.shareId + "/scenario/report/selectReportContent/" + this.stepId, response => {
+            this.requestInfo = response.data;
+            this.$nextTick(() => {
+              this.requestInfo.loading = false;
+            });
           });
-        });
+        } else {
+          this.$get("/api/scenario/report/selectReportContent/" + this.stepId, response => {
+            this.requestInfo = response.data;
+            this.$nextTick(() => {
+              this.requestInfo.loading = false;
+            });
+          });
+        }
+      } else {
+        this.requestInfo = this.request;
       }
-
     },
     active() {
       if (this.request.unexecute) {

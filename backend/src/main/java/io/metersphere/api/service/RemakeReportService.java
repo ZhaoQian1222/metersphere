@@ -107,7 +107,10 @@ public class RemakeReportService {
                     }
                     apiScenarioReportMapper.updateByPrimaryKeySelective(report);
                 }
-            } else {
+            } else if (StringUtils.equalsAny(request.getRunMode(), ApiRunMode.UI_SCENARIO_PLAN.name(),
+                    request.getRunMode(), ApiRunMode.UI_SCHEDULE_SCENARIO_PLAN.name(), ApiRunMode.UI_JENKINS_SCENARIO_PLAN.name())) {
+                remarkUiScenarioPlan(request);
+            }else {
                 ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(request.getReportId());
                 if (report != null) {
                     report.setStatus(APITestStatus.Error.name());
@@ -134,6 +137,11 @@ public class RemakeReportService {
             LogUtil.error(e);
         }
     }
+
+    private void remarkUiScenarioPlan(JmeterRunRequestDTO request) {
+        // todo
+    }
+
 
     public void remakeScenario(String runMode, String scenarioId, ApiScenarioWithBLOBs scenarioWithBLOBs, ApiScenarioReport report) {
         // 生成失败报告
@@ -173,7 +181,7 @@ public class RemakeReportService {
             LoggerUtil.info("进入异常结果处理报告【" + dto.getReportId() + " 】" + dto.getRunMode() + " 整体执行完成");
             // 全局并发队列
             PoolExecBlockingQueueUtil.offer(dto.getReportId());
-            String consoleMsg = FixedCapacityUtils.getJmeterLogger(dto.getReportId());
+            String consoleMsg = FixedCapacityUtils.getJmeterLogger(dto.getReportId(),true);
             dto.setConsole(consoleMsg + "\n" + errorMsg);
             // 整体执行结束更新资源状态
             CommonBeanFactory.getBean(TestResultService.class).testEnded(dto);

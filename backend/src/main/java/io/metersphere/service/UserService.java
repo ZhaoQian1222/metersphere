@@ -391,6 +391,22 @@ public class UserService {
         }
         user.setPassword(null);
         user.setUpdateTime(System.currentTimeMillis());
+        // 变更前
+        User userFromDB = userMapper.selectByPrimaryKey(user.getId());
+        // last workspace id 变了
+        if (user.getLastWorkspaceId() != null && !StringUtils.equals(user.getLastWorkspaceId(), userFromDB.getLastWorkspaceId())) {
+            List<Project> projects = getProjectListByWsAndUserId(user.getId(), user.getLastWorkspaceId());
+            if (projects.size() > 0) {
+                // 如果传入的 last_project_id 是 last_workspace_id 下面的
+                boolean present = projects.stream().anyMatch(p -> StringUtils.equals(p.getId(), user.getLastProjectId()));
+                if (!present) {
+                    user.setLastProjectId(projects.get(0).getId());
+                }
+            } else {
+                user.setLastProjectId("");
+            }
+        }
+        // 执行变更
         userMapper.updateByPrimaryKeySelective(user);
         if (StringUtils.equals(user.getStatus(), UserStatus.DISABLED)) {
             SessionUtils.kickOutUser(user.getId());
@@ -405,7 +421,7 @@ public class UserService {
 
         if (StringUtils.equals("workspace", sign)) {
             user.setLastWorkspaceId(sourceId);
-            List<Project> projects = getProjectListByWsAndUserId(sourceId);
+            List<Project> projects = getProjectListByWsAndUserId(sessionUser.getId(), sourceId);
             if (projects.size() > 0) {
                 user.setLastProjectId(projects.get(0).getId());
             } else {
@@ -418,14 +434,13 @@ public class UserService {
         userMapper.updateByPrimaryKeySelective(newUser);
     }
 
-    private List<Project> getProjectListByWsAndUserId(String workspaceId) {
-        String useId = SessionUtils.getUser().getId();
+    private List<Project> getProjectListByWsAndUserId(String userId, String workspaceId) {
         ProjectExample projectExample = new ProjectExample();
         projectExample.createCriteria().andWorkspaceIdEqualTo(workspaceId);
         List<Project> projects = projectMapper.selectByExample(projectExample);
 
         UserGroupExample userGroupExample = new UserGroupExample();
-        userGroupExample.createCriteria().andUserIdEqualTo(useId);
+        userGroupExample.createCriteria().andUserIdEqualTo(userId);
         List<UserGroup> userGroups = userGroupMapper.selectByExample(userGroupExample);
         List<Project> projectList = new ArrayList<>();
         userGroups.forEach(userGroup -> projects.forEach(project -> {
@@ -620,11 +635,21 @@ public class UserService {
     }
 
     private void autoSwitch(UserDTO user) {
+        // 用户有 last_project_id 权限
         if (StringUtils.isNotBlank(user.getLastProjectId())) {
             List<UserGroup> projectUserGroups = user.getUserGroups().stream()
                     .filter(ug -> StringUtils.equals(user.getLastProjectId(), ug.getSourceId()))
                     .collect(Collectors.toList());
             if (CollectionUtils.isNotEmpty(projectUserGroups)) {
+                return;
+            }
+        }
+        // 用户有 last_workspace_id 权限
+        if (StringUtils.isNotBlank(user.getLastWorkspaceId())) {
+            List<UserGroup> workspaceUserGroups = user.getUserGroups().stream()
+                    .filter(ug -> StringUtils.equals(user.getLastWorkspaceId(), ug.getSourceId()))
+                    .collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(workspaceUserGroups)) {
                 return;
             }
         }
@@ -1404,5 +1429,9 @@ public class UserService {
             }
         }
         return "ok";
+    }
+
+    public List<User> getProjectMemberOption(String projectId) {
+        return extUserGroupMapper.getProjectMemberOption(projectId);
     }
 }

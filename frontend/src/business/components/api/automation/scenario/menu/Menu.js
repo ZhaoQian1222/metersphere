@@ -145,63 +145,67 @@ export function buttons(this_) {
   ];
   return buttons.filter(btn => btn.show);
 }
-
+export function setNode(_this,node) {
+  if(_this.selectedTreeNode !== undefined){
+    if(_this.stepFilter.get("SpecialSteps").indexOf(_this.selectedTreeNode.type) !== -1){
+      if (_this.selectedNode.parent.data.hashTree) {
+        _this.selectedNode.parent.data.hashTree.splice(_this.selectedTreeNode.index, 0, node);
+      } else {
+        _this.scenarioDefinition.splice(_this.selectedTreeNode.index, 0, node);
+      }
+      _this.$store.state.forceRerenderIndex = getUUID();
+    }else{
+      _this.selectedTreeNode.hashTree.push(node) ;
+    }
+  }else{
+    _this.scenarioDefinition.push(node);
+  }
+}
 export function setComponent(type, _this, plugin) {
   switch (type) {
     case ELEMENT_TYPE.IfController:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new IfController()) :
-        _this.scenarioDefinition.push(new IfController());
+      setNode(_this,new IfController());
       break;
     case ELEMENT_TYPE.ConstantTimer:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new ConstantTimer({label: "SCENARIO-REF-STEP"})) :
-        _this.scenarioDefinition.push(new ConstantTimer());
+      setNode(_this,new ConstantTimer({label: "SCENARIO-REF-STEP"}));
       break;
     case ELEMENT_TYPE.JSR223Processor:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new JSR223Processor({label: "SCENARIO-REF-STEP"})) :
-        _this.scenarioDefinition.push(new JSR223Processor());
+      setNode(_this,new JSR223Processor({label: "SCENARIO-REF-STEP"}));
       break;
     case ELEMENT_TYPE.JSR223PreProcessor:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new JSR223Processor({type: "JSR223PreProcessor", label: "SCENARIO-REF-STEP"})) :
-        _this.scenarioDefinition.push(new JSR223Processor({type: "JSR223PreProcessor"}));
+      setNode(_this, new JSR223Processor({type: "JSR223PreProcessor", label: "SCENARIO-REF-STEP"}));
       break;
     case ELEMENT_TYPE.JSR223PostProcessor:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new JSR223Processor({type: "JSR223PostProcessor", label: "SCENARIO-REF-STEP"})) :
-        _this.scenarioDefinition.push(new JSR223Processor({type: "JSR223PostProcessor"}));
+      setNode(_this, new JSR223Processor({type: "JSR223PostProcessor", label: "SCENARIO-REF-STEP"}));
       break;
     case ELEMENT_TYPE.JDBCPreProcessor:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new JDBCProcessor({type: "JDBCPreProcessor", label: "SCENARIO-REF-STEP"})) :
-        _this.scenarioDefinition.push(new JDBCProcessor({type: "JDBCPreProcessor"}));
+      setNode(_this, new JDBCProcessor({type: "JDBCPreProcessor", label: "SCENARIO-REF-STEP"}));
       break;
     case ELEMENT_TYPE.JDBCPostProcessor:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new JDBCProcessor({type: "JDBCPostProcessor", label: "SCENARIO-REF-STEP"})) :
-        _this.scenarioDefinition.push(new JDBCProcessor({type: "JDBCPostProcessor"}));
+      setNode(_this, new JDBCProcessor({type: "JDBCPostProcessor", label: "SCENARIO-REF-STEP"}));
       break;
     case ELEMENT_TYPE.Assertions:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new Assertions({label: "SCENARIO-REF-STEP", id: getUUID()})) :
-        _this.scenarioDefinition.push(new Assertions());
+      setNode(_this, new Assertions({label: "SCENARIO-REF-STEP", id: getUUID()}));
       break;
     case ELEMENT_TYPE.Extract:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new Extract({label: "SCENARIO-REF-STEP", id: getUUID()})) :
-        _this.scenarioDefinition.push(new Extract());
+      setNode(_this, new Extract({label: "SCENARIO-REF-STEP", id: getUUID()}));
       break;
     case ELEMENT_TYPE.CustomizeReq:
       _this.customizeRequest = {protocol: "HTTP", type: "API", hashTree: [], referenced: 'Created', active: false};
       _this.customizeVisible = true;
       break;
     case  ELEMENT_TYPE.LoopController:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new LoopController()) :
-        _this.scenarioDefinition.push(new LoopController());
+      setNode(_this, new LoopController());
       break;
     case ELEMENT_TYPE.TransactionController:
-      _this.selectedTreeNode !== undefined ? _this.selectedTreeNode.hashTree.push(new TransactionController()) :
-        _this.scenarioDefinition.push(new TransactionController());
+      setNode(_this, new TransactionController());
       break;
     case ELEMENT_TYPE.scenario:
       _this.isBtnHide = true;
       _this.$refs.scenarioRelevance.open();
       break;
     default:
-      _this.scenarioDefinition.push(new PluginController({type: plugin.jmeterClazz, stepName: plugin.name, pluginId: plugin.scriptId}));
+      setNode(_this,new PluginController({type: plugin.jmeterClazz, stepName: plugin.name, pluginId: plugin.scriptId}));
       break;
   }
   if (_this.selectedNode) {
