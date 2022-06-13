@@ -311,12 +311,16 @@ public class ApiAutomationService {
     }
 
     private void uploadFiles(SaveApiScenarioRequest request, List<MultipartFile> bodyFiles, List<MultipartFile> scenarioFiles) {
-        FileUtils.createBodyFiles(request.getScenarioFileIds(), scenarioFiles);
-        List<String> bodyFileRequestIds = request.getBodyFileRequestIds();
-        if (CollectionUtils.isNotEmpty(bodyFileRequestIds)) {
-            bodyFileRequestIds.forEach(requestId -> {
-                FileUtils.createBodyFiles(requestId, bodyFiles);
-            });
+        if (scenarioFiles != null) {
+            FileUtils.createBodyFiles(request.getScenarioFileIds(), scenarioFiles);
+        }
+        if (bodyFiles != null) {
+            List<String> bodyFileRequestIds = request.getBodyFileRequestIds();
+            if (CollectionUtils.isNotEmpty(bodyFileRequestIds)) {
+                bodyFileRequestIds.forEach(requestId -> {
+                    FileUtils.createBodyFiles(requestId, bodyFiles);
+                });
+            }
         }
     }
 
@@ -423,7 +427,7 @@ public class ApiAutomationService {
         uploadFiles(request, bodyFiles, scenarioFiles);
 
         // 处理git仓库文件
-        //dealwithCsvGitFile(request, repositoryFiles);
+        dealwithCsvGitFile(request, repositoryFiles);
 
         // 存储依赖关系
         ApiAutomationRelationshipEdgeService relationshipEdgeService = CommonBeanFactory.getBean(ApiAutomationRelationshipEdgeService.class);
@@ -841,7 +845,7 @@ public class ApiAutomationService {
         config.setOperating(true);
         config.getExcludeScenarioIds().add(apiScenario.getId());
         try {
-            MsScenario scenario = JSONObject.parseObject(apiScenario.getScenarioDefinition(), MsScenario.class,Feature.DisableSpecialKeyDetect);
+            MsScenario scenario = JSONObject.parseObject(apiScenario.getScenarioDefinition(), MsScenario.class, Feature.DisableSpecialKeyDetect);
             if (scenario == null) {
                 return null;
             }
@@ -851,7 +855,7 @@ public class ApiAutomationService {
             String environmentJson = apiScenario.getEnvironmentJson();
             String environmentGroupId = apiScenario.getEnvironmentGroupId();
             if (StringUtils.equals(environmentType, EnvironmentType.JSON.name()) && StringUtils.isNotBlank(environmentJson)) {
-                scenario.setEnvironmentMap(JSON.parseObject(environmentJson, Map.class,Feature.DisableSpecialKeyDetect));
+                scenario.setEnvironmentMap(JSON.parseObject(environmentJson, Map.class, Feature.DisableSpecialKeyDetect));
             } else if (StringUtils.equals(environmentType, EnvironmentType.GROUP.name()) && StringUtils.isNotBlank(environmentGroupId)) {
                 Map<String, String> envMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
                 scenario.setEnvironmentMap(envMap);
@@ -2138,27 +2142,27 @@ public class ApiAutomationService {
         int successRepositoryFile = 0;
         String fileId = "";
         //查询出ids所在的场景列表
+        List<String> ids = request.getIds();
         ServiceUtils.getSelectAllIds(request, request.getCondition(),
                 (query) -> extApiScenarioMapper.selectIdsByQuery(query));
-        List<String> ids = request.getIds();
         List<ApiScenarioDTO> apiScenarioDTOList = extApiScenarioMapper.selectIds(ids);
         if (CollectionUtils.isNotEmpty(apiScenarioDTOList)) {
             for (ApiScenarioDTO apiScenarioDTO : apiScenarioDTOList) {
-                Integer csv_count = 0;
-                //判断场景是否有csv变量
-                MsScenario scenario = JSONObject.parseObject(apiScenarioDTO.getScenarioDefinition(), MsScenario.class, Feature.DisableSpecialKeyDetect);
-                List<ScenarioVariable> variables = scenario.getVariables();
-                if (CollectionUtils.isNotEmpty(variables)) {
-                    for (ScenarioVariable variable : variables) {
-                        if (variable.getType().equals("CSV")) {
-                            csv_count += 1;
-                            List<BodyFile> files = variable.getFiles();
-                            BodyFile bodyFile = files.get(0);
-                            fileId = bodyFile.getId();
-                            String repositoryId = variable.getRepositoryId();
-                            WorkspaceRepository workspaceRepository = workspaceRepositoryMapper.selectByPrimaryKey(repositoryId);
-                            if (workspaceRepository != null) {
-                                try {
+                try {
+                    Integer csv_count = 0;
+                    //判断场景是否有csv变量
+                    MsScenario scenario = JSONObject.parseObject(apiScenarioDTO.getScenarioDefinition(), MsScenario.class, Feature.DisableSpecialKeyDetect);
+                    List<ScenarioVariable> variables = scenario.getVariables();
+                    if (CollectionUtils.isNotEmpty(variables)) {
+                        for (ScenarioVariable variable : variables) {
+                            if (variable.getType().equals("CSV") && variable.getFileResource().equals("repository")) {
+                                csv_count += 1;
+                                List<BodyFile> files = variable.getFiles();
+                                BodyFile bodyFile = files.get(0);
+                                fileId = bodyFile.getId();
+                                String repositoryId = variable.getRepositoryId();
+                                WorkspaceRepository workspaceRepository = workspaceRepositoryMapper.selectByPrimaryKey(repositoryId);
+                                if (workspaceRepository != null) {
                                     // 校验并拉取git仓库中的文件
                                     String directoryPath = JGitUtils.pullLatestRevision(workspaceRepository.getRepositoryUrl(), workspaceRepository.getUsername(), workspaceRepository.getPassword(), variable.getRepositoryBranch(), workspaceRepository.getRepositoryName(), workspaceRepository.getWorkspaceId());
                                     if (JGitUtils.validateFileExists(directoryPath, variable.getRepositoryFilePath())) {
@@ -2180,7 +2184,8 @@ public class ApiAutomationService {
                                             }
                                         }
                                     }
-                                } catch (Exception e) {
+
+                                } else {
                                     errorRepositoryFile += 1;
                                     errorScanceArray.add(apiScenarioDTO.getName());
                                     break;
@@ -2190,9 +2195,13 @@ public class ApiAutomationService {
                                 noRepositoryFile += 1;
                             }
                         }
+                    } else {
+                        noRepositoryFile += 1;
                     }
-                } else {
-                    noRepositoryFile += 1;
+                } catch (Exception e) {
+                    errorRepositoryFile += 1;
+                    errorScanceArray.add(apiScenarioDTO.getName());
+                    break;
                 }
             }
         }

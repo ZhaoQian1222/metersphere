@@ -410,7 +410,7 @@ public class ApiScenarioExecuteService {
         JmeterRunRequestDTO runRequest = new JmeterRunRequestDTO(request.getId(), request.getId(), runMode, hashTree);
         LoggerUtil.info(new MsTestPlan().getJmx(hashTree));
         runRequest.setDebug(true);
-        jMeterService.run(runRequest, new ArrayList<>());
+        jMeterService.run(runRequest);
         return request.getId();
     }
 
