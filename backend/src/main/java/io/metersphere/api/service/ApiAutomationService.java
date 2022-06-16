@@ -2191,11 +2191,12 @@ public class ApiAutomationService {
                                     break;
                                 }
                             }
-                            if (csv_count == 0) {
-                                noRepositoryFile += 1;
-                            }
+
                         }
                     } else {
+                        noRepositoryFile += 1;
+                    }
+                    if (csv_count == 0) {
                         noRepositoryFile += 1;
                     }
                 } catch (Exception e) {
