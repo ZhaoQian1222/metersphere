@@ -3,8 +3,6 @@ package io.metersphere.api.exec.scenario;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.Feature;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.metersphere.api.dto.EnvironmentType;
 import io.metersphere.api.dto.ScenarioEnv;
@@ -27,14 +25,11 @@ import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.service.EnvironmentGroupProjectService;
-import io.metersphere.utils.LoggerUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.lang.reflect.Method;
-import java.util.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -178,16 +173,6 @@ public class ApiScenarioEnvService {
         String definition = apiScenarioWithBLOBs.getScenarioDefinition();
         MsScenario scenario = JSONObject.parseObject(definition, MsScenario.class, Feature.DisableSpecialKeyDetect);
         GenerateHashTreeUtil.parse(definition, scenario);
-        // 添加csv版本控制台打印信息
-        try {
-            if (Class.forName("io.metersphere.xpack.repository.service.GitRepositoryService") != null) {
-                Class clazz = Class.forName("io.metersphere.xpack.repository.service.GitRepositoryService");
-                Method method = clazz.getMethod("getCsvVersionScriptProcess", String.class, MsTestElement.class);
-                method.invoke(CommonBeanFactory.getBean("gitRepositoryService"), apiScenarioWithBLOBs.getId(), scenario);
-            }
-        } catch (Exception exception) {
-            LoggerUtil.error("不存在GitRepositoryService类");
-        }
         if (StringUtils.equals(environmentType, EnvironmentType.JSON.toString())) {
             scenario.setEnvironmentMap(JSON.parseObject(environmentJson, Map.class));
         } else if (StringUtils.equals(environmentType, EnvironmentType.GROUP.toString())) {

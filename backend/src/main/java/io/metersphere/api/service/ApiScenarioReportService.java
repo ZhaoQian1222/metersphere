@@ -41,6 +41,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
@@ -104,8 +106,65 @@ public class ApiScenarioReportService {
 
     public ApiScenarioReport testEnded(ResultDTO dto) {
         if (!StringUtils.equals(dto.getReportType(), RunModeConstants.SET_REPORT.toString())) {
+            StringBuffer stringBuffer = new StringBuffer();
+            //使用反射查询场景里csv信息
+            try {
+                TestPlanApiScenario testPlanApiScenario = testPlanApiScenarioMapper.selectByPrimaryKey(dto.getTestId());
+                if (testPlanApiScenario != null) {
+                    ApiScenarioWithBLOBs apiScenarioWithBLOBs = apiScenarioMapper.selectByPrimaryKey(testPlanApiScenario.getApiScenarioId());
+                    if (apiScenarioWithBLOBs != null) {
+                        if (Class.forName("io.metersphere.xpack.repository.service.RepositoryApiAutomationService") != null) {
+                            Class clazz = Class.forName("io.metersphere.xpack.repository.service.RepositoryFileVersionService");
+                            Method method = clazz.getMethod("queryRepositoryFileList", String.class);
+                            Object repositoryApiAutomationService = method.invoke(CommonBeanFactory.getBean("repositoryFileVersionService"), testPlanApiScenario.getApiScenarioId());
+                            if (repositoryApiAutomationService != null) {
+                                List<WorkspaceRepositoryFileVersion> workspaceRepositoryFileVersionList = (List<WorkspaceRepositoryFileVersion>) repositoryApiAutomationService;
+                                if (CollectionUtils.isNotEmpty(workspaceRepositoryFileVersionList)) {
+                                    HashMap<Object, Object> objectObjectHashMap = new HashMap<>();
+                                    for (WorkspaceRepositoryFileVersion workspaceRepositoryFileVersion : workspaceRepositoryFileVersionList) {
+                                        objectObjectHashMap.put(workspaceRepositoryFileVersion.getPath(), workspaceRepositoryFileVersion.getCommitId());
+                                    }
+                                    stringBuffer.append("场景名称："+apiScenarioWithBLOBs.getName() + "(" + testPlanApiScenario.getApiScenarioId() + ")当前的git-csv文件：" + JSONObject.toJSONString(objectObjectHashMap) + "\n");
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    ApiScenarioReport apiScenarioReport = apiScenarioReportMapper.selectByPrimaryKey(dto.getTestId());
+                    if (apiScenarioReport != null) {
+                        HashMap<Object, Object> objectObjectHashMap = new HashMap<>();
+                        if (Class.forName("io.metersphere.xpack.repository.service.RepositoryApiAutomationService") != null) {
+                            Class clazz = Class.forName("io.metersphere.xpack.repository.service.RepositoryFileVersionService");
+                            Method method = clazz.getMethod("queryRepositoryFileList", String.class);
+                            Object repositoryApiAutomationService = method.invoke(CommonBeanFactory.getBean("repositoryFileVersionService"), apiScenarioReport.getScenarioId());
+                            if (repositoryApiAutomationService != null) {
+                                List<WorkspaceRepositoryFileVersion> workspaceRepositoryFileVersionList = (List<WorkspaceRepositoryFileVersion>) repositoryApiAutomationService;
+                                if (CollectionUtils.isNotEmpty(workspaceRepositoryFileVersionList)) {
+                                    for (WorkspaceRepositoryFileVersion workspaceRepositoryFileVersion : workspaceRepositoryFileVersionList) {
+                                        objectObjectHashMap.put(workspaceRepositoryFileVersion.getPath(), workspaceRepositoryFileVersion.getCommitId());
+                                    }
+                                    stringBuffer.append("场景名称："+apiScenarioReport.getScenarioName() + "(" +  apiScenarioReport.getScenarioId() + ")当前的git-csv文件：" + JSONObject.toJSONString(objectObjectHashMap) + "\n");
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (ClassNotFoundException exception) {
+                exception.printStackTrace();
+                LoggerUtil.error("不存在GitRepositoryService类");
+            } catch (InvocationTargetException e) {
+                MSException.throwException("请检查场景变量中的git存储库信息！");
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
             // 更新控制台信息
-            apiScenarioReportStructureService.update(dto.getReportId(), dto.getConsole());
+            apiScenarioReportStructureService.update(dto.getReportId(), dto.getConsole() + stringBuffer);
         }
         ApiScenarioReportResultExample example = new ApiScenarioReportResultExample();
         example.createCriteria().andReportIdEqualTo(dto.getReportId());

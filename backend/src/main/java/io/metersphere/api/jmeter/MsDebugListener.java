@@ -23,6 +23,8 @@ import io.metersphere.api.dto.RequestResultExpandDTO;
 import io.metersphere.api.dto.RunningParamKeys;
 import io.metersphere.api.exec.queue.PoolExecBlockingQueueUtil;
 import io.metersphere.api.exec.utils.ResultParseUtil;
+import io.metersphere.base.domain.ApiScenarioReport;
+import io.metersphere.base.domain.WorkspaceRepositoryFileVersion;
 import io.metersphere.commons.utils.*;
 import io.metersphere.dto.RequestResult;
 import io.metersphere.jmeter.JMeterBase;
@@ -40,6 +42,10 @@ import org.apache.jmeter.testelement.property.BooleanProperty;
 import org.apache.jmeter.threads.JMeterVariables;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -155,7 +161,42 @@ public class MsDebugListener extends AbstractListenerElement implements SampleLi
                 dto.setReportId("send." + this.getName());
                 dto.setToReport(this.getName());
 
-                String console = FixedCapacityUtils.getJmeterLogger(this.getName(),false);
+                StringBuffer stringBuffer = new StringBuffer();
+                //使用反射查询场景里csv信息
+                try {
+                    String reportId = this.getName();
+                    if(Class.forName("io.metersphere.api.service.ApiScenarioReportService")!=null){
+                        Class clazz = Class.forName("io.metersphere.api.service.ApiScenarioReportService");
+                        Method method = clazz.getMethod("getByIds", List.class);
+                        ArrayList<String> strings = new ArrayList<>();
+                        strings.add(reportId);
+                        Object apiScenarioReportObject = method.invoke(CommonBeanFactory.getBean("apiScenarioReportService"), strings);
+                        if(apiScenarioReportObject!=null){
+                            List<ApiScenarioReport> apiScenarioReportList = (List<ApiScenarioReport>) apiScenarioReportObject;
+                            String scenarioId = apiScenarioReportList.get(0).getScenarioId();
+                            String scenarioName = apiScenarioReportList.get(0).getScenarioName();
+                            if (Class.forName("io.metersphere.xpack.repository.service.RepositoryApiAutomationService") != null) {
+                                Class clazz1 = Class.forName("io.metersphere.xpack.repository.service.RepositoryFileVersionService");
+                                Method method1 = clazz1.getMethod("queryRepositoryFileList", String.class);
+                                Object repositoryApiAutomationService = method1.invoke(CommonBeanFactory.getBean("repositoryFileVersionService"), scenarioId);
+                                if (repositoryApiAutomationService != null) {
+                                    List<WorkspaceRepositoryFileVersion> workspaceRepositoryFileVersionList = (List<WorkspaceRepositoryFileVersion>) repositoryApiAutomationService;
+                                    if (CollectionUtils.isNotEmpty(workspaceRepositoryFileVersionList)) {
+                                        HashMap<Object, Object> objectObjectHashMap = new HashMap<>();
+                                        for (WorkspaceRepositoryFileVersion workspaceRepositoryFileVersion : workspaceRepositoryFileVersionList) {
+                                            objectObjectHashMap.put(workspaceRepositoryFileVersion.getPath(), workspaceRepositoryFileVersion.getCommitId());
+                                        }
+                                        stringBuffer.append("场景名称：" + scenarioName + "(" + scenarioId + ")当前的git-csv文件：" + JSONObject.toJSONString(objectObjectHashMap) + "\n");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                } catch (Exception e) {
+                    LoggerUtil.error("webSocket追加git-csv日志失败！");
+                }
+                String console = FixedCapacityUtils.getJmeterLogger(this.getName(), false) + stringBuffer;
                 if (StringUtils.isNotEmpty(requestResult.getName()) && requestResult.getName().startsWith("Transaction=")) {
                     requestResult.getSubRequestResults().forEach(transactionResult -> {
                         transactionResult.getResponseResult().setConsole(console);

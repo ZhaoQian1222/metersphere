@@ -76,6 +76,7 @@ import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -297,9 +298,17 @@ public class ApiAutomationService {
                 Method method = clazz.getMethod("dealwithRepositoryFile", SaveApiScenarioRequest.class, List.class);
                 method.invoke(CommonBeanFactory.getBean("repositoryApiAutomationService"), request, repositoryFiles);
             }
-        } catch (Exception exception) {
+        } catch (ClassNotFoundException exception) {
             exception.printStackTrace();
             LoggerUtil.error("不存在GitRepositoryService类");
+        } catch (InvocationTargetException e){
+            MSException.throwException("请检查场景变量中的git存储库信息！");
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
@@ -2164,7 +2173,8 @@ public class ApiAutomationService {
                                 WorkspaceRepository workspaceRepository = workspaceRepositoryMapper.selectByPrimaryKey(repositoryId);
                                 if (workspaceRepository != null) {
                                     // 校验并拉取git仓库中的文件
-                                    String directoryPath = JGitUtils.pullLatestRevision(workspaceRepository.getRepositoryUrl(), workspaceRepository.getUsername(), workspaceRepository.getPassword(), variable.getRepositoryBranch(), workspaceRepository.getRepositoryName(), workspaceRepository.getWorkspaceId());
+                                    String gitProjectName = workspaceRepository.getRepositoryUrl().substring(workspaceRepository.getRepositoryUrl().lastIndexOf("/") + 1, workspaceRepository.getRepositoryUrl().lastIndexOf("."));
+                                    String directoryPath = JGitUtils.pullLatestRevision(workspaceRepository.getRepositoryUrl(), workspaceRepository.getUsername(), workspaceRepository.getPassword(), variable.getRepositoryBranch(), gitProjectName, workspaceRepository.getWorkspaceId());
                                     if (JGitUtils.validateFileExists(directoryPath, variable.getRepositoryFilePath())) {
                                         //复制文件到本地路径下
                                         FileUtils.createBodyFileByCopy(fileId, directoryPath + "/" + variable.getRepositoryFilePath());
@@ -2177,7 +2187,7 @@ public class ApiAutomationService {
                                         if (CollectionUtils.isNotEmpty(workspaceRepositoryFileVersions)) {
                                             for (WorkspaceRepositoryFileVersion workspaceRepositoryFileVersion : workspaceRepositoryFileVersions) {
                                                 // 获取此文件的最新修改记录
-                                                String commitId = JGitUtils.getLatestCommitId(variable.getRepositoryBranch(), workspaceRepository.getRepositoryName(), workspaceRepository.getWorkspaceId(), variable.getRepositoryFilePath());
+                                                String commitId = JGitUtils.getLatestCommitId(variable.getRepositoryBranch(), gitProjectName, workspaceRepository.getWorkspaceId(), variable.getRepositoryFilePath());
                                                 //修改仓库文件版本
                                                 workspaceRepositoryFileVersion.setCommitId(commitId);
                                                 int i = workspaceRepositoryFileVersionMapper.updateByPrimaryKey(workspaceRepositoryFileVersion);

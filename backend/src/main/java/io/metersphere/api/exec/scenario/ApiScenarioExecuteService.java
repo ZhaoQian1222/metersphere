@@ -368,7 +368,6 @@ public class ApiScenarioExecuteService {
         try {
             uploadBodyFiles(request.getBodyFileRequestIds(), bodyFiles);
             FileUtils.createBodyFiles(request.getScenarioFileIds(), scenarioFiles);
-            this.testElement(request);
             hashTree = request.getTestElement().generateHashTree(config);
             LogUtil.info(request.getTestElement().getJmx(hashTree));
         } catch (Exception e) {
