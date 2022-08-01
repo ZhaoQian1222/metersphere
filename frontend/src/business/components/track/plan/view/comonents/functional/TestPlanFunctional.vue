@@ -5,6 +5,8 @@
       <node-tree class="node-tree"
                  v-loading="result.loading"
                  @nodeSelectEvent="nodeChange"
+                 local-suffix="test_case"
+                 default-label="未规划用例"
                  :tree-nodes="treeNodes"
                  ref="nodeTree"/>
     </template>
@@ -23,6 +25,7 @@
           v-if="activeDom === 'left'"
           @openTestCaseRelevanceDialog="openTestCaseRelevanceDialog"
           @refresh="refresh"
+          @refreshTree="refreshTree"
           @setCondition="setCondition"
           :plan-id="planId"
           :plan-status="planStatus "
@@ -49,8 +52,6 @@
       ref="testCaseRelevance"/>
 
     <is-change-confirm
-      :title="'请保存脑图'"
-      :tip="'脑图未保存，确认保存脑图吗？'"
       @confirm="changeConfirm"
       ref="isChangeConfirm"/>
   </ms-test-plan-common-component>
@@ -90,7 +91,8 @@ export default {
       selectNode: {},
       condition: {},
       tmpActiveDom: null,
-      tmpPath: null
+      tmpPath: null,
+      currentNode: null
     };
   },
   props: [
@@ -128,6 +130,9 @@ export default {
       this.$refs.testCaseRelevance.search();
       this.getNodeTreeByPlanId();
     },
+    refreshTree() {
+      this.getNodeTreeByPlanId();
+    },
     clearSelectNode() {
       this.selectNodeIds = [];
       this.$store.commit('setTestPlanViewSelectNode', {});
@@ -141,6 +146,7 @@ export default {
     nodeChange(node, nodeIds, pNodes) {
       this.selectNodeIds = nodeIds;
       this.$store.commit('setTestPlanViewSelectNode', node);
+      this.currentNode = node;
       // 切换node后，重置分页数
       if (this.$refs.testPlanTestCaseList) {
         this.$refs.testPlanTestCaseList.currentPage = 1;
@@ -155,7 +161,13 @@ export default {
         }
         this.result = this.$get(url, response => {
           this.treeNodes = response.data;
+          this.setCurrentKey();
         });
+      }
+    },
+    setCurrentKey() {
+      if (this.$refs.nodeTree) {
+        this.$refs.nodeTree.setCurrentKey(this.currentNode);
       }
     },
     setCondition(data) {

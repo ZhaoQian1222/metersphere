@@ -7,11 +7,13 @@ import com.alibaba.fastjson.TypeReference;
 import io.metersphere.base.domain.*;
 import io.metersphere.commons.constants.IssuesManagePlatform;
 import io.metersphere.commons.constants.IssuesStatus;
+import io.metersphere.commons.constants.ZentaoIssuePlatformStatus;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.i18n.Translator;
 import io.metersphere.track.dto.DemandDTO;
+import io.metersphere.track.dto.PlatformStatusDTO;
 import io.metersphere.track.issue.client.ZentaoClient;
 import io.metersphere.track.issue.client.ZentaoGetClient;
 import io.metersphere.track.issue.domain.PlatformUser;
@@ -36,6 +38,7 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -225,8 +228,37 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
     public void updateIssue(IssuesUpdateRequest request) {
         setUserConfig();
         MultiValueMap<String, Object> param = buildUpdateParam(request);
+        if (request.getTransitions() != null) {
+            request.setPlatformStatus(request.getTransitions().getValue());
+        }
         handleIssueUpdate(request);
+        this.handleZentaoBugStatus(param);
         zentaoClient.updateIssue(request.getPlatformId(), param);
+    }
+
+    private void handleZentaoBugStatus(MultiValueMap<String, Object> param) {
+        if (!param.containsKey("status")) {
+            return;
+        }
+        List<Object> status = param.get("status");
+        if (CollectionUtils.isEmpty(status)) {
+            return;
+        }
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String str = (String) status.get(0);
+            if (StringUtils.equals(str, "resolved")) {
+                param.add("resolvedDate", format.format(new Date()));
+            } else if (StringUtils.equals(str, "closed")) {
+                param.add("closedDate", format.format(new Date()));
+                if (!param.containsKey("resolution")) {
+                    // 解决方案默认为已解决
+                    param.add("resolution", "fixed");
+                }
+            }
+        } catch (Exception e) {
+            //
+        }
     }
 
     private MultiValueMap<String, Object> buildUpdateParam(IssuesUpdateRequest issuesRequest) {
@@ -238,6 +270,9 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
         MultiValueMap<String, Object> paramMap = new LinkedMultiValueMap<>();
         paramMap.add("product", projectId);
         paramMap.add("title", issuesRequest.getTitle());
+        if (issuesRequest.getTransitions() != null) {
+            paramMap.add("status", issuesRequest.getTransitions().getValue());
+        }
 
         addCustomFields(issuesRequest, paramMap);
 
@@ -498,5 +533,18 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
     @Override
     public Boolean checkProjectExist(String relateId) {
         return zentaoClient.checkProjectExist(relateId);
+    }
+
+    @Override
+    public List<PlatformStatusDTO> getTransitions(String issueKey) {
+        List<PlatformStatusDTO> platformStatusDTOS = new ArrayList<>();
+        for (ZentaoIssuePlatformStatus status : ZentaoIssuePlatformStatus.values()) {
+            PlatformStatusDTO platformStatusDTO = new PlatformStatusDTO();
+            platformStatusDTO.setValue(status.name());
+            platformStatusDTO.setLable(status.getName());
+
+            platformStatusDTOS.add(platformStatusDTO);
+        }
+        return platformStatusDTOS;
     }
 }

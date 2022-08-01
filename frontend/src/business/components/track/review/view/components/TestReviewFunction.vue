@@ -4,9 +4,12 @@
       <ms-node-tree
         class="node-tree"
         :all-label="$t('commons.all_label.review')"
+        local-suffix="test_case"
+        default-label="未规划用例"
         v-loading="result.loading"
         @nodeSelectEvent="nodeChange"
         :tree-nodes="treeNodes"
+        :default-expand-all="true"
         ref="nodeTree"/>
     </template>
     <template v-slot:main>
@@ -46,8 +49,6 @@
       ref="testReviewRelevance"/>
 
     <is-change-confirm
-      :title="'请保存脑图'"
-      :tip="'脑图未保存，确认保存脑图吗？'"
       :version-enable="versionEnable"
       @confirm="changeConfirm"
       ref="isChangeConfirm"/>

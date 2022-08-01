@@ -17,6 +17,7 @@ import io.metersphere.dto.IssueTemplateDao;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.service.CustomFieldService;
 import io.metersphere.track.dto.DemandDTO;
+import io.metersphere.track.dto.PlatformStatusDTO;
 import io.metersphere.track.issue.client.JiraClientV2;
 import io.metersphere.track.issue.domain.PlatformUser;
 import io.metersphere.track.issue.domain.ProjectIssueConfig;
@@ -27,10 +28,13 @@ import io.metersphere.track.service.IssuesService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.io.File;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -74,6 +78,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
         String status = getStatus(fields);
 
         String description = dealWithDescription(fields.getString("description"), fields.getJSONArray("attachment"));
+        fields.put("description", description);
 
         JSONObject assignee = (JSONObject) fields.get("assignee");
         issue.setTitle(fields.getString("summary"));
@@ -99,7 +104,9 @@ public class JiraPlatform extends AbstractIssuePlatform {
                 JSONObject attachment = attachments.getJSONObject(i);
                 String filename = attachment.getString("filename");
                 String content = attachment.getString("content");
-                if (StringUtils.equals(attachment.getString("mimeType"), "image/jpeg")) {
+                content = "/resource/md/get/url?platform=Jira&url=" + URLEncoder.encode(content, StandardCharsets.UTF_8);
+
+                if (StringUtils.contains(attachment.getString("mimeType"), "image")) {
                     String contentUrl = "![" + filename + "](" + content + ")";
                     fileContentMap.put(filename, contentUrl);
                 } else {
@@ -116,11 +123,14 @@ public class JiraPlatform extends AbstractIssuePlatform {
                 List<String> keys = fileContentMap.keySet().stream().filter(key -> splitStr.contains(key)).collect(Collectors.toList());
                 if (CollectionUtils.isNotEmpty(keys)) {
                     description = description.replace(splitStr, fileContentMap.get(keys.get(0)));
+                    fileContentMap.remove(keys.get(0));
                 } else {
                     if (splitStr.contains("MS附件：")) {
                         // 解析标签内容
                         String name = getHyperLinkPathForImg("\\!\\[(.*?)\\]", StringEscapeUtils.unescapeJava(splitStr));
                         String path = getHyperLinkPathForImg("\\|(.*?)\\)", splitStr);
+                        path = "/resource/md/get/url?platform=Jira&url=" + URLEncoder.encode(path, StandardCharsets.UTF_8);
+
                         // 解析标签内容为图片超链接格式，进行替换
                         description = description.replace(splitStr, "\n\n![" + name + "](" + path + ")");
                     }
@@ -129,6 +139,10 @@ public class JiraPlatform extends AbstractIssuePlatform {
             }
         }
 
+        for (String key: fileContentMap.keySet()) {
+            // 同步jira上传的附件
+            description += "\n" + fileContentMap.get(key);
+        }
         return description;
     }
 
@@ -214,7 +228,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
     }
 
     private List<File> getImageFiles(IssuesUpdateRequest issuesRequest) {
-        List<File> files = getImageFiles(issuesRequest.getDescription());
+        List<File> files = new ArrayList<>();
         List<CustomFieldItemDTO> customFields = CustomFieldService.getCustomFields(issuesRequest.getCustomFields());
         customFields.forEach(item -> {
             String fieldName = item.getCustomData();
@@ -427,6 +441,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
         JSONObject param = buildUpdateParam(request, getIssueType(project.getIssueConfig()), project.getJiraKey());
         jiraClientV2.updateIssue(request.getPlatformId(), JSONObject.toJSONString(param));
 
+        Set<String> attachmentNames = new HashSet<>();
         // 更新附件
         JiraIssue jiraIssue = jiraClientV2.getIssues(request.getPlatformId());
         JSONObject fields = jiraIssue.getFields();
@@ -436,6 +451,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
             for (int i = 0; i < attachments.size(); i++) {
                 JSONObject attachment = attachments.getJSONObject(i);
                 String filename = attachment.getString("filename");
+                attachmentNames.add(filename);
                 if (!request.getDescription().contains(filename)) {
                     String fileId = attachment.getString("id");
                     jiraClientV2.deleteAttachment(fileId);
@@ -444,11 +460,21 @@ public class JiraPlatform extends AbstractIssuePlatform {
         }
 
         // 上传新附件
-        imageFiles.forEach(img -> jiraClientV2.uploadAttachment(request.getPlatformId(), img));
+        imageFiles.forEach(img -> {
+            if (!attachmentNames.contains(img.getName())) {
+                // 旧附件没有才上传新附件
+                jiraClientV2.uploadAttachment(request.getPlatformId(), img);
+            }
+        });
 
         if (request.getTransitions() != null) {
             try {
-                jiraClientV2.setTransitions(request.getPlatformId(), request.getTransitions());
+                List<JiraTransitionsResponse.Transitions> transitions = jiraClientV2.getTransitions(request.getPlatformId());
+                transitions.forEach(transition -> {
+                    if (Objects.equals(request.getPlatformStatus(), transition.getTo().getName())) {
+                        jiraClientV2.setTransitions(request.getPlatformId(), transition);
+                    }
+                });
             } catch (Exception e) {
                 LogUtil.error(e);
             }
@@ -537,8 +563,19 @@ public class JiraPlatform extends AbstractIssuePlatform {
         return setUserConfig(getUserPlatInfo(this.workspaceId));
     }
 
-    public List<JiraTransitionsResponse.Transitions> getTransitions(String issueKey) {
-        return jiraClientV2.getTransitions(issueKey);
+    @Override
+    public List<PlatformStatusDTO> getTransitions(String issueKey) {
+        List<PlatformStatusDTO> platformStatusDTOS = new ArrayList<>();
+        List<JiraTransitionsResponse.Transitions> transitions = jiraClientV2.getTransitions(issueKey);
+        if (CollectionUtils.isNotEmpty(transitions)) {
+            transitions.forEach(item -> {
+                PlatformStatusDTO platformStatusDTO = new PlatformStatusDTO();
+                platformStatusDTO.setLable(item.getTo().getName());
+                platformStatusDTO.setValue(item.getTo().getName());
+                platformStatusDTOS.add(platformStatusDTO);
+            });
+        }
+        return platformStatusDTOS;
     }
 
     public IssueTemplateDao getThirdPartTemplate() {
@@ -665,6 +702,10 @@ public class JiraPlatform extends AbstractIssuePlatform {
                 value = CustomFieldType.TEXTAREA.getValue();
             } else if (customType.contains("labels")) {
                 value = CustomFieldType.MULTIPLE_INPUT.getValue();
+            } else if (customType.contains("multiversion")) {
+                value = CustomFieldType.MULTIPLE_SELECT.getValue();
+            } else if (customType.contains("version")) {
+                value = CustomFieldType.SELECT.getValue();
             }
         } else {
             // 系统字段
@@ -772,5 +813,9 @@ public class JiraPlatform extends AbstractIssuePlatform {
             return false;
         }
         return false;
+    }
+
+    public ResponseEntity proxyForGet(String url, Class responseEntityClazz) {
+        return jiraClientV2.proxyForGet(url, responseEntityClazz);
     }
 }

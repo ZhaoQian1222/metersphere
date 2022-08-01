@@ -5,10 +5,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
-import io.metersphere.base.mapper.ext.ExtProjectMapper;
-import io.metersphere.base.mapper.ext.ExtUserGroupMapper;
-import io.metersphere.base.mapper.ext.ExtUserMapper;
-import io.metersphere.base.mapper.ext.ExtWorkspaceMapper;
+import io.metersphere.base.mapper.ext.*;
 import io.metersphere.commons.constants.*;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.user.SessionUser;
@@ -94,7 +91,7 @@ public class UserService {
     @Resource
     private ExtWorkspaceMapper extWorkspaceMapper;
     @Resource
-    private OperatingLogMapper operatingLogMapper;
+    private ExtOperatingLogMapper extOperatingLogMapper;
 
     public List<UserDetail> queryTypeByIds(List<String> userIds) {
         return extUserMapper.queryTypeByIds(userIds);
@@ -413,14 +410,14 @@ public class UserService {
         }
     }
 
-    public void switchUserResource(String sign, String sourceId) {
-        SessionUser sessionUser = SessionUtils.getUser();
+    public void switchUserResource(String sign, String sourceId, UserDTO sessionUser) {
         // 获取最新UserDTO
         UserDTO user = getUserDTO(sessionUser.getId());
         User newUser = new User();
 
         if (StringUtils.equals("workspace", sign)) {
             user.setLastWorkspaceId(sourceId);
+            sessionUser.setLastWorkspaceId(sourceId);
             List<Project> projects = getProjectListByWsAndUserId(sessionUser.getId(), sourceId);
             if (projects.size() > 0) {
                 user.setLastProjectId(projects.get(0).getId());
@@ -615,7 +612,10 @@ public class UserService {
             if (subject.isAuthenticated()) {
                 UserDTO user = (UserDTO) subject.getSession().getAttribute(ATTR_USER);
                 autoSwitch(user);
-                return ResultHolder.success(subject.getSession().getAttribute("user"));
+                // 放入session中
+                SessionUser sessionUser = SessionUser.fromUser(user);
+                SessionUtils.putUser(sessionUser);
+                return ResultHolder.success(sessionUser);
             } else {
                 return ResultHolder.error(Translator.get("login_fail"));
             }
@@ -634,25 +634,20 @@ public class UserService {
         }
     }
 
-    private void autoSwitch(UserDTO user) {
+    public void autoSwitch(UserDTO user) {
         // 用户有 last_project_id 权限
-        if (StringUtils.isNotBlank(user.getLastProjectId())) {
-            List<UserGroup> projectUserGroups = user.getUserGroups().stream()
-                    .filter(ug -> StringUtils.equals(user.getLastProjectId(), ug.getSourceId()))
-                    .collect(Collectors.toList());
-            if (CollectionUtils.isNotEmpty(projectUserGroups)) {
-                return;
-            }
+        if (hasLastProjectPermission(user)) {
+            return;
         }
         // 用户有 last_workspace_id 权限
-        if (StringUtils.isNotBlank(user.getLastWorkspaceId())) {
-            List<UserGroup> workspaceUserGroups = user.getUserGroups().stream()
-                    .filter(ug -> StringUtils.equals(user.getLastWorkspaceId(), ug.getSourceId()))
-                    .collect(Collectors.toList());
-            if (CollectionUtils.isNotEmpty(workspaceUserGroups)) {
-                return;
-            }
+        if (hasLastWorkspacePermission(user)) {
+            return;
         }
+        // 判断其他权限
+        checkNewWorkspaceAndProject(user);
+    }
+
+    private void checkNewWorkspaceAndProject(UserDTO user) {
         List<UserGroup> userGroups = user.getUserGroups();
         List<String> projectGroupIds = user.getGroups()
                 .stream().filter(ug -> StringUtils.equals(ug.getType(), UserGroupType.PROJECT))
@@ -670,7 +665,12 @@ public class UserService {
                     .collect(Collectors.toList());
             if (workspaces.size() > 0) {
                 String wsId = workspaces.get(0).getSourceId();
-                switchUserResource("workspace", wsId);
+                switchUserResource("workspace", wsId, user);
+            } else {
+                // 用户登录之后没有项目和工作空间的权限就把值清空
+                user.setLastWorkspaceId("");
+                user.setLastProjectId("");
+                updateUser(user);
             }
         } else {
             UserGroup userGroup = project.stream().filter(p -> StringUtils.isNotBlank(p.getSourceId()))
@@ -682,8 +682,72 @@ public class UserService {
             user.setLastProjectId(projectId);
             user.setLastWorkspaceId(wsId);
             updateUser(user);
-            SessionUtils.putUser(SessionUser.fromUser(user));
         }
+    }
+
+    private boolean hasLastProjectPermission(UserDTO user) {
+        if (StringUtils.isNotBlank(user.getLastProjectId())) {
+            List<UserGroup> projectUserGroups = user.getUserGroups().stream()
+                    .filter(ug -> StringUtils.equals(user.getLastProjectId(), ug.getSourceId()))
+                    .collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(projectUserGroups)) {
+                Project project = projectMapper.selectByPrimaryKey(user.getLastProjectId());
+                if (StringUtils.equals(project.getWorkspaceId(), user.getLastWorkspaceId())) {
+                    return true;
+                }
+                // last_project_id 和 last_workspace_id 对应不上了
+                user.setLastWorkspaceId(project.getWorkspaceId());
+                updateUser(user);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasLastWorkspacePermission(UserDTO user) {
+        if (StringUtils.isNotBlank(user.getLastWorkspaceId())) {
+            List<UserGroup> workspaceUserGroups = user.getUserGroups().stream()
+                    .filter(ug -> StringUtils.equals(user.getLastWorkspaceId(), ug.getSourceId()))
+                    .collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(workspaceUserGroups)) {
+                ProjectExample example = new ProjectExample();
+                example.createCriteria().andWorkspaceIdEqualTo(user.getLastWorkspaceId());
+                List<Project> projects = projectMapper.selectByExample(example);
+                // 工作空间下没有项目
+                if (CollectionUtils.isEmpty(projects)) {
+                    return true;
+                }
+                // 工作空间下有项目，选中有权限的项目
+                List<String> projectIds = projects.stream()
+                        .map(Project::getId)
+                        .collect(Collectors.toList());
+
+                List<UserGroup> userGroups = user.getUserGroups();
+                List<String> projectGroupIds = user.getGroups()
+                        .stream().filter(ug -> StringUtils.equals(ug.getType(), UserGroupType.PROJECT))
+                        .map(Group::getId)
+                        .collect(Collectors.toList());
+                List<String> projectIdsWithPermission = userGroups.stream().filter(ug -> projectGroupIds.contains(ug.getGroupId()))
+                        .filter(p -> StringUtils.isNotBlank(p.getSourceId()))
+                        .map(UserGroup::getSourceId)
+                        .filter(projectIds::contains)
+                        .collect(Collectors.toList());
+
+                List<String> intersection = projectIds.stream().filter(projectIdsWithPermission::contains).collect(Collectors.toList());
+                // 当前工作空间下的所有项目都没有权限
+                if (CollectionUtils.isEmpty(intersection)) {
+                    return true;
+                }
+                Project project = projects.stream().filter(p -> StringUtils.equals(intersection.get(0), p.getId())).findFirst().get();
+                String wsId = project.getWorkspaceId();
+                user.setId(user.getId());
+                user.setLastProjectId(project.getId());
+                user.setLastWorkspaceId(wsId);
+                updateUser(user);
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<User> searchUser(String condition) {
@@ -1185,14 +1249,6 @@ public class UserService {
         userGroupMapper.deleteByExample(userGroupExample);
     }
 
-    public List<User> getProjectMember(QueryMemberRequest request) {
-        String projectId = request.getProjectId();
-        if (StringUtils.isBlank(projectId)) {
-            return new ArrayList<>();
-        }
-        return extUserGroupMapper.getProjectMemberList(request);
-    }
-
     public List<User> getWsAllMember(String workspaceId) {
         List<String> sourceIds = new ArrayList<>();
         ProjectExample projectExample = new ProjectExample();
@@ -1356,7 +1412,7 @@ public class UserService {
 
     public boolean checkWhetherChangePasswordOrNot(LoginRequest request) {
         // 首次登录需要提示
-        if (operatingLogMapper.countByExample(new OperatingLogExample()) == 0) {
+        if (extOperatingLogMapper.isNewInstallation()) {
             return true;
         }
 

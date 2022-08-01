@@ -12,12 +12,14 @@
       <node-tree class="node-tree"
                  :is-display="openType"
                  v-loading="result.loading"
+                 local-suffix="test_case"
+                 default-label="未规划用例"
                  @nodeSelectEvent="nodeChange"
                  :tree-nodes="treeNodes"
                  ref="nodeTree"/>
     </template>
 
-    <ms-table-header :condition.sync="page.condition" @search="getTestCases" title="" :show-create="false">
+    <ms-table-header :condition.sync="page.condition" @search="search" title="" :show-create="false">
       <template v-slot:searchBarBefore>
         <version-select v-xpack :project-id="projectId" @changeVersion="changeVersion" margin-right="20"/>
       </template>
@@ -32,7 +34,8 @@
       :screen-height="screenHeight"
       @handlePageChange="getTestCases"
       @selectCountChange="setSelectCounts"
-      @refresh="getTestCases"
+      @order="getTestCases"
+      @filter="search"
       ref="table">
 
       <ms-table-column
@@ -107,6 +110,7 @@ import MsTag from "@/business/components/common/components/MsTag";
 import {getCurrentProjectID, hasLicense} from "@/common/js/utils";
 import MsCreateTimeColumn from "@/business/components/common/components/table/MsCreateTimeColumn";
 import MsUpdateTimeColumn from "@/business/components/common/components/table/MsUpdateTimeColumn";
+import {getVersionFilters} from "@/network/project";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const VersionSelect = requireComponent.keys().length > 0 ? requireComponent("./version/VersionSelect.vue") : {};
@@ -185,13 +189,16 @@ export default {
     },
     projectId() {
       this.page.condition.projectId = this.projectId;
+      this.page.condition.versionId = null;
       this.getProjectNode();
       this.getTestCases();
       this.getCustomNum();
+      this.getVersionOptions();
     }
   },
   methods: {
     open() {
+      this.page.condition = {};
       this.isSaving = false;
       this.$refs.baseRelevance.open();
       if (this.$refs.table) {
@@ -211,6 +218,11 @@ export default {
           this.customNum = data.caseCustomNum;
         }
       });
+    },
+    search() {
+      // 添加搜索条件时，当前页设置成第一页
+      this.page.currentPage = 1;
+      this.getTestCases();
     },
     getTestCases() {
       let condition = this.page.condition;
@@ -233,6 +245,8 @@ export default {
       this.save(param, this);
     },
     nodeChange(node, nodeIds, nodeNames) {
+      this.page.condition.selectAll = false;
+      this.$refs.table.condition.selectAll = false;
       this.selectNodeIds = nodeIds;
       this.selectNodeNames = nodeNames;
     },
@@ -252,14 +266,9 @@ export default {
       this.getNodeTree(this);
     },
     getVersionOptions() {
-      if (hasLicense()) {
-        this.$get('/project/version/get-project-versions/' + getCurrentProjectID(), response => {
-          this.versionOptions = response.data;
-          this.versionFilters = response.data.map(u => {
-            return {text: u.name, value: u.id};
-          });
-        });
-      }
+      getVersionFilters(this.projectId, (data) => {
+        this.versionFilters = data;
+      });
     },
     changeVersion(currentVersion) {
       this.page.condition.versionId = currentVersion || null;

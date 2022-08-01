@@ -29,9 +29,9 @@ import io.metersphere.track.dto.*;
 import io.metersphere.track.issue.*;
 import io.metersphere.track.issue.domain.PlatformUser;
 import io.metersphere.track.issue.domain.jira.JiraIssueType;
-import io.metersphere.track.issue.domain.jira.JiraTransitionsResponse;
 import io.metersphere.track.issue.domain.zentao.ZentaoBuild;
 import io.metersphere.track.request.issues.JiraIssueTypeRequest;
+import io.metersphere.track.request.issues.PlatformIssueTypeRequest;
 import io.metersphere.track.request.testcase.AuthUserIssueRequest;
 import io.metersphere.track.request.testcase.IssuesRequest;
 import io.metersphere.track.request.testcase.IssuesUpdateRequest;
@@ -39,12 +39,14 @@ import io.metersphere.track.request.testcase.TestCaseBatchRequest;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.lang.reflect.Constructor;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -79,6 +81,10 @@ public class IssuesService {
     private IssueFollowMapper issueFollowMapper;
     @Resource
     private TestPlanTestCaseMapper testPlanTestCaseMapper;
+    @Resource
+    StringRedisTemplate stringRedisTemplate;
+
+    private static final String SYNC_THIRD_PARTY_ISSUES_KEY = "ISSUE:SYNC";
 
     public void testAuth(String workspaceId, String platform) {
         IssuesRequest issuesRequest = new IssuesRequest();
@@ -198,12 +204,13 @@ public class IssuesService {
         boolean tapd = isIntegratedPlatform(workspaceId, IssuesManagePlatform.Tapd.toString());
         boolean jira = isIntegratedPlatform(workspaceId, IssuesManagePlatform.Jira.toString());
         boolean zentao = isIntegratedPlatform(workspaceId, IssuesManagePlatform.Zentao.toString());
+        boolean azure = isIntegratedPlatform(workspaceId, IssuesManagePlatform.AzureDevops.toString());
 
         List<String> platforms = new ArrayList<>();
         if (tapd) {
             // 是否关联了项目
             String tapdId = project.getTapdId();
-            if (StringUtils.isNotBlank(tapdId)) {
+            if (StringUtils.isNotBlank(tapdId) && StringUtils.equals(project.getPlatform(), IssuesManagePlatform.Tapd.toString())) {
                 platforms.add(IssuesManagePlatform.Tapd.name());
             }
 
@@ -211,17 +218,25 @@ public class IssuesService {
 
         if (jira) {
             String jiraKey = project.getJiraKey();
-            if (StringUtils.isNotBlank(jiraKey)) {
+            if (StringUtils.isNotBlank(jiraKey) && StringUtils.equals(project.getPlatform(), IssuesManagePlatform.Jira.toString())) {
                 platforms.add(IssuesManagePlatform.Jira.name());
             }
         }
 
         if (zentao) {
             String zentaoId = project.getZentaoId();
-            if (StringUtils.isNotBlank(zentaoId)) {
+            if (StringUtils.isNotBlank(zentaoId) && StringUtils.equals(project.getPlatform(), IssuesManagePlatform.Zentao.toString())) {
                 platforms.add(IssuesManagePlatform.Zentao.name());
             }
         }
+
+        if (azure) {
+            String azureDevopsId = project.getAzureDevopsId();
+            if (StringUtils.isNotBlank(azureDevopsId) && StringUtils.equals(project.getPlatform(), IssuesManagePlatform.AzureDevops.toString())) {
+                platforms.add(IssuesManagePlatform.AzureDevops.name());
+            }
+        }
+
         return platforms;
     }
 
@@ -475,13 +490,39 @@ public class IssuesService {
         LogUtil.info("测试计划-测试用例同步缺陷信息结束");
     }
 
-    public void syncThirdPartyIssues(String projectId) {
+    public boolean checkSync(String projectId) {
+        String syncValue = getSyncKey(projectId);
+        if (StringUtils.isNotEmpty(syncValue)) {
+            return false;
+        }
+        return true;
+    }
+
+    public String getSyncKey(String projectId) {
+        return stringRedisTemplate.opsForValue().get(SYNC_THIRD_PARTY_ISSUES_KEY + ":" + projectId);
+    }
+
+    public void setSyncKey(String projectId) {
+        stringRedisTemplate.opsForValue().set(SYNC_THIRD_PARTY_ISSUES_KEY + ":" + projectId,
+                UUID.randomUUID().toString(), 60 * 10, TimeUnit.SECONDS);
+    }
+
+    public void deleteSyncKey(String projectId) {
+        stringRedisTemplate.delete(SYNC_THIRD_PARTY_ISSUES_KEY + ":" + projectId);
+    }
+
+    public boolean syncThirdPartyIssues(String projectId) {
         if (StringUtils.isNotBlank(projectId)) {
+            String syncValue = getSyncKey(projectId);
+            if (StringUtils.isNotEmpty(syncValue)) {
+                return false;
+            }
+            setSyncKey(projectId);
             Project project = projectService.getProjectById(projectId);
             List<IssuesDao> issues = extIssuesMapper.getIssueForSync(projectId);
 
             if (CollectionUtils.isEmpty(issues)) {
-                return;
+                return true;
             }
 
             List<IssuesDao> tapdIssues = issues.stream()
@@ -528,7 +569,9 @@ public class IssuesService {
                     LogUtil.error(e);
                 }
             }
+            deleteSyncKey(projectId);
         }
+        return true;
     }
 
 
@@ -757,14 +800,31 @@ public class IssuesService {
         return extIssuesMapper.getIssues(request);
     }
 
-    public List<JiraTransitionsResponse.Transitions> getJiraTransitions(JiraIssueTypeRequest request) {
-        IssuesRequest issuesRequest = getDefaultIssueRequest(request.getProjectId(), request.getWorkspaceId());
-        JiraPlatform platform = (JiraPlatform) IssueFactory.createPlatform(IssuesManagePlatform.Jira.toString(), issuesRequest);
-        try {
-            return platform.getTransitions(request.getJiraKey());
-        } catch (Exception e) {
-            LogUtil.error(e);
+    public List<PlatformStatusDTO> getPlatformTransitions(PlatformIssueTypeRequest request) {
+        List<PlatformStatusDTO> platformStatusDTOS = new ArrayList<>();
+
+        if (!StringUtils.isBlank(request.getPlatformKey())) {
+            Project project = projectService.getProjectById(request.getProjectId());
+            List<String> platforms = getPlatforms(project);
+            if (CollectionUtils.isEmpty(platforms)) {
+                return platformStatusDTOS;
+            }
+
+            IssuesRequest issuesRequest = getDefaultIssueRequest(request.getProjectId(), request.getWorkspaceId());
+            Map<String, AbstractIssuePlatform> platformMap = IssueFactory.createPlatformsForMap(platforms, issuesRequest);
+            try {
+                if (platformMap.size() > 1) {
+                    MSException.throwException(Translator.get("project_reference_multiple_plateform"));
+                }
+                Optional<AbstractIssuePlatform> platformOptional = platformMap.values().stream().findFirst();
+                if (platformOptional.isPresent()) {
+                    platformStatusDTOS = platformOptional.get().getTransitions(request.getPlatformKey());
+                }
+            } catch (Exception e) {
+                LogUtil.error(e);
+            }
         }
-        return new ArrayList<>();
+
+        return platformStatusDTOS;
     }
 }

@@ -769,42 +769,46 @@ public class ApiAutomationService {
         Boolean enable = request.getEnvironmentEnable();
         String scenarioDefinition = request.getDefinition();
         JSONObject element = JSON.parseObject(scenarioDefinition, Feature.DisableSpecialKeyDetect);
-        Map<String, String> environmentMap = new HashMap<>();
-        if (BooleanUtils.isFalse(enable)) {
-            String envType = request.getEnvironmentType();
-            String envGroupId = request.getEnvironmentGroupId();
-            if (StringUtils.equals(envType, EnvironmentType.GROUP.name())) {
-                environmentMap = environmentGroupProjectService.getEnvMap(envGroupId);
-            } else if (StringUtils.equals(envType, EnvironmentType.JSON.name())) {
-                environmentMap = request.getEnvironmentMap();
-            }
-        } else {
-            String scenarioId = request.getId();
-            ApiScenarioDTO scenario = getNewApiScenario(scenarioId);
-            if (scenario != null) {
-                String referenced = element.getString("referenced");
-                if (StringUtils.equalsIgnoreCase("REF", referenced)) {
-                    JSONObject source = JSON.parseObject(scenario.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
-                    element = jsonMerge(source, element);
+        try {
+            Map<String, String> environmentMap = new HashMap<>();
+            if (BooleanUtils.isFalse(enable)) {
+                String envType = request.getEnvironmentType();
+                String envGroupId = request.getEnvironmentGroupId();
+                if (StringUtils.equals(envType, EnvironmentType.GROUP.name())) {
+                    environmentMap = environmentGroupProjectService.getEnvMap(envGroupId);
+                } else if (StringUtils.equals(envType, EnvironmentType.JSON.name())) {
+                    environmentMap = request.getEnvironmentMap();
                 }
-                element.put("referenced", referenced);
-                String environmentType = scenario.getEnvironmentType();
-                String environmentGroupId = scenario.getEnvironmentGroupId();
-                String environmentJson = scenario.getEnvironmentJson();
-                if (StringUtils.equals(environmentType, EnvironmentType.GROUP.name())) {
-                    environmentMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
-                } else if (StringUtils.equals(environmentType, EnvironmentType.JSON.name())) {
-                    environmentMap = JSON.parseObject(environmentJson, Map.class);
+            } else {
+                String scenarioId = request.getId();
+                ApiScenarioDTO scenario = getNewApiScenario(scenarioId);
+                if (scenario != null) {
+                    String referenced = element.getString("referenced");
+                    if (StringUtils.equalsIgnoreCase("REF", referenced)) {
+                        JSONObject source = JSON.parseObject(scenario.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
+                        element = jsonMerge(source, element);
+                    }
+                    element.put("referenced", referenced);
+                    String environmentType = scenario.getEnvironmentType();
+                    String environmentGroupId = scenario.getEnvironmentGroupId();
+                    String environmentJson = scenario.getEnvironmentJson();
+                    if (StringUtils.equals(environmentType, EnvironmentType.GROUP.name())) {
+                        environmentMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
+                    } else if (StringUtils.equals(environmentType, EnvironmentType.JSON.name())) {
+                        environmentMap = JSON.parseObject(environmentJson, Map.class);
+                    }
                 }
             }
-        }
 
-        ParameterConfig config = new ParameterConfig();
-        apiScenarioEnvService.setEnvConfig(environmentMap, config);
-        if (config.getConfig() != null && !config.getConfig().isEmpty()) {
-            ElementUtil.dataSetDomain(element.getJSONArray("hashTree"), config);
+            ParameterConfig config = new ParameterConfig();
+            apiScenarioEnvService.setEnvConfig(environmentMap, config);
+            if (config.getConfig() != null && !config.getConfig().isEmpty()) {
+                ElementUtil.dataSetDomain(element.getJSONArray("hashTree"), config);
+            }
+            return JSON.toJSONString(element);
+        } catch (Exception e) {
+            return scenarioDefinition;
         }
-        return JSON.toJSONString(element);
     }
 
 
@@ -1014,13 +1018,15 @@ public class ApiAutomationService {
         Map<String, List<String>> mapping = request.getMapping();
         Map<String, String> envMap = request.getEnvMap();
         Set<String> set = mapping.keySet();
+        List<String> relevanceIds = request.getSelectIds();
+        Collections.reverse(relevanceIds);
         String envType = request.getEnvironmentType();
         String envGroupId = request.getEnvGroupId();
         if (set.isEmpty()) {
             return;
         }
         Long nextOrder = ServiceUtils.getNextOrder(request.getPlanId(), extTestPlanScenarioCaseMapper::getLastOrder);
-        for (String id : set) {
+        for (String id : relevanceIds) {
             Map<String, String> newEnvMap = new HashMap<>(16);
             List<String> list = mapping.get(id);
             list.forEach(l -> newEnvMap.put(l, envMap == null ? "" : envMap.getOrDefault(l, "")));
@@ -1137,7 +1143,7 @@ public class ApiAutomationService {
         MsTestPlan testPlan = new MsTestPlan();
         testPlan.setHashTree(new LinkedList<>());
         ApiScenarioDTO scenario = apiScenarios.get(0);
-        JmxInfoDTO dto = apiTestService.updateJmxString(generateJmx(scenario), scenario.getProjectId());
+        JmxInfoDTO dto = apiTestService.updateJmxString(generateJmx(scenario), scenario.getProjectId(), true);
 
         String name = request.getName() + ".jmx";
         dto.setName(name);
@@ -1510,8 +1516,8 @@ public class ApiAutomationService {
             if (StringUtils.isNotEmpty(item.getScenarioDefinition())) {
                 String jmx = generateJmx(item);
                 if (StringUtils.isNotEmpty(jmx)) {
-                    ApiScenarioExportJmxDTO scenariosExportJmx = new ApiScenarioExportJmxDTO(item.getName(), apiTestService.updateJmxString(jmx, item.getProjectId()).getXml());
-                    JmxInfoDTO dto = apiTestService.updateJmxString(jmx, item.getProjectId());
+                    ApiScenarioExportJmxDTO scenariosExportJmx = new ApiScenarioExportJmxDTO(item.getName(), apiTestService.updateJmxString(jmx, item.getProjectId(), false).getXml());
+                    JmxInfoDTO dto = apiTestService.updateJmxString(jmx, item.getProjectId(), true);
                     scenariosExportJmx.setId(item.getId());
                     scenariosExportJmx.setVersion(item.getVersion());
                     //扫描需要哪些文件
@@ -1539,7 +1545,7 @@ public class ApiAutomationService {
             if (StringUtils.isNotEmpty(item.getScenarioDefinition())) {
                 String jmx = generateJmx(item);
                 if (StringUtils.isNotEmpty(jmx)) {
-                    ApiScenarioExportJmxDTO scenariosExportJmx = new ApiScenarioExportJmxDTO(item.getName(), apiTestService.updateJmxString(jmx, item.getProjectId()).getXml());
+                    ApiScenarioExportJmxDTO scenariosExportJmx = new ApiScenarioExportJmxDTO(item.getName(), apiTestService.updateJmxString(jmx, item.getProjectId(), false).getXml());
                     String fileName = item.getName() + ".jmx";
                     String jmxStr = scenariosExportJmx.getJmx();
                     files.put(fileName, jmxStr.getBytes(StandardCharsets.UTF_8));
@@ -1818,7 +1824,7 @@ public class ApiAutomationService {
             apiScenarioList.forEach(item -> {
                 MsTestPlan testPlan = new MsTestPlan();
                 testPlan.setHashTree(new LinkedList<>());
-                JmxInfoDTO dto = apiTestService.updateJmxString(generateJmx(item), item.getProjectId());
+                JmxInfoDTO dto = apiTestService.updateJmxString(generateJmx(item), item.getProjectId(), true);
                 String name = item.getName() + ".jmx";
                 dto.setId(item.getId());
                 dto.setName(name);
@@ -2194,7 +2200,6 @@ public class ApiAutomationService {
                                             }
                                         }
                                     }
-
                                 } else {
                                     errorRepositoryFile += 1;
                                     errorScanceArray.add(apiScenarioDTO.getName());
@@ -2203,10 +2208,10 @@ public class ApiAutomationService {
                             }
 
                         }
+                        if (csv_count == 0) {
+                            noRepositoryFile += 1;
+                        }
                     } else {
-                        noRepositoryFile += 1;
-                    }
-                    if (csv_count == 0) {
                         noRepositoryFile += 1;
                     }
                 } catch (Exception e) {
@@ -2217,6 +2222,9 @@ public class ApiAutomationService {
             }
         }
         successRepositoryFile = ids.size() - errorRepositoryFile - noRepositoryFile;
+        if(successRepositoryFile<0){
+            successRepositoryFile=0;
+        }
         return "共选中" + ids.size() + "个场景;成功更新场景数" + successRepositoryFile + "个;" + errorRepositoryFile + "个场景有更新错误:" + errorScanceArray.toString() + ";" + noRepositoryFile + "个场景无git存储文件，无更新";
     }
 }

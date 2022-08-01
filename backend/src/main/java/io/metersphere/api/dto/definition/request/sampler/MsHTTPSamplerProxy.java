@@ -193,9 +193,6 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             if (StringUtils.isNotEmpty(this.body.getType()) && "Form Data".equals(this.body.getType())) {
                 AtomicBoolean kvIsEmpty = new AtomicBoolean(true);
                 this.body.getKvs().forEach(files -> {
-                    if (StringUtils.isNotEmpty(files.getName()) && "file".equals(files.getType()) && CollectionUtils.isNotEmpty(files.getFiles())) {
-                        sampler.setDoBrowserCompatibleMultipart(true);
-                    }
                     if (StringUtils.isNotEmpty(files.getName())) {
                         kvIsEmpty.set(false);
                     }
@@ -213,27 +210,6 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             }
         }
 
-        if (config.isOperating() && config.isEffective(this.getProjectId()) && config.getConfig().get(this.getProjectId()).getCommonConfig() != null
-                && config.getConfig().get(this.getProjectId()).getCommonConfig().isEnableHost()) {
-            //导出的需要将DNSCache去掉，并把域名进行ip替换
-            Map<String, String> dnsMap = MsDNSCacheManager.getEnvironmentDns(config.getConfig().get(this.getProjectId()), httpConfig);
-            String domain = sampler.getDomain();
-            if (dnsMap.containsKey(domain)) {
-                String address = dnsMap.get(domain);
-                if (address.contains(":")) {
-                    String[] addressArr = StringUtils.split(address, ":");
-                    if (addressArr.length == 2) {
-                        try {
-                            sampler.setDomain(addressArr[0]);
-                            sampler.setPort(Integer.parseInt(addressArr[1]));
-                        } catch (Exception ignored) {
-                        }
-                    }
-                } else {
-                    sampler.setDomain(dnsMap.get(domain));
-                }
-            }
-        }
         final HashTree httpSamplerTree = tree.add(sampler);
 
         // 注意顺序，放在config前面，会优先于环境的请求头生效
@@ -257,7 +233,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             httpSamplerTree.add(arguments);
         }
         //判断是否要开启DNS
-        if (!config.isOperating() && config.isEffective(this.getProjectId()) && config.getConfig().get(this.getProjectId()).getCommonConfig() != null
+        if (config.isEffective(this.getProjectId()) && config.getConfig().get(this.getProjectId()).getCommonConfig() != null
                 && config.getConfig().get(this.getProjectId()).getCommonConfig().isEnableHost()) {
             MsDNSCacheManager.addEnvironmentVariables(httpSamplerTree, this.getName(), config.getConfig().get(this.getProjectId()));
             MsDNSCacheManager.addEnvironmentDNS(httpSamplerTree, this.getName(), config.getConfig().get(this.getProjectId()), httpConfig);
@@ -690,28 +666,28 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         list.stream().
                 filter(KeyValue::isValid).
                 filter(KeyValue::isEnable).forEach(keyValue -> {
-                    try {
-                        String value = StringUtils.isNotEmpty(keyValue.getValue()) && keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
-                        HTTPArgument httpArgument = new HTTPArgument(keyValue.getName(), value);
-                        if (keyValue.getValue() == null) {
-                            httpArgument.setValue("");
-                        }
-                        httpArgument.setAlwaysEncoded(keyValue.isUrlEncode());
-                        if (StringUtils.isNotBlank(keyValue.getContentType())) {
-                            httpArgument.setContentType(keyValue.getContentType());
-                        }
-                        if (StringUtils.equalsIgnoreCase(this.method, "get")) {
-                            if (StringUtils.isNotEmpty(httpArgument.getValue())) {
-                                arguments.addArgument(httpArgument);
-                            }
-                        } else {
-                            arguments.addArgument(httpArgument);
-                        }
-                    } catch (Exception e) {
+                            try {
+                                String value = StringUtils.isNotEmpty(keyValue.getValue()) && keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
+                                HTTPArgument httpArgument = new HTTPArgument(keyValue.getName(), value);
+                                if (keyValue.getValue() == null) {
+                                    httpArgument.setValue("");
+                                }
+                                httpArgument.setAlwaysEncoded(keyValue.isUrlEncode());
+                                if (StringUtils.isNotBlank(keyValue.getContentType())) {
+                                    httpArgument.setContentType(keyValue.getContentType());
+                                }
+                                if (StringUtils.equalsIgnoreCase(this.method, "get")) {
+                                    if (StringUtils.isNotEmpty(httpArgument.getValue())) {
+                                        arguments.addArgument(httpArgument);
+                                    }
+                                } else {
+                                    arguments.addArgument(httpArgument);
+                                }
+                            } catch (Exception e) {
 
-                    }
-                }
-        );
+                            }
+                        }
+                );
         return arguments;
     }
 

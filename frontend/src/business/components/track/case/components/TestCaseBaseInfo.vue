@@ -14,7 +14,7 @@
             v-model="form.name"
             size="small"
             class="ms-case-input"
-            maxlength="225"
+            maxlength="255"
             show-word-limit
             :disabled="readOnly"/>
         </el-form-item>
@@ -50,6 +50,7 @@
                class="case-form">
         <custom-filed-form-row :form="customFieldForm"
                                :disabled="readOnly"
+                               :default-open="defaultOpen"
                                :issue-template="testCaseTemplate"/>
       </el-form>
 
@@ -112,6 +113,7 @@ export default {
     customFieldForm: Object,
     customFieldRules: Object,
     testCaseTemplate: Object,
+    defaultOpen: String
   },
   computed: {
     isCustomNum() {
@@ -130,6 +132,10 @@ export default {
           isValidate = false;
         }
       });
+      return isValidate;
+    },
+    validateCustomForm() {
+      let isValidate = true;
       this.$refs['customFieldForm'].validate((valid) => {
         if (!valid) {
           isValidate = false;

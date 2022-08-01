@@ -66,7 +66,7 @@
                       ref="caseList"/>
 
     <!-- 执行组件 -->
-    <ms-run :debug="false" :environment="api.environment" :reportId="reportId" :run-data="runData"
+    <ms-run :debug="false" :reportId="reportId" :run-data="runData"
             @runRefresh="runRefresh" @errorRefresh="errorRefresh" ref="runTest"/>
 
   </div>
@@ -84,6 +84,7 @@ import MsTcpFormatParameters from "@/business/components/api/definition/componen
 import {REQ_METHOD} from "../../model/JsonData";
 import EnvironmentSelect from "../environment/EnvironmentSelect";
 import {TYPE_TO_C} from "@/business/components/api/automation/scenario/Setting";
+import {mergeRequestDocumentData} from "@/business/components/api/definition/api-definition";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const esbDefinition = (requireComponent != null && requireComponent.keys().length) > 0 ? requireComponent("./apidefinition/EsbDefinition.vue") : {};
@@ -128,7 +129,7 @@ export default {
   props: {apiData: {}, currentProtocol: String, syncTabs: Array, projectId: String},
   watch: {
     '$store.state.useEnvironment': function () {
-      if(this.api && this.api.request) {
+      if (this.api && this.api.request) {
         this.api.request.useEnvironment = this.$store.state.useEnvironment;
       }
       this.api.environmentId = this.$store.state.useEnvironment;
@@ -168,6 +169,7 @@ export default {
       }
     },
     handleCommand(e) {
+      mergeRequestDocumentData(this.api.request);
       switch (e) {
         case "load_case":
           return this.loadCase();
@@ -339,7 +341,7 @@ export default {
       if (requireComponent != null && JSON.stringify(esbDefinition) !== '{}') {
         this.showXpackCompnent = true;
       }
-      if(this.api.environmentId) {
+      if (this.api.environmentId) {
         this.api.request.useEnvironment = this.api.environmentId;
       }
       this.checkVersionEnable();

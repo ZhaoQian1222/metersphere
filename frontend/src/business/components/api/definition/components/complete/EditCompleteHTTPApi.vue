@@ -200,7 +200,7 @@ import MsInputTag from "@/business/components/api/automation/scenario/MsInputTag
 import MsJsr233Processor from "../../../automation/scenario/component/Jsr233Processor";
 import MsSelectTree from "../../../../common/select-tree/SelectTree";
 import MsChangeHistory from "../../../../history/ChangeHistory";
-import {getCurrentProjectID, getCurrentUser, getUUID, hasLicense} from "@/common/js/utils";
+import {getCurrentUser, getUUID, hasLicense} from "@/common/js/utils";
 import MsFormDivider from "@/business/components/common/components/MsFormDivider";
 import ApiOtherInfo from "@/business/components/api/definition/components/complete/ApiOtherInfo";
 import HttpApiVersionDiff from "./version/HttpApiVersionDiff";
@@ -269,8 +269,8 @@ export default {
       newMockBaseUrl: "",
       count: 0,
       versionData: [],
-      newRequest:Sampler,
-      newResponse:{},
+      newRequest: Sampler,
+      newResponse: {},
       createNewVersionVisible: false,
       isFormAlive: true,
       customFieldForm: null,
@@ -537,8 +537,12 @@ export default {
       }
     },
     setModule(id, data) {
-      this.httpForm.moduleId = id;
-      this.httpForm.modulePath = data.path;
+      if (id && id !== "") {
+        this.httpForm.moduleId = id;
+      }
+      if (data && data.path) {
+        this.httpForm.modulePath = data.path;
+      }
     },
     initMockEnvironment() {
       let protocol = document.location.protocol;
@@ -725,7 +729,7 @@ export default {
             this.$refs.versionHistory.loading = false;
           }
         }
-      },error => {
+      }, error => {
         if (this.$refs.versionHistory) {
           this.$refs.versionHistory.loading = false;
         }

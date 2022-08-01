@@ -28,6 +28,7 @@ import io.metersphere.notice.annotation.SendNotice;
 import io.metersphere.service.CheckPermissionService;
 import io.metersphere.service.FileService;
 import io.metersphere.track.dto.TestCaseDTO;
+import io.metersphere.track.dto.TestCaseNodeDTO;
 import io.metersphere.track.request.testcase.*;
 import io.metersphere.track.request.testplan.FileOperationRequest;
 import io.metersphere.track.request.testplan.LoadCaseRequest;
@@ -73,6 +74,12 @@ public class TestCaseController {
         return PageUtils.setPageInfo(page, testCaseService.publicListTestCase(request));
     }
 
+
+    @PostMapping("/public/case/node")
+    public List<TestCaseNodeDTO> getPublicCaseNode(@RequestBody QueryTestCaseRequest request) {
+        return testCaseService.getPublicCaseNode(request);
+    }
+
     @GetMapping("/list/{projectId}")
     @RequiresPermissions("PROJECT_TRACK_CASE:READ")
     public List<TestCaseDTO> list(@PathVariable String projectId) {
@@ -113,6 +120,11 @@ public class TestCaseController {
     @GetMapping("/relationship/case/{id}/{relationshipType}")
     public List<RelationshipEdgeDTO> getRelationshipCase(@PathVariable("id") String id, @PathVariable("relationshipType") String relationshipType) {
         return testCaseService.getRelationshipCase(id, relationshipType);
+    }
+
+    @PostMapping("/relationship/add")
+    public void saveRelationshipBatch(@RequestBody TestCaseRelationshipEdgeRequest request) {
+        testCaseService.saveRelationshipBatch(request);
     }
 
     @GetMapping("/relationship/case/count/{id}")

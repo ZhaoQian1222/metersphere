@@ -290,7 +290,7 @@ export const CREATOR = {
     }
   },
   options: { // 异步获取候选项
-    url: "/user/list",
+    url: "/user/ws/current/member/list",
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {
@@ -318,7 +318,7 @@ export const EXECUTOR = {
     }
   },
   options: { // 异步获取候选项
-    url: "/user/list",
+    url: "/user/ws/current/member/list",
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {
@@ -441,7 +441,7 @@ export const PRINCIPAL = {
     }
   },
   options: { // 异步获取候选项
-    url: "/user/list",
+    url: "/user/ws/current/member/list",
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {
@@ -469,7 +469,7 @@ export const PRINCIPALAPI = {
     }
   },
   options: { // 异步获取候选项
-    url: "/user/list",
+    url: "/user/ws/current/member/list",
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {

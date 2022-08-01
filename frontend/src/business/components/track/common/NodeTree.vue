@@ -8,6 +8,7 @@
       class="filter-tree node-tree"
       :data="extendTreeNodes"
       :default-expanded-keys="expandedNode"
+      :default-expand-all="defaultExpandAll"
       node-key="id"
       @node-drag-end="handleDragEnd"
       @node-expand="nodeExpand"
@@ -29,8 +30,8 @@
         <span v-if="!data.isEdit" class="node-icon">
           <i class="el-icon-folder"/>
         </span>
-        <el-tooltip class="item" effect="dark" :content="data.name" placement="top-start">
-          <span v-if="!data.isEdit" class="node-title" v-text="data.name"/>
+        <el-tooltip class="item" effect="dark" :content="data.name" placement="top-start" :open-delay="1000">
+          <span v-if="!data.isEdit" class="node-title" v-text="isDefault(data) ? getLocalDefaultName() : data.name"/>
         </el-tooltip>
 
         <span class="count-title" v-if="isDisplay !== 'relevance'">
@@ -48,7 +49,7 @@
             <i @click.stop="edit(node, data)" class="el-icon-edit"></i>
           </el-tooltip>
           <el-tooltip
-            v-if="data.name === defaultLabel && data.level !==1"
+            v-if="data.name === defaultLabel && data.level !== 1"
             v-permission="updatePermission"
             class="item"
             effect="dark"
@@ -62,7 +63,7 @@
             effect="dark"
             :open-delay="200"
             v-permission="addPermission"
-            v-if="!(data.name === defaultLabel && data.level ===1)"
+            v-if="!isDefault(data)"
             :content="$t('test_track.module.add_submodule')"
             placement="top">
             <i @click.stop="append(node, data)" class="el-icon-circle-plus-outline"></i>
@@ -132,7 +133,7 @@ export default {
     defaultLabel: {
       type: String,
       default() {
-        return '默认模块';
+        return '未规划用例';
       }
     },
     nameLimit: {
@@ -141,9 +142,16 @@ export default {
         return 50;
       }
     },
+    defaultExpandAll: {
+      type: Boolean,
+      default() {
+        return false;
+      }
+    },
     updatePermission: Array,
     addPermission: Array,
-    deletePermission: Array
+    deletePermission: Array,
+    localSuffix: String
   },
   watch: {
     treeNodes() {
@@ -207,7 +215,7 @@ export default {
       // this.reloaded = false;
       this.$nextTick(() => {
         let node = this.$refs.tree.getNode(data);
-        if(node){
+        if (node) {
           node.expanded = false;
         }
 
@@ -217,14 +225,14 @@ export default {
       });
     },
     // 改变节点的状态
-    changeTreeNodeStatus (parentData) {
+    changeTreeNodeStatus(parentData) {
       for (let i = 0; i < parentData.children.length; i++) {
         let data = parentData.children[i];
         if (data.id) {
           this.expandedNode.splice(this.expandedNode.indexOf(data.id), 1);
         }
         let node = this.$refs.tree.getNode(data);
-        if(node){
+        if (node) {
           node.expanded = false;
         }
 
@@ -283,7 +291,9 @@ export default {
         }
         return true;
       }
-      if (!rootNode.children) {return false;}
+      if (!rootNode.children) {
+        return false;
+      }
       for (let i = 0; i < rootNode.children.length; i++) {
         let children = rootNode.children[i];
         let result = this._traverse(children, id, callback, isParentCallback);
@@ -340,7 +350,7 @@ export default {
         this.$refs.tree.remove(node);
         return;
       }
-      let tip =  '确定删除节点 ' + data.label + ' 及其子节点下所有资源' + '？';
+      let tip = '确定删除节点 ' + data.label + ' 及其子节点下所有资源' + '？';
       // let info =  this.$t("test_track.module.delete_confirm") + data.label + "，" + this.$t("test_track.module.delete_all_resource") + "？";
       this.$alert(tip, "", {
           confirmButtonText: this.$t("commons.confirm"),
@@ -429,9 +439,9 @@ export default {
       }
       for (let i = 0; i < nodes.length; i++) {
         if (nodes[i].id === id) {
-          i - 1 >= 0 ? list[0] = nodes[i-1].id : list[0] = "";
+          i - 1 >= 0 ? list[0] = nodes[i - 1].id : list[0] = "";
           list[1] = nodes[i].id;
-          i + 1 < nodes.length ? list[2] = nodes[i+1].id : list[2] = "";
+          i + 1 < nodes.length ? list[2] = nodes[i + 1].id : list[2] = "";
           return;
         }
         if (nodes[i].children) {
@@ -475,6 +485,12 @@ export default {
           this.$refs.tree.setCurrentKey(currentNode.data.id);
         })
       }
+    },
+    isDefault(data) {
+      return data.name === this.defaultLabel && data.level === 1;
+    },
+    getLocalDefaultName() {
+      return this.$t('commons.default_module.' + this.localSuffix);
     }
   }
 };

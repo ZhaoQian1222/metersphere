@@ -1,7 +1,7 @@
 <template>
 
   <span>
-    <el-input :placeholder="$t('commons.search_by_name_or_id')" @change="initTableData" class="search-input"
+    <el-input :placeholder="$t('commons.search_by_name_or_id')" @change="search" class="search-input"
               size="small"
               v-model="condition.name" ref="inputVal"/>
     <el-link type="primary" @click="open" style="float: right;margin-top: 5px;padding-right: 10px">
@@ -27,7 +27,7 @@
       @handleRowClick="handleEdit"
       :fields.sync="fields"
       :field-key="tableHeaderKey"
-      @refresh="initTableData"
+      @filter="search"
       :custom-fields="testCaseTemplate.customFields"
       ref="table">
 
@@ -50,14 +50,6 @@
         :label="$t('commons.delete_user')"
         min-width="120"/>
 
-       <ms-table-column
-         prop="projectName"
-         :fields-width="fieldsWidth"
-         :label="$t('test_track.case.project')"
-         v-if="publicEnable"
-         min-width="150px">
-        </ms-table-column>
-
       <span v-for="(item, index) in fields" :key="index">
         <ms-table-column
           v-if="item.id === 'lastExecResult'"
@@ -72,6 +64,14 @@
             </span>
         </template>
       </ms-table-column>
+
+       <ms-table-column
+         prop="projectName"
+         :fields-width="fieldsWidth"
+         :label="$t('test_track.case.project')"
+         v-if="publicEnable && item.id === 'projectName'"
+         min-width="150px">
+       </ms-table-column>
 
         <ms-table-column
           v-if="!customNum"
@@ -138,8 +138,6 @@
             <span/>
           </template>
         </ms-table-column>
-
-
 
         <ms-table-column
           v-if="versionEnable"
@@ -528,6 +526,10 @@ export default {
     }
   },
   created: function () {
+    if (this.publicEnable) {
+      this.tableHeaderKey = 'TRACK_PUBLIC_TEST_CASE';
+      this.fields = getCustomTableHeader(this.tableHeaderKey);
+    }
     this.getTemplateField();
     this.$emit('setCondition', this.condition);
     this.initTableData();
@@ -633,7 +635,7 @@ export default {
       Promise.all([p1, p2]).then((data) => {
         let template = data[1];
         this.testCaseTemplate = template;
-        this.fields = getTableHeaderWithCustomFields('TRACK_TEST_CASE', this.testCaseTemplate.customFields);
+        this.fields = getTableHeaderWithCustomFields(this.tableHeaderKey, this.testCaseTemplate.customFields);
         this.setTestCaseDefaultValue(template);
         this.typeArr = [];
         getCustomFieldBatchEditOption(template.customFields, this.typeArr, this.valueArr, this.members);
@@ -666,7 +668,7 @@ export default {
           return row.priority;
         }
         if (field.name === '责任人') {
-          return row.maintainer;
+          return row.maintainerName;
         }
         if (field.name === '用例状态') {
           return row.status;
@@ -678,6 +680,9 @@ export default {
       if (field.name === '用例等级') {
         return this.priorityFilters;
       } else if (field.name === '用例状态') {
+        if (this.trashEnable) {
+          return null;
+        }
         return this.statusFilters;
       }
       return null;
@@ -708,7 +713,7 @@ export default {
       let dataType = this.$route.params.dataType;
       this.selectDataRange = dataType === 'case' ? dataRange : 'all';
     },
-    initTableData() {
+    initTableData(nodeIds) {
       this.condition.planId = "";
       this.condition.nodeIds = [];
       initCondition(this.condition, this.condition.selectAll);
@@ -727,6 +732,11 @@ export default {
             this.condition.nodeIds = this.selectNodeIds;
           }
         }
+      }
+      // todo 优化参数传递方式
+      if (nodeIds && Array.isArray(nodeIds) && nodeIds.length > 0) {
+        this.condition.nodeIds = nodeIds;
+        this.condition.workspaceId = getCurrentWorkspaceId();
       }
       this.getData();
     },
@@ -767,7 +777,7 @@ export default {
       if (this.trashEnable) {
         //支持回收站查询版本
         let versionIds = this.condition.filters.version_id;
-        this.condition.filters = {status: ["Trash"]};
+        this.condition.filters.status = ["Trash"];
         if (versionIds) {
           this.condition.filters.version_id = versionIds;
         }
@@ -786,8 +796,12 @@ export default {
           this.page.total = data.itemCount;
           this.page.data = data.listObject;
           this.page.data.forEach(item => {
+            let nodePath = item.nodePath;
             if (item.customFields) {
               item.customFields = JSON.parse(item.customFields);
+            }
+            if (nodePath.startsWith("/未规划用例", "0")) {
+              item.nodePath = nodePath.replaceAll("/未规划用例", "/" + this.$t('api_test.unplanned_case'));
             }
           });
           parseTag(this.page.data);
@@ -797,6 +811,8 @@ export default {
       }
     },
     search() {
+      // 添加搜索条件时，当前页设置成第一页
+      this.page.currentPage = 1;
       this.initTableData();
     },
     buildPagePath(path) {
@@ -975,7 +991,7 @@ export default {
     },
     refresh() {
       this.$refs.table.clear();
-      this.$emit('refresh');
+      this.$emit('refreshAll');
     },
     refreshAll() {
       this.$refs.table.clear();
@@ -1101,7 +1117,7 @@ export default {
             let param = buildBatchParam(this, this.$refs.table.selectIds);
             this.$post('/test/case/batch/movePublic/deleteToGc', param, () => {
               this.$refs.table.clear();
-              this.$emit("refresh");
+              this.$emit("refreshPublic");
               this.$success(this.$t('commons.delete_success'));
             });
           }
@@ -1123,7 +1139,7 @@ export default {
           this.$get('/test/case/deletePublic/' + testCase.versionId + '/' + testCase.refId, () => {
             this.$success(this.$t('commons.delete_success'));
             this.$refs.apiDeleteConfirm.close();
-            this.$emit("refreshAll");
+            this.$emit("refreshPublic");
           });
         } else {
           this.$get('/test/case/delete/' + testCase.versionId + '/' + testCase.refId, () => {
@@ -1137,12 +1153,11 @@ export default {
       else {
         if (this.publicEnable) {
           let param = buildBatchParam(this, this.$refs.table.selectIds);
+          param.ids.push(testCase.id);
           this.$post('/test/case/batch/movePublic/deleteToGc', param, () => {
             this.$success(this.$t('commons.delete_success'));
-            // this.initTable();
             this.$refs.apiDeleteConfirm.close();
-            this.$emit("refreshAll");
-
+            this.$emit("refreshPublic");
           });
         } else {
           this._handleDeleteToGc(testCase);
@@ -1152,7 +1167,7 @@ export default {
       }
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
+      this.$get('/user/project/member/list', response => {
         this.valueArr.maintainer = response.data;
       });
     },

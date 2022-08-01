@@ -19,6 +19,7 @@ import io.metersphere.base.mapper.TestPlanMapper;
 import io.metersphere.base.mapper.ext.ExtTestPlanApiCaseMapper;
 import io.metersphere.commons.constants.ExecuteResult;
 import io.metersphere.commons.utils.*;
+import io.metersphere.controller.request.OrderRequest;
 import io.metersphere.controller.request.ResetOrderRequest;
 import io.metersphere.dto.MsExecResponseDTO;
 import io.metersphere.dto.RunModeConfigDTO;
@@ -456,7 +457,7 @@ public class TestPlanApiCaseService {
     }
 
     public List<TestPlanFailureApiDTO> getErrorReportCases(String planId) {
-        List<TestPlanFailureApiDTO> apiTestCases = extTestPlanApiCaseMapper.getFailureList(planId, ExecuteResult.errorReportResult.name());
+        List<TestPlanFailureApiDTO> apiTestCases = extTestPlanApiCaseMapper.getFailureList(planId, ExecuteResult.ERROR_REPORT_RESULT.toString());
         return buildCases(apiTestCases);
     }
 

@@ -18,7 +18,19 @@
         :total='total'
         :public-total="publicTotal"
         ref="nodeTree"
+        @importChangeConfirm="importChangeConfirm"
       />
+    </ms-aside-container>
+
+    <ms-aside-container v-if="showPublicNode">
+      <node-tree class="node-tree"
+                 :is-display="'public'"
+                 v-loading="result.loading"
+                 local-suffix="test_case"
+                 default-label="未规划用例"
+                 @nodeSelectEvent="publicNodeChange"
+                 :tree-nodes="publicTreeNodes"
+                 ref="publicNodeTree"/>
     </ms-aside-container>
 
     <ms-main-container>
@@ -66,6 +78,7 @@
             @getPublicList="getPublicList"
             @refresh="refresh"
             @refreshAll="refreshAll"
+            @refreshPublic="refreshPublic"
             @setCondition="setCondition"
             ref="testCasePublicList">
           </test-case-list>
@@ -108,8 +121,9 @@
               :tree-nodes="treeNodes"
               :project-id="projectId"
               :condition="condition"
+              :active-name="activeName"
               v-if="activeDom === 'right'"
-              @refresh="refreshAll"
+              @refresh="minderSaveRefresh"
               ref="minder"/>
           </ms-tab-button>
         </el-tab-pane>
@@ -177,8 +191,6 @@
       </el-tabs>
 
       <is-change-confirm
-        :title="'请保存脑图'"
-        :tip="'脑图未保存，确认保存脑图吗？'"
         @confirm="changeConfirm"
         ref="isChangeConfirm"/>
     </ms-main-container>
@@ -212,6 +224,7 @@ import TestCaseMinder from "@/business/components/track/common/minder/TestCaseMi
 import IsChangeConfirm from "@/business/components/common/components/IsChangeConfirm";
 import {openMinderConfirm, saveMinderConfirm} from "@/business/components/track/common/minder/minderUtils";
 import TestCaseEditShow from "@/business/components/track/case/components/TestCaseEditShow";
+import {PROJECT_ID} from "@/common/js/constants";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const VersionSelect = requireComponent.keys().length > 0 ? requireComponent("./version/VersionSelect.vue") : {};
@@ -253,16 +266,23 @@ export default {
       currentTrashVersion: null,
       versionEnable: false,
       isAsideHidden: true,
+      showPublicNode: false,
+      publicTreeNodes: [],
+      ignoreTreeNodes:false,
     };
+  },
+  created() {
+    let projectId = this.$route.query.projectId;
+    if (projectId) {
+      this.ignoreTreeNodes = true;
+      if (projectId !== getCurrentProjectID() && projectId !== 'all') {
+        sessionStorage.setItem(PROJECT_ID, projectId);
+      }
+    }
   },
   mounted() {
     this.getProject();
-    let routeTestCase = this.$route.params.testCase;
-    if (routeTestCase && routeTestCase.add === true) {
-      this.addTab({name: 'add'});
-    } else {
-      this.init(this.$route);
-    }
+    this.init(this.$route);
     this.checkVersionEnable();
   },
   beforeRouteLeave(to, from, next) {
@@ -286,6 +306,7 @@ export default {
     },
     activeName(newVal, oldVal) {
       this.isAsideHidden = this.activeName === 'default';
+      this.showPublicNode = this.activeName === 'public';
       if (oldVal !== 'default' && newVal === 'default' && this.$refs.minder) {
         this.$refs.minder.refresh();
       }
@@ -307,6 +328,12 @@ export default {
     publicEnable() {
       if (this.publicEnable) {
         this.activeName = 'public';
+        this.result = this.$post('/test/case/public/case/node', {workspaceId: getCurrentWorkspaceId()}, res => {
+          this.publicTreeNodes = res.data;
+          this.publicTreeNodes.forEach(firstLevel => {
+            this.$refs.publicNodeTree.nodeExpand(firstLevel);
+          })
+        })
       } else {
         this.activeName = 'default';
       }
@@ -369,8 +396,38 @@ export default {
     updateActiveDom(activeDom) {
       openMinderConfirm(this, activeDom);
     },
+    importChangeConfirm(isSave) {
+      this.$store.commit('setIsTestCaseMinderChanged', false);
+      if (isSave) {
+        this.$refs.minder.save(() => {
+          this.$refs.nodeTree.handleImport();
+        });
+      } else {
+        this.$refs.nodeTree.handleImport();
+      }
+    },
     changeConfirm(isSave, temWorkspaceId) {
-      saveMinderConfirm(this, isSave);
+      if (isSave) {
+        this.$refs.minder.save(() => {
+          // 保存成功之后再切换tab
+          this.activeDom = this.tmpActiveDom;
+          this.tmpActiveDom = null;
+        });
+      } else {
+        this.activeDom = this.tmpActiveDom;
+        this.tmpActiveDom = null;
+      }
+
+      this.$store.commit('setIsTestCaseMinderChanged', false);
+      this.$nextTick(() => {
+        if (this.tmpPath) {
+          this.$router.push({
+            path: this.tmpPath
+          });
+          this.tmpPath = null;
+        }
+      });
+
       if (temWorkspaceId) {
         // 如果是切换工作空间提示的保存，则保存完后跳转到对应的工作空间
         this.$EventBus.$emit('changeWs', temWorkspaceId);
@@ -379,7 +436,7 @@ export default {
     changeRedirectParam(redirectIDParam) {
       this.redirectID = redirectIDParam;
       if (redirectIDParam != null) {
-        if (this.redirectFlag == "none") {
+        if (this.redirectFlag === "none") {
           this.activeName = "default";
           this.redirectFlag = "redirected";
         }
@@ -484,7 +541,7 @@ export default {
         message += t[0].testCaseInfo.name + "，";
       }
       if (message !== "") {
-        this.$alert(this.$t('commons.track') + " [ " + message.substr(0, message.length - 1) + " ] " + this.$t('commons.confirm_info'), '', {
+        this.$alert(this.$t('commons.track') + " [ " + message + " ] " + this.$t('commons.confirm_info'), '', {
           confirmButtonText: this.$t('commons.confirm'),
           cancelButtonText: this.$t('commons.cancel'),
           callback: (action) => {
@@ -519,14 +576,11 @@ export default {
       if (path.indexOf("/track/case/edit") >= 0 || path.indexOf("/track/case/create") >= 0) {
         this.testCaseReadOnly = false;
         let caseId = this.$route.params.caseId;
-        let routeTestCase = this.$route.params.testCase;
         if (!this.projectId) {
           this.$warning(this.$t('commons.check_project_tip'));
           return;
         }
-        if (routeTestCase) {
-          this.editTestCase(routeTestCase);
-        } else if (caseId) {
+        if (caseId) {
           this.$get('test/case/get/' + caseId, response => {
             let testCase = response.data;
             this.editTestCase(testCase);
@@ -544,6 +598,13 @@ export default {
       this.publicEnable = false;
       this.activeName = "default";
     },
+    publicNodeChange(node, nodeIds, pNodes) {
+      this.activeName = 'public';
+      this.publicEnable = true;
+      if (this.$refs.testCasePublicList) {
+        this.$refs.testCasePublicList.initTableData(nodeIds);
+      }
+    },
     increase(id) {
       this.$refs.nodeTree.increase(id);
     },
@@ -555,11 +616,9 @@ export default {
       if (!index) {
         this.type = "edit";
         this.testCaseReadOnly = false;
-        if (testCase.label !== "redirect") {
-          if (this.treeNodes.length < 1) {
-            this.$warning(this.$t('test_track.case.create_module_first'));
-            return;
-          }
+        if (!this.ignoreTreeNodes && testCase.label !== "redirect" && this.treeNodes.length < 1) {
+          this.$warning(this.$t('test_track.case.create_module_first'));
+          return;
         }
         let hasEditPermission = hasPermission('PROJECT_TRACK_CASE:READ+EDIT');
         this.$set(testCase, 'rowClickHasPermission', hasEditPermission);
@@ -574,11 +633,9 @@ export default {
       if (!index) {
         this.type = "edit";
         this.testCaseReadOnly = false;
-        if (testCase.label !== "redirect") {
-          if (this.treeNodes.length < 1) {
-            this.$warning(this.$t('test_track.case.create_module_first'));
-            return;
-          }
+        if (testCase.label !== "redirect" && this.treeNodes.length < 1) {
+          this.$warning(this.$t('test_track.case.create_module_first'));
+          return;
         }
         let hasEditPermission = hasPermission('PROJECT_TRACK_CASE:READ+EDIT');
         this.$set(testCase, 'rowClickHasPermission', hasEditPermission);
@@ -640,6 +697,20 @@ export default {
       }
       this.$refs.nodeTree.list();
       this.setTable(data);
+    },
+    minderSaveRefresh() {
+      if (this.$refs.testCaseList) {
+        this.$refs.testCaseList.initTableData();
+      }
+      this.$refs.nodeTree.list();
+    },
+    refreshPublic() {
+      if (this.$refs.testCasePublicList) {
+        this.$refs.testCasePublicList.initTableData([]);
+      }
+      this.result = this.$post('/test/case/public/case/node', {workspaceId: getCurrentWorkspaceId()}, res => {
+        this.publicTreeNodes = res.data;
+      })
     },
     setTreeNodes(data) {
       this.treeNodes = data;

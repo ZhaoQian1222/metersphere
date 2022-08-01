@@ -142,7 +142,6 @@
 
 <script>
 import TestPlanTestCaseStatusButton from '../../../common/TestPlanTestCaseStatusButton';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 import ApiTestDetail from "../test/ApiTestDetail";
 import ApiTestResult from "../test/ApiTestResult";
 import PerformanceTestDetail from "../test/PerformanceTestDetail";
@@ -191,10 +190,6 @@ export default {
       showDialog: false,
       testCase: {},
       index: 0,
-      editor: ClassicEditor,
-      editorConfig: {
-        toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'insertTable', '|', 'undo', 'redo'],
-      },
       readConfig: {toolbar: []},
       test: {},
       activeTab: 'detail',
@@ -341,7 +336,11 @@ export default {
 
         });
         if (!noTip) {
-          this.$success(this.$t('commons.save_success') + ' -> ' + this.$t('test_track.plan_view.next_case'));
+          if (!this.isLastData()) {
+            this.$success(this.$t('commons.save_success') + ' -> ' + this.$t('test_track.plan_view.next_case'));
+          } else {
+            this.$success(this.$t('commons.save_success'));
+          }
         }
         this.updateTestCases(param);
         this.setPlanStatus(this.testCase.planId);
@@ -362,15 +361,19 @@ export default {
       }
     },
     handleNext() {
-      if (this.index === this.testCases.length - 1 && this.pageNum === this.pageTotal) {
+      if (this.isLastData()) {
         return;
       } else if (this.index === this.testCases.length - 1) {
         this.$emit('nextPage');
+        this.index = 0;
         return;
       }
       this.index++;
       this.getTestCase(this.testCases[this.index].id);
       this.reloadOtherInfo();
+    },
+    isLastData() {
+      return this.index === this.testCases.length - 1 && this.pageNum === this.pageTotal;
     },
     reloadOtherInfo() {
       this.otherInfoActive = false;
@@ -384,6 +387,7 @@ export default {
         return;
       } else if (this.index === 0) {
         this.$emit('prePage');
+        this.index = this.pageSize - 1;
         return;
       }
       this.index--;

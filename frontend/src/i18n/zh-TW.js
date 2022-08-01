@@ -1,7 +1,7 @@
 export default {
   commons: {
     project_permission: '請先添加該項目權限',
-    no_permission:'暫無權限',
+    no_permission: '暫無權限',
     failure_continues: "失敗繼續",
     full_screen_editing: "全屏編輯",
     trash: "回收站",
@@ -51,7 +51,7 @@ export default {
     project: '項目',
     about_us: '關於',
     current_project: '當前項目',
-    not_exist:"不存在",
+    not_exist: "不存在",
     name: '名稱',
     repositoryFilePath: 'git文件路徑',
     repositoryBranch: 'git分支',
@@ -59,12 +59,14 @@ export default {
     annotation: '註釋',
     clear: '清空',
     save: '保存',
+    not_save: '不保存',
     save_as: '另存為',
     update: '更新',
     save_success: '保存成功',
     send_success: '發送成功',
     delete_success: '刪除成功',
     copy_success: '復製成功',
+    warning_module_add: "模塊樹深度最大為8層",
     modify_success: '修改成功',
     delete_cancel: '已取消刪除',
     option_cannot_spread_pages: '這個操作不支持跨頁，是否繼續？',
@@ -253,8 +255,8 @@ export default {
     cancel_follow_success: "取消關註成功",
     type: "類型",
     type_of_integer: "請輸入整數類型",
-    type_of_num:"請輸入數字類型",
-    validity_period:'有效期',
+    type_of_num: "請輸入數字類型",
+    validity_period: '有效期',
     please_select_a_deadline: "請選擇截止時間",
     relationship: {
       name: '依賴關系',
@@ -456,7 +458,14 @@ export default {
     repositoryName: 'Git存儲庫名稱',
     repositoryUsername: '用戶名',
     ui: 'UI 測試',
-    not_eligible_for_deletion:'不符合删除條件'
+    not_eligible_for_deletion: '不符合删除條件',
+    default_module: {
+      test_case: '未規劃用例',
+      api_definition: '未規劃接口',
+      api_scenario: '未規劃場景',
+      ui_element: '未規劃元素',
+      ui_scenario: '未規劃場景'
+    }
   },
   login: {
     normal_Login: "普通登錄",
@@ -854,6 +863,7 @@ export default {
     remove_member: '確定要移除該成員嗎',
     org_remove_member: '將該用戶從組織中移除，將同時移除該組織下所有工作空間的權限，確定要移除該成員嗎？',
     input_id_or_email: '請輸入用戶 ID, 或者 用戶郵箱',
+    input_id_or_email_or_name: '請輸入用戶 ID, 用戶名, 或者 用戶郵箱',
     no_such_user: '無此用戶信息, 請輸入正確的用戶 ID 或者 用戶郵箱！',
   },
   repository: {
@@ -974,6 +984,7 @@ export default {
     downloadZipFile: '下載執行文件',
     export: '導出',
     export_to_ms_format: '導出 MeterSphere 格式',
+    export_jmeter_format: '導出 Jmeter 格式',
     export_to_swagger3_format: '導出 Swagger3.0 格式',
     compare: '報告對比',
     generation_error: '報告生成錯誤, 無法查看, 請檢查日誌詳情!',
@@ -1051,7 +1062,8 @@ export default {
     ramp_up_time_seconds: '秒內增加並發用戶',
     ramp_up_tips: 'RampUp 過大，圖表渲染卡頓不予展示，這並不影響測試執行，請以實際結果為準',
     iterate_num: '叠代次數',
-    by_iteration: '按叠代次數',
+    by_iteration: '按迭代次數',
+    by_iteration_tip: '按迭代次數執行需要配置執行時長，JMeter會按照迭代次數和執行時長來決定是否結束測試',
     by_duration: '按持續時間',
     ramp_up_time_times: '次增加並發用戶',
     advanced_config_error: '高級配置校驗失敗',
@@ -1138,6 +1150,8 @@ export default {
     hours: "時",
   },
   api_test: {
+    case_jump_message: "跳轉的用例已經刪除！",
+    scenario_jump_message: "跳轉的場景已經刪除！",
     is_continue: "是否繼續",
     creator: "創建人",
     save_and_run: "保存並執行",
@@ -1199,14 +1213,14 @@ export default {
       rule: {
         input_code: "請輸入 HTTP Code"
       },
-      range_type:{
+      range_type: {
         value_eq: "值-等於[value=]",
         value_not_eq: "值-不等於[value!=]",
-        value_contain:"值-包含[include=]",
+        value_contain: "值-包含[include=]",
         length_eq: "長度-等于[length=]",
         length_not_eq: "長度-不等於[length!=]",
-        length_large_than:"長度-大於[length>]",
-        length_shot_than:"長度-小於[length<]",
+        length_large_than: "長度-大於[length>]",
+        length_shot_than: "長度-小於[length<]",
         regular_match: "正則匹配",
       }
     },
@@ -1283,6 +1297,7 @@ export default {
         batch_copy_end: "批量復製完成",
         delete_case_confirm: "確認刪除用例",
         delete_confirm_step: "確認刪除步驟",
+        debug_warning: "沒有開啟的步驟",
         assertions_rule: "斷言規則",
         scenario_assertions: "場景斷言",
         pre_operation: "前置操作",
@@ -1391,7 +1406,7 @@ export default {
       wait_controller: "等待控製器",
       if_controller: "條件控製器",
       loop_controller: "循環控製器",
-      transcation_controller: "事務控製器",
+      transaction_controller: "事務控製器",
       scenario_import: "場景導入",
       customize_script: "自定義腳本",
       customize_req: "自定義請求",
@@ -1918,7 +1933,7 @@ export default {
     },
     script: {
       tip_3: "腳本步驟會統計到場景執行結果中，執行報錯時會影響場景的最終執行結果",
-      filter_request_type: "過濾請求類型",
+      filter_request_type: "忽略請求",
       execution_order: "腳本執行順序",
       associated_scene_results: "關聯場景結果",
       execute_before_step: "單個請求步驟前執行",
@@ -2038,6 +2053,9 @@ export default {
       minder_not_module_tip: "模塊{0}，不能創建在非模塊節點下",
       minder_all_module_tip: "全部用例為虛擬模塊，請在其他模塊創建用例",
       minder_issue_delete_tip: "取消缺陷關聯成功",
+      minder_save_confirm_title: '請保存腦圖',
+      minder_save_confirm_tip: '腦圖未保存，確認保存腦圖嗎？',
+      minder_import_save_confirm_tip: '導入成功後會刷新腦圖，確認保存腦圖嗎？',
       check_select: "請勾選用例",
       export_all_cases: '確定要導出全部用例嗎?',
       input_test_case: '請輸入關聯用例名稱',
@@ -2255,7 +2273,8 @@ export default {
       reviewed_by_me: "待我評審",
       creator: "創建人",
       done: "已評用例",
-      result_distribution: "結果分布"
+      result_distribution: "結果分布",
+      deadline_cannot_early_tips: "截止時間不能早於當前時間！",
     },
     comment: {
       no_comment: "暫無評論",
@@ -2421,10 +2440,20 @@ export default {
       use_third_party: "使用 Jira 缺陷模板",
       update_third_party_bugs: "更新第三方平臺的缺陷",
       sync_bugs: "同步缺陷",
+      sync_complete: "同步完成",
+      issue_sync_tip: "當前項目正在同步缺陷, 請稍等!",
       save_before_open_comment: "請先保存缺陷再添加評論",
       delete_tip: "確認刪除缺陷：",
       check_id_exist: "檢查",
-      save_project_first: "請先保存項目"
+      save_project_first: "請先保存項目",
+      tapd_status_new: "新",
+      tapd_status_in_progress: "接受/處理",
+      tapd_status_reopened: "重新打開",
+      tapd_status_rejected: "已拒絕",
+      tapd_status_verified: "已驗證",
+      tapd_status_closed: "已關閉",
+      tapd_status_resolved: "已解決",
+      please_choose_platform_status: "請選擇平臺狀態",
     },
     report: {
       name: "測試計劃報告",
@@ -2805,6 +2834,8 @@ export default {
     mail_subject: "郵件主題",
     mail_addressee: "收件人",
     mail_duplicate: "抄送人",
+    enter_mail_addressee: "輸入回車添加郵箱",
+    enter_mail_duplicate: "輸入回車添加郵箱",
   },
   notice: {
     operation: {
@@ -3176,8 +3207,8 @@ export default {
       delete: "刪除",
       read: "查看腳本",
     },
-    personal_information:{
-      name:'設置',
+    personal_information: {
+      name: '設置',
       personal_setting: '個人設置',
       api_keys: 'API Keys',
       edit_password: "修改密碼",
@@ -3206,7 +3237,7 @@ export default {
   error_report_library: {
     name: "誤報庫",
     assertion: "誤報斷言",
-    tips:"注：在\"項目設置-設置環境-全局斷言\"中啟用誤報將進行以下規則匹配",
+    tips: "注：在\"項目設置-設置環境-全局斷言\"中啟用誤報將進行以下規則匹配",
     use_error_report: "啟用誤報",
     use_desc: "失敗斷言與誤報規則衝突時統一處理為誤報",
     conflict_with_success: "請求同時包含誤報和成功斷言，請求結果處理為：",

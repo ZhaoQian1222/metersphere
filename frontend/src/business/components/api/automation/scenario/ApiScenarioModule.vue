@@ -13,6 +13,7 @@
       :add-permission="['PROJECT_API_SCENARIO:READ+CREATE']"
       :update-permission="['PROJECT_API_SCENARIO:READ+EDIT']"
       :default-label="$t('api_test.automation.unplanned_scenario')"
+      local-suffix="api_scenario"
       @add="add"
       @edit="edit"
       @drag="drag"
@@ -125,7 +126,7 @@
                 }
               },
               {
-                label: this.$t('report.export') + 'JMETER 格式',
+                label: this.$t('report.export_jmeter_format'),
                 permissions: ['PROJECT_API_SCENARIO:READ+EXPORT_SCENARIO'],
                 callback: () => {
                   this.$emit('exportJmx');
@@ -211,12 +212,18 @@
       add(param) {
         param.projectId = this.projectId;
         param.protocol = this.condition.protocol;
-        this.$post("/api/automation/module/add", param, () => {
-          this.$success(this.$t('commons.save_success'));
+        if (param && param.level >= 9) {
           this.list();
-        }, (error) => {
-          this.list();
-        });
+          this.$error(this.$t('commons.warning_module_add'));
+          return;
+        } else {
+          this.$post("/api/automation/module/add", param, () => {
+            this.$success(this.$t('commons.save_success'));
+            this.list();
+          }, (error) => {
+            this.list();
+          });
+        }
 
       },
       remove(nodeIds) {

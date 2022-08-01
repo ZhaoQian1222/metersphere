@@ -134,6 +134,14 @@ public class ApiDefinitionService {
     private ExtProjectVersionMapper extProjectVersionMapper;
     @Resource
     private ProjectApplicationService projectApplicationService;
+    @Resource
+    private EsbApiParamsMapper esbApiParamsMapper;
+    @Resource
+    private ExtTestPlanApiCaseMapper extTestPlanApiCaseMapper;
+
+    @Lazy
+    @Resource
+    private ApiModuleService apiModuleService;
 
     private ThreadLocal<Long> currentApiOrder = new ThreadLocal<>();
     private ThreadLocal<Long> currentApiCaseOrder = new ThreadLocal<>();
@@ -330,7 +338,7 @@ public class ApiDefinitionService {
     }
 
     public ApiDefinitionResult update(SaveApiDefinitionRequest request, List<MultipartFile> bodyFiles) {
-        if (request.getRequest() != null) {
+        if (request.getRequest() != null && StringUtils.isNotEmpty(request.getRequest().getId())) {
             deleteFileByTestId(request.getRequest().getId());
         }
         request.setBodyUploadIds(null);
@@ -1068,7 +1076,11 @@ public class ApiDefinitionService {
             apiTestCase.setCreateTime(System.currentTimeMillis());
             apiTestCase.setUpdateTime(System.currentTimeMillis());
             apiTestCase.setCreateUserId(SessionUtils.getUserId());
-            apiTestCase.setProjectId(SessionUtils.getCurrentProjectId());
+            if (StringUtils.isEmpty(apiTestImportRequest.getProjectId())) {
+                apiTestCase.setProjectId(SessionUtils.getCurrentProjectId());
+            } else {
+                apiTestCase.setProjectId(apiTestImportRequest.getProjectId());
+            }
             apiTestCase.setOrder(getImportNextCaseOrder(apiTestImportRequest.getProjectId()));
             apiTestCaseMapper.insert(apiTestCase);
         } else if (StringUtils.equals("fullCoverage", apiTestImportRequest.getModeId())) {
@@ -1110,7 +1122,9 @@ public class ApiDefinitionService {
                     CollectionUtils.isNotEmpty(request.getTestElement().getHashTree()) &&
                     CollectionUtils.isNotEmpty(request.getTestElement().getHashTree().get(0).getHashTree()) ?
                     request.getTestElement().getHashTree().get(0).getHashTree().get(0).getName() : request.getId();
+            String reportName = this.getReportNameByTestId(testId);
             ApiDefinitionExecResult result = ApiDefinitionExecResultUtil.add(testId, APITestStatus.Running.name(), request.getId(), Objects.requireNonNull(SessionUtils.getUser()).getId());
+            result.setName(reportName);
             result.setProjectId(request.getProjectId());
             result.setTriggerMode(TriggerMode.MANUAL.name());
             apiDefinitionExecResultMapper.insert(result);
@@ -1123,6 +1137,20 @@ public class ApiDefinitionService {
             apiTestCaseMapper.updateByPrimaryKeySelective(record);
         }
         return apiExecuteService.debug(request, bodyFiles);
+    }
+
+    private String getReportNameByTestId(String testId) {
+        String testName = extApiDefinitionMapper.selectNameById(testId);
+        if (StringUtils.isEmpty(testName)) {
+            testName = extApiTestCaseMapper.selectNameById(testId);
+            if (StringUtils.isEmpty(testName)) {
+                String resourceID = extTestPlanApiCaseMapper.getApiTestCaseIdById(testId);
+                if (StringUtils.isNotEmpty(resourceID)) {
+                    testName = extApiTestCaseMapper.selectNameById(resourceID);
+                }
+            }
+        }
+        return testName;
     }
 
     /**
@@ -1185,6 +1213,11 @@ public class ApiDefinitionService {
         //通过platform，获取对应的导入解析类型。
         ApiImportParser runService = ApiDefinitionImportParserFactory.getApiImportParser(request.getPlatform());
         ApiDefinitionImport apiImport = null;
+        if (StringUtils.isNotBlank(request.getSwaggerUrl())) {
+            if (!UrlTestUtils.testUrlWithTimeOut(request.getSwaggerUrl(), 30000)) {
+                MSException.throwException(Translator.get("connection_timeout"));
+            }
+        }
         try {
             apiImport = (ApiDefinitionImport) Objects.requireNonNull(runService).parse(file == null ? null : file.getInputStream(), request);
             if (apiImport.getMocks() == null) {
@@ -1252,6 +1285,7 @@ public class ApiDefinitionService {
         currentApiCaseOrder.remove();
         currentApiOrder.remove();
         List<ApiDefinitionWithBLOBs> data = apiImport.getData();
+        data = this.initApiModuleId(data);
         ApiDefinitionMapper batchMapper = sqlSession.getMapper(ApiDefinitionMapper.class);
         ApiTestCaseMapper apiTestCaseMapper = sqlSession.getMapper(ApiTestCaseMapper.class);
         ExtApiDefinitionMapper extApiDefinitionMapper = sqlSession.getMapper(ExtApiDefinitionMapper.class);
@@ -1320,6 +1354,36 @@ public class ApiDefinitionService {
         if (sqlSession != null && sqlSessionFactory != null) {
             SqlSessionUtils.closeSqlSession(sqlSession, sqlSessionFactory);
         }
+    }
+
+    /**
+     * 初始化apiModuleId，如果apiModuleId不存在则赋默认的moduleId
+     *
+     * @param apiDefinitionList
+     * @return
+     */
+    private List<ApiDefinitionWithBLOBs> initApiModuleId(List<ApiDefinitionWithBLOBs> apiDefinitionList) {
+        Map<String, List<String>> protocalModuleIdMap = new HashMap<>();
+        apiDefinitionList.forEach(apiDefinition -> {
+            if (protocalModuleIdMap.containsKey(apiDefinition.getProtocol()) && !protocalModuleIdMap.get(apiDefinition.getProtocol()).contains(apiDefinition.getModuleId())) {
+                protocalModuleIdMap.get(apiDefinition.getProtocol()).add(apiDefinition.getModuleId());
+            } else {
+                protocalModuleIdMap.put(apiDefinition.getProtocol(), new ArrayList<>() {{
+                    this.add(apiDefinition.getModuleId());
+                }});
+            }
+        });
+        Map<String, List<String>> rightfulModuleIdMap = apiModuleService.checkModuleIds(protocalModuleIdMap);
+        for (ApiDefinitionWithBLOBs apiBlobs : apiDefinitionList) {
+            if (!rightfulModuleIdMap.containsKey(apiBlobs.getProtocol()) || !rightfulModuleIdMap.get(apiBlobs.getProtocol()).contains(apiBlobs.getModuleId())) {
+                ApiModule defaultModule = apiModuleService.getDefaultNode(apiBlobs.getProjectId(), apiBlobs.getProtocol());
+                if (defaultModule != null) {
+                    apiBlobs.setModuleId(defaultModule.getId());
+                    apiBlobs.setModulePath(defaultModule.getName());
+                }
+            }
+        }
+        return apiDefinitionList;
     }
 
 
@@ -1478,6 +1542,7 @@ public class ApiDefinitionService {
         }
         Page<Object> page = PageHelper.startPage(goPage, pageSize, true);
         List<ApiDefinitionResult> resList = extApiDefinitionMapper.listRelevance(request);
+        buildUserInfo(resList);
         calculateResult(resList, request.getProjectId());
         return PageUtils.setPageInfo(page, resList);
     }
@@ -1766,6 +1831,25 @@ public class ApiDefinitionService {
     public String getLogDetails(String id) {
         ApiDefinitionWithBLOBs bloBs = apiDefinitionMapper.selectByPrimaryKey(id);
         if (bloBs != null) {
+            if (StringUtils.equals(bloBs.getMethod(), "ESB")) {
+                EsbApiParamsExample example = new EsbApiParamsExample();
+                example.createCriteria().andResourceIdEqualTo(id);
+                List<EsbApiParamsWithBLOBs> list = esbApiParamsMapper.selectByExampleWithBLOBs(example);
+                JSONObject request = JSONObject.parseObject(bloBs.getRequest());
+                Object backEsbDataStruct = request.get("backEsbDataStruct");
+                Map<String, Object> map = new HashMap<>();
+                if (backEsbDataStruct != null) {
+                    map.put("backEsbDataStruct", backEsbDataStruct);
+                    if (CollectionUtils.isNotEmpty(list)) {
+                        map.put("backScript", list.get(0).getBackedScript());
+                    }
+                    map.put("type", "ESB");
+                }
+                request.remove("backEsbDataStruct");
+                bloBs.setRequest(JSONObject.toJSONString(request));
+                String response = JSONObject.toJSONString(map);
+                bloBs.setResponse(response);
+            }
             List<DetailColumn> columns = ReflexObjectUtil.getColumns(bloBs, DefinitionReference.definitionColumns);
             OperatingLogDetails details = new OperatingLogDetails(JSON.toJSONString(id), bloBs.getProjectId(), bloBs.getName(), bloBs.getCreateUser(), columns);
             return JSON.toJSONString(details);
@@ -2099,4 +2183,21 @@ public class ApiDefinitionService {
         }
     }
 
+    public void saveRelationshipBatch(ApiDefinitionRelationshipEdgeRequest request) {
+        List<String> relationshipIds = relationshipEdgeService.getRelationshipIds(request.getId());
+        request.getCondition().setNotInIds(relationshipIds);
+        request.getCondition().setId(null);
+        ServiceUtils.getSelectAllIds(request, request.getCondition(),
+                (query) -> extApiDefinitionMapper.selectIds(query));
+        List<String> ids = request.getIds();
+        ids.remove(request.getId());
+        if (CollectionUtils.isNotEmpty(ids)) {
+            if (CollectionUtils.isNotEmpty(request.getTargetIds())) {
+                request.setTargetIds(ids);
+            } else if (CollectionUtils.isNotEmpty(request.getSourceIds())) {
+                request.setSourceIds(ids);
+            }
+            relationshipEdgeService.saveBatch(request);
+        }
+    }
 }

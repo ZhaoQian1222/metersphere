@@ -57,6 +57,7 @@
                         :fields.sync="fields"
                         :field-key="tableHeaderKey"
                         @handleRowClick="handleRowClick"
+                        @refresh="onChange"
                         ref="variableTable">
                           <span v-for="item in fields" :key="item.key">
                             <ms-table-column
@@ -315,12 +316,14 @@ export default {
         index++;
       });
     },
-    sortParamters() {
+    sortParameters() {
       let index = 1;
       this.variables.forEach(item => {
         item.num = index;
+        item.showMore = false;
         index++;
       });
+      this.selection = [];
     },
     updateParameters(v) {
       this.editData = JSON.parse(JSON.stringify(v));
@@ -469,7 +472,7 @@ export default {
                 const index = this.variables.findIndex(d => d.id === row);
                 this.variables.splice(index, 1);
               });
-              this.sortParamters();
+              this.sortParameters();
               this.editData = {};
             }
           }
@@ -479,7 +482,7 @@ export default {
           const index = this.variables.findIndex(d => d.id === row);
           this.variables.splice(index, 1);
         });
-        this.sortParamters();
+        this.sortParameters();
         this.editData = {};
       }
     },
@@ -494,7 +497,7 @@ export default {
               this.variables.splice(index, 1);
             });
             // this.editData = {type: "CONSTANT"};
-            this.sortParamters();
+            this.sortParameters();
             this.editData = {};
             this.$refs.variableTable.cancelCurrentRow();
             this.$refs.variableTable.clear();
@@ -554,7 +557,11 @@ export default {
           this.editData.files = item.files
         }
       });
-    }
+    },
+    onChange(){
+      this.selection = [];
+      this.sortParameters();
+    },
   }
 };
 </script>

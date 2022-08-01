@@ -41,8 +41,7 @@
         </el-row>
           <el-row>
           <el-col :span="12" style="margin-left: 50px">
-            <el-switch v-model="authEnable" :active-text="$t('api_test.api_import.add_request_params')"
-                       @change="changeAuthEnable"></el-switch>
+            <el-switch v-model="authEnable" :active-text="$t('api_test.api_import.add_request_params')"></el-switch>
           </el-col>
 
           <el-col :span="19" v-show="authEnable" style="margin-top: 10px; margin-left: 50px" class="request-tabs">
@@ -188,10 +187,9 @@ export default {
         callback(new Error(this.$t('schedule.cron_expression_format_error')));
       } else if (!customValidate.pass) {
         callback(new Error(customValidate.info));
-      }else if(!this.intervalValidate()){
+      } else if (!this.intervalValidate()) {
         callback(new Error(this.$t('schedule.cron_expression_interval_error')));
-      }
-      else {
+      } else {
         callback();
       }
     };
@@ -287,17 +285,12 @@ export default {
     },
 
     initUserList() {
-      this.result = this.$post('/user/project/member/list', {projectId: getCurrentProjectID()},response => {
+      this.result = this.$get('/user/project/member/list', response => {
         this.scheduleReceiverOptions = response.data;
       });
     },
     currentUser: () => {
       return getCurrentUser();
-    },
-    changeAuthEnable() {
-      if (!this.authEnable) {
-        this.clearAuthInfo();
-      }
     },
     clear() {
       this.formData.id = null;
@@ -377,6 +370,9 @@ export default {
           });
         }
       });
+    },
+    searchTaskList(){
+      this.$refs.taskList.search();
     },
     intervalValidate() {
       if (this.getIntervalTime() < 1 * 60 * 1000) {

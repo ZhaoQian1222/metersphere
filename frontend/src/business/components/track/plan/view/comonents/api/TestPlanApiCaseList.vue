@@ -7,7 +7,7 @@
           :condition="condition"
           :plan-id="planId"
           :plan-status="planStatus"
-          @refresh="initTable"
+          @refresh="search"
           @relevanceCase="$emit('relevanceCase')"
           @setEnvironment="setEnvironment"
           v-if="isPlanModel"/>
@@ -24,11 +24,12 @@
         @handlePageChange="initTable"
         :fields.sync="fields"
         :field-key="tableHeaderKey"
-        @refresh="initTable"
+        @order="initTable"
         :row-order-group-id="planId"
         :row-order-func="editTestPlanApiCaseOrder"
         :enable-order-drag="enableOrderDrag"
         row-key="id"
+        @filter="search"
         ref="table">
         <span v-for="(item) in fields" :key="item.key">
           <ms-table-column :field="item" prop="num"
@@ -379,7 +380,7 @@ export default {
       this.$refs.headerCustom.open(list);
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
+      this.$get('/user/project/member/list', response => {
         this.valueArr.userId = response.data;
         this.userFilters = response.data.map(u => {
           return {text: u.name, value: u.id};
@@ -433,6 +434,7 @@ export default {
       }
     },
     search() {
+      this.currentPage = 1;
       this.initTable();
     },
     buildPagePath(path) {

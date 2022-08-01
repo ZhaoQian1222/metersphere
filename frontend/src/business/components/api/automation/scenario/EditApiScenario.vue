@@ -195,9 +195,9 @@
                     <span class="custom-tree-node-col" style="padding-left:0px;padding-right:0px"
                           v-show="node && data.hashTree && data.hashTree.length > 0 && !data.isLeaf">
                       <span v-show="!node.expanded" class="el-icon-circle-plus-outline custom-node_e"
-                            @click="openOrClose(node)"/>
+                            @click="openOrClose(node,data)"/>
                       <span v-show="node.expanded" class="el-icon-remove-outline custom-node_e"
-                            @click="openOrClose(node)"/>
+                            @click="openOrClose(node,data)"/>
                     </span>
                     <!-- 批量操作 -->
                     <span :class="data.checkBox? 'custom-tree-node-hide' : 'custom-tree-node-col'"
@@ -324,6 +324,8 @@
             :reloadDebug="reloadDebug"
             :stepReEnable="stepEnable"
             :message="message"
+            :enable-cookie="enableCookieShare"
+            :on-sample-error="onSampleError"
             @setEnvType="setEnvType"
             @envGroupId="setEnvGroup"
             @closePage="close"
@@ -336,6 +338,7 @@
             @setCookieShare="setCookieShare"
             @setSampleError="setSampleError"
             @stop="stop"
+            @sort="sort"
             @openScenario="openScenario"
             @runScenario="runDebug"
             @stopScenario="stop"
@@ -401,7 +404,7 @@ import {
 } from "@/business/components/api/automation/api-automation";
 import MsComponentConfig from "./component/ComponentConfig";
 import {ENV_TYPE} from "@/common/js/constants";
-import {hisDataProcessing} from "@/business/components/api/definition/api-definition";
+import {mergeRequestDocumentData} from "@/business/components/api/definition/api-definition";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const versionHistory = requireComponent.keys().length > 0 ? requireComponent("./version/VersionHistory.vue") : {};
@@ -516,7 +519,6 @@ export default {
       reloadDebug: "",
       stopDebug: "",
       isTop: false,
-      stepSize: 0,
       message: "",
       messageWebSocket: {},
       buttonData: [],
@@ -671,8 +673,18 @@ export default {
         }
       });
     },
-    openOrClose(node) {
+    openOrClose(node, data) {
       node.expanded = !node.expanded;
+      this.pluginOrder(data);
+    },
+    pluginOrder(nodes) {
+      // 兼容历史数据
+      if (nodes && nodes.type === 'GenericController' && nodes.hashTree) {
+        let data = nodes.hashTree.filter(v => v.type !== "Assertions");
+        for (let i = 0; i < data.length; i++) {
+          data[i].index = (i + 1);
+        }
+      }
     },
     hideNode(node) {
       node.isLeaf = true;
@@ -755,7 +767,7 @@ export default {
         if (item && map.has(item.resourceId)) {
           item.domain = map.get(item.resourceId);
           item.resourceId = getUUID();
-        }else{
+        } else {
           item.domain = "";
         }
         if (item && item.hashTree && item.hashTree.length > 0) {
@@ -822,7 +834,7 @@ export default {
       if (this.reportId) {
         try {
           if (this.messageWebSocket) {
-           this.messageWebSocket.close();
+            this.messageWebSocket.close();
           }
           this.clearNodeStatus(this.$refs.stepTree.root.childNodes);
           this.clearDebug();
@@ -835,7 +847,7 @@ export default {
         let url = "/api/automation/stop/" + this.reportId;
         this.$get(url, response => {
           this.debugLoading = false;
-        },error =>{
+        }, error => {
           this.debugLoading = false;
         });
       }
@@ -990,7 +1002,7 @@ export default {
     },
     onDebugMessage(e) {
       // 确认连接建立成功，开始执行
-      if(e && e.data === "CONN_SUCCEEDED"){
+      if (e && e.data === "CONN_SUCCEEDED") {
         this.run();
       }
       if (e.data && e.data.startsWith("result_")) {
@@ -1018,6 +1030,7 @@ export default {
       this.debug = false;
       this.saved = true;
       this.executeType = "Saved";
+      this.mergeScenario(this.scenarioDefinition);
       this.validatePluginData(this.scenarioDefinition);
       if (this.pluginDelStep) {
         this.$error("场景包含插件步骤，对应场景已经删除不能执行！");
@@ -1195,7 +1208,7 @@ export default {
       } else {
         this.operatingElements = [];
       }
-      if ((!this.operatingElements && this.stepFilter)|| this.stepFilter.get("SpecialSteps").indexOf(data.type) !== -1) {
+      if ((!this.operatingElements && this.stepFilter) || this.stepFilter.get("SpecialSteps").indexOf(data.type) !== -1) {
         this.operatingElements = this.stepFilter.get("ALL");
       }
       this.selectedTreeNode = data;
@@ -1225,54 +1238,52 @@ export default {
       this.isBtnHide = true;
       this.$refs.scenarioApiRelevance.open();
     },
-    sort(stepArray, scenarioProjectId, fullPath) {
-      if (!stepArray) {
-        stepArray = this.scenarioDefinition;
-      }
+    sort(stepArray) {
+      stepArray = stepArray || this.scenarioDefinition;
+      this.recursionStep(stepArray);
+    },
+    recursionStep(stepArray, scenarioProjectId, fullPath, isGeneric) {
       for (let i in stepArray) {
-        stepArray[i].index = Number(i) + 1;
-        if (!stepArray[i].resourceId) {
-          stepArray[i].resourceId = getUUID();
+        let step = stepArray[i];
+        step.index = !isGeneric ? Number(i) + 1 : step.index;
+        if (step.type === 'GenericController') {
+          this.pluginOrder(step);
         }
+        step.resourceId = step.resourceId || getUUID();
         // 历史数据处理
-        if (stepArray[i].type === "HTTPSamplerProxy" && !stepArray[i].headers) {
-          stepArray[i].headers = [new KeyValue()];
+        if (step.type === "HTTPSamplerProxy" && !step.headers) {
+          step.headers = [new KeyValue()];
         }
-        if (stepArray[i].type === ELEMENT_TYPE.LoopController
-          && stepArray[i].loopType === "LOOP_COUNT"
-          && stepArray[i].hashTree
-          && stepArray[i].hashTree.length > 1) {
-          stepArray[i].countController.proceed = true;
+        if (step.type === ELEMENT_TYPE.LoopController
+          && step.loopType === "LOOP_COUNT"
+          && step.hashTree
+          && step.hashTree.length > 1) {
+          step.countController.proceed = true;
         }
-        if (!stepArray[i].clazzName) {
-          stepArray[i].clazzName = TYPE_TO_C.get(stepArray[i].type);
+        step.clazzName = step.clazzName || TYPE_TO_C.get(step.type);
+        if (step && step.authManager && !step.authManager.clazzName) {
+          step.authManager.clazzName = TYPE_TO_C.get(step.authManager.type);
         }
-        if (stepArray[i] && stepArray[i].authManager && !stepArray[i].authManager.clazzName) {
-          stepArray[i].authManager.clazzName = TYPE_TO_C.get(stepArray[i].authManager.type);
-        }
-        if (!stepArray[i].projectId) {
-          // 如果自身没有ID并且场景有ID则赋值场景ID，否则赋值当前项目ID
-          stepArray[i].projectId = scenarioProjectId ? scenarioProjectId : this.projectId;
-        }
+        // 如果自身没有ID并且场景有ID则赋值场景ID，否则赋值当前项目ID
+        step.projectId = step.projectId || scenarioProjectId || this.projectId;
         // 添加debug结果
-        stepArray[i].parentIndex = fullPath ? fullPath + "_" + stepArray[i].index : stepArray[i].index;
-        if (stepArray[i].hashTree && stepArray[i].hashTree.length > 0) {
-          this.stepSize += stepArray[i].hashTree.length;
-          this.sort(stepArray[i].hashTree, stepArray[i].projectId, stepArray[i].parentIndex);
+        step.parentIndex = fullPath ? fullPath + "_" + step.index : step.index;
+        if (step.hashTree && step.hashTree.length > 0) {
+          this.recursionStep(step.hashTree, step.projectId, step.parentIndex, step.type === 'GenericController');
         }
       }
     },
     addCustomizeApi(request) {
       this.customizeVisible = false;
       request.enable === undefined ? request.enable = true : request.enable;
-      if(this.selectedTreeNode !== undefined){
-        if(this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1){
-          this.scenarioDefinition.splice(this.selectedTreeNode.index,0,request);
+      if (this.selectedTreeNode !== undefined) {
+        if (this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1) {
+          this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, request);
           this.$store.state.forceRerenderIndex = getUUID();
-        }else{
-          this.selectedTreeNode.hashTree.push(request) ;
+        } else {
+          this.selectedTreeNode.hashTree.push(request);
         }
-      }else{
+      } else {
         this.scenarioDefinition.push(request);
       }
       this.customizeRequest = {};
@@ -1293,20 +1304,25 @@ export default {
           this.resetResourceId(item.hashTree);
           item.enable === undefined ? item.enable = true : item.enable;
           item.variableEnable = item.variableEnable === undefined ? true : item.variableEnable;
-          if(this.selectedTreeNode !== undefined){
-            if(this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1){
-              this.scenarioDefinition.splice(this.selectedTreeNode.index,0,item);
+          if (this.selectedTreeNode !== undefined) {
+            if (this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1) {
+              this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, item);
               this.$store.state.forceRerenderIndex = getUUID();
-            }else{
-              this.selectedTreeNode.hashTree.push(item) ;
+            } else {
+              this.selectedTreeNode.hashTree.push(item);
             }
-          }else{
+          } else {
             this.scenarioDefinition.push(item);
           }
         })
       }
       this.isBtnHide = false;
-      this.sort();
+      // 历史数据兼容处理
+      if (this.selectedTreeNode && this.selectedTreeNode.type === 'GenericController') {
+        this.pluginOrder(this.selectedTreeNode);
+      } else {
+        this.sort();
+      }
       this.cancelBatchProcessing();
     },
     setApiParameter(item, refType, referenced) {
@@ -1345,14 +1361,14 @@ export default {
       if (referenced === 'REF' && request.hashTree) {
         this.recursiveSorting(request.hashTree);
       }
-      if(this.selectedTreeNode !== undefined){
-        if(this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1){
-          this.scenarioDefinition.splice(this.selectedTreeNode.index,0,request);
+      if (this.selectedTreeNode !== undefined) {
+        if (this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1) {
+          this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, request);
           this.$store.state.forceRerenderIndex = getUUID();
-        }else{
-          this.selectedTreeNode.hashTree.push(request) ;
+        } else {
+          this.selectedTreeNode.hashTree.push(request);
         }
-      }else{
+      } else {
         this.scenarioDefinition.push(request);
       }
     },
@@ -1362,11 +1378,16 @@ export default {
       });
       this.isBtnHide = false;
       this.$refs.scenarioApiRelevance.changeButtonLoadingType();
-      this.sort();
+      // 历史数据兼容处理
+      if (this.selectedTreeNode && this.selectedTreeNode.type === 'GenericController') {
+        this.pluginOrder(this.selectedTreeNode);
+      } else {
+        this.sort();
+      }
       this.cancelBatchProcessing();
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
+      this.$get('/user/project/member/list', response => {
         this.maintainerOptions = response.data;
       });
     },
@@ -1435,8 +1456,17 @@ export default {
     run() {
       this.reportId = this.debugReportId;
     },
+    mergeScenario(data) {
+      data.forEach(item => {
+        mergeRequestDocumentData(item);
+        if (item.hashTree && item.hashTree > 0) {
+          this.mergeScenario(item.hashTree);
+        }
+      })
+    },
     runDebug(runScenario) {
-      if(this.debugLoading){
+      this.mergeScenario(this.scenarioDefinition);
+      if (this.debugLoading) {
         return;
       }
       this.debugLoading = true;
@@ -1444,6 +1474,19 @@ export default {
         this.debugLoading = false;
         return;
       }
+      let enableArray;
+      for (let i = 0; i < this.scenarioDefinition.length; i++) {
+        if (this.scenarioDefinition[i].enable) {
+          enableArray = this.scenarioDefinition[i];
+          break;
+        }
+      }
+      if (!enableArray) {
+        this.$warning(this.$t('api_test.definition.request.debug_warning'));
+        this.debugLoading = false;
+        return;
+      }
+
       this.stopDebug = "";
       this.clearDebug();
       this.validatePluginData(this.scenarioDefinition);
@@ -1495,7 +1538,7 @@ export default {
           this.pluginDelStep = false;
           // 建立消息链接
           this.initMessageSocket();
-        }else{
+        } else {
           this.debugLoading = false;
         }
       })
@@ -1556,6 +1599,7 @@ export default {
       }
     },
     editScenario() {
+      this.mergeScenario(this.scenarioDefinition);
       if (!document.getElementById("inputDelay")) {
         return;
       }
@@ -1581,6 +1625,9 @@ export default {
                 this.$store.state.pluginFiles = [];
                 if (response.data) {
                   this.currentScenario.id = response.data.id;
+                  if (!this.currentScenario.refId && response.data.refId) {
+                    this.currentScenario.refId = response.data.refId;
+                  }
                 }
                 // 保存成功后刷新历史版本
                 this.getVersionHistory();
@@ -1700,7 +1747,7 @@ export default {
                 } else {
                   this.onSampleError = obj.onSampleError;
                 }
-                this.dataProcessing(obj.hashTree, obj);
+                this.dataProcessing(obj.hashTree);
                 this.scenarioDefinition = obj.hashTree;
               }
             }
@@ -1742,16 +1789,9 @@ export default {
         })
       }
     },
-    dataProcessing(stepArray, obj) {
+    dataProcessing(stepArray) {
       if (stepArray) {
         for (let i in stepArray) {
-          if (stepArray[i].type === "Assertions") {
-            hisDataProcessing(stepArray, obj)
-            let assertions = stepArray[i];
-            stepArray.splice(i, 1);
-            stepArray.unshift(assertions);
-            this.sort();
-          }
           let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
           if (typeArray.indexOf(stepArray[i].type) !== -1) {
             stepArray[i].originalDataSourceId = stepArray[i].dataSourceId;
@@ -1767,7 +1807,7 @@ export default {
             };
           }
           if (stepArray[i].hashTree.length > 0) {
-            this.dataProcessing(stepArray[i].hashTree, stepArray[i]);
+            this.dataProcessing(stepArray[i].hashTree);
           }
         }
       }
@@ -1882,15 +1922,15 @@ export default {
       this.setDomain(true);
       this.setStep(this.scenarioDefinition);
     },
-    setStep(stepArray){
+    setStep(stepArray) {
       for (let i in stepArray) {
         let typeArray = ["JDBCPostProcessor", "JDBCSampler", "JDBCPreProcessor"]
-        if(typeArray.indexOf(stepArray[i].type) !== -1) {
-          if(stepArray[i].customizeReq  ){
-            if(stepArray[i].isRefEnvironment){
+        if (typeArray.indexOf(stepArray[i].type) !== -1) {
+          if (stepArray[i].customizeReq) {
+            if (stepArray[i].isRefEnvironment) {
               this.setStepEnv(stepArray[i]);
             }
-          }else {
+          } else {
             this.setStepEnv(stepArray[i]);
           }
         }
@@ -1918,7 +1958,7 @@ export default {
           envId = request.refEevMap.get(projectId);
         }
       }
-      if(envId === request.originalEnvironmentId && request.originalDataSourceId) {
+      if (envId === request.originalEnvironmentId && request.originalDataSourceId) {
         request.dataSourceId = request.originalDataSourceId;
       }
       let targetDataSourceName = "";
@@ -1938,9 +1978,9 @@ export default {
           currentEnvironment = environment;
         }
       });
-     this.initDataSource(envId, currentEnvironment, targetDataSourceName,request);
+      this.initDataSource(envId, currentEnvironment, targetDataSourceName, request);
     },
-    initDataSource(envId, currentEnvironment, targetDataSourceName,request) {
+    initDataSource(envId, currentEnvironment, targetDataSourceName, request) {
       this.databaseConfigsOptions = [];
       if (envId) {
         request.environmentId = envId;
@@ -1998,6 +2038,7 @@ export default {
     },
     unFullScreen() {
       this.drawer = false;
+      this.reloadTree = getUUID();
     },
     close(name) {
       this.drawer = false;

@@ -28,6 +28,7 @@
     <template v-slot:headerBtn>
       <table-select-count-bar :count="selectCounts" style="float: left; margin: 5px;"/>
 
+      <el-button size="mini" icon="el-icon-refresh" @click="refresh"/>
       <el-button type="primary" @click="copy" :loading="buttonIsWorking" @keydown.enter.native.prevent size="mini">
         {{ $t('commons.copy') }}
       </el-button>
@@ -169,6 +170,7 @@ export default {
         }
         this.result = this.$post("/api/automation/getApiScenarios/", this.currentScenarioIds, response => {
           if (response.data) {
+            this.currentScenarioIds = [];
             this.createScenarioDefinition(scenarios, response.data, referenced);
             this.$emit('save', scenarios);
             this.$refs.baseRelevance.close();

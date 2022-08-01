@@ -119,11 +119,17 @@
           :field="item"
           :fields-width="fieldsWidth"
           min-width="80px"
+          :show-overflow-tooltip=false
           :label="$t('commons.tag')">
           <template v-slot:default="scope">
-            <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
-                    :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=100" :content="itemName"
-                    style="margin-left: 0px; margin-right: 2px"/>
+            <el-tooltip class="item" effect="dark" placement="top">
+              <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
+              <div class="oneLine">
+                <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
+                        :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=100" :content="itemName"
+                        style="margin-left: 0px; margin-right: 2px"/>
+              </div>
+            </el-tooltip>
             <span/>
           </template>
         </ms-table-column>
@@ -431,7 +437,7 @@ export default {
       selectDataCounts: 0,
       projectName: "",
       versionEnable: false,
-      isFirstInitTable:true,
+      isFirstInitTable: true,
     };
   },
   props: {
@@ -638,15 +644,15 @@ export default {
         });
       }
       if (this.needRefreshModule()) {
-        if(this.isFirstInitTable){
+        if (this.isFirstInitTable) {
           this.isFirstInitTable = false;
-        }else {
+        } else {
           this.$emit("refreshTree");
         }
       }
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
+      this.$get('/user/project/member/list', response => {
         this.valueArr.userId = response.data;
         this.userFilters = response.data.map(u => {
           return {text: u.name, value: u.id};
@@ -872,12 +878,10 @@ export default {
     getSelectDataRange() {
       let dataRange = this.$route.params.dataSelectRange;
       let dataType = this.$route.params.dataType;
-      if (dataType === 'api') {
-        this.selectDataRange = dataRange;
-      } else {
-        this.selectDataRange = 'all';
-      }
-      if (this.selectDataRange != null) {
+      this.selectDataRange = dataType === 'api' ? dataRange : "all";
+      if (this.selectDataRange &&
+        Object.prototype.toString.call(this.selectDataRange).match(/\[object (\w+)\]/)[1].toLowerCase() !== 'object'
+        && this.selectDataRange.indexOf(":") !== -1) {
         let selectParamArr = this.selectDataRange.split(":");
         if (selectParamArr.length === 2) {
           if (selectParamArr[0] === "apiList") {
@@ -943,6 +947,17 @@ export default {
           }
         });
       }
+    },
+    getTagToolTips(tags) {
+      try {
+        let showTips = "";
+        tags.forEach(item => {
+          showTips += item + ",";
+        })
+        return showTips.substr(0, showTips.length - 1);
+      } catch (e) {
+        return "";
+      }
     }
   },
 };
@@ -987,8 +1002,10 @@ export default {
   padding-right: 100%;
 }
 
-/* /deep/ .el-table__fixed-body-wrapper {
-  top: 60px !important;
-} */
+.oneLine {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
 </style>

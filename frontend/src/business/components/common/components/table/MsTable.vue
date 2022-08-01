@@ -1,6 +1,7 @@
 <template>
   <div>
     <el-table
+        v-if="tableActive"
         border
         class="test-content adjust-table ms-table"
         v-loading="tableIsLoading"
@@ -19,7 +20,6 @@
         @header-dragend="headerDragend"
         @cell-mouse-enter="showPopover"
         @row-click="handleRowClick"
-        :key="tableActive"
         ref="table">
 
       <el-table-column
@@ -45,7 +45,7 @@
 
         <template v-slot:default="scope">
           <!-- 选中记录后浮现的按钮，提供对记录的批量操作 -->
-          <show-more-btn :has-showed="!scope.row.showBatchTip"
+          <show-more-btn :has-showed="hasBatchTipShow"
                          :is-show="scope.row.showMore"
                          :buttons="batchOperators"
                          :size="selectDataCounts"/>
@@ -139,7 +139,6 @@ import HeaderLabelOperate from "@/business/components/common/head/HeaderLabelOpe
 import HeaderCustom from "@/business/components/common/head/HeaderCustom";
 import MsCustomTableHeader from "@/business/components/common/components/table/MsCustomTableHeader";
 import {lineToHump} from "@/common/js/utils";
-import {editTestCaseOrder} from "@/network/testCase";
 
 /**
  * 参考 ApiList
@@ -165,7 +164,7 @@ export default {
       selectDataCounts: 0,
       selectRows: new Set(),
       selectIds: [],
-      // hasBatchTipShow: false,
+      hasBatchTipShow: false,
       defaultSort: {},
       tableActive: true
     };
@@ -291,11 +290,11 @@ export default {
       // 不知为何，勾选选择框也会进到这里，但是这种情况 newVar === oldVar
       if (newVar !== oldVar) {
         this.$nextTick(() => {
+          this.setDefaultOrders();
           this.clear();
           this.doLayout();
           this.checkTableRowIsSelect();
           this.listenRowDrop();
-          this.initData();
         });
       }
     },
@@ -304,14 +303,6 @@ export default {
     }
   },
   methods: {
-    initData(){
-      //初始化数据是否显示提示块
-      if(this.data && this.data.length > 0){
-        this.$nextTick(() => {
-          this.data[0].showBatchTip = true;
-        });
-      }
-    },
     // 批量操作提示, 第一次勾选提示, 之后不提示
     // 先添加 batch-popper 样式, 全选后再移除样式, 只保留可见框内第一条数据的提示
     removeBatchPopper() {
@@ -332,8 +323,7 @@ export default {
           if (i == index) {
             elements[i].classList.remove('batch-popper');
             setTimeout(() => {
-              // this.hasBatchTipShow = true;
-              this.initData();
+              this.hasBatchTipShow = true;
             }, 1500);
           }
         }
@@ -429,6 +419,7 @@ export default {
     },
     filter(filters) {
       _filter(filters, this.condition);
+      this.$emit('filter');
       this.handleRefresh();
     },
     sort(column) {
@@ -440,6 +431,7 @@ export default {
       if (this.rememberOrder) {
         saveLastTableSortField(this.fieldKey, JSON.stringify(this.condition.orders));
       }
+      this.$emit('order');
       this.handleRefresh();
     },
     handleBatchEdit() {
@@ -491,16 +483,19 @@ export default {
     },
     resetHeader() {
       this.$emit('update:fields', getCustomTableHeader(this.fieldKey, this.customFields));
-      this.reloadTable();
+      this.tableActive = false;
+      this.$nextTick(() => {
+        this.doLayout();
+        this.tableActive = true;
+      });
+      this.listenRowDrop();
     },
     toggleRowSelection() {
       this.$refs.table.toggleRowSelection();
     },
     reloadTable() {
-      this.tableActive = false;
       this.$nextTick(() => {
         this.doLayout();
-        this.tableActive = true;
       });
     },
     addPaddingColClass({column}) {

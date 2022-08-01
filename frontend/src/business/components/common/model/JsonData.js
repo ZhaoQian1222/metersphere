@@ -21,7 +21,7 @@ export const Test_Case_Review = [
   {id: 'status', label: i18n.t('test_track.review.review_status')},
   {id: 'createTime', label: i18n.t('commons.create_time')},
   {id: 'endTime', label: i18n.t('test_track.review.end_time')},
-  {id: 'tags', label: '标签'},
+  {id: 'tags', label: i18n.t('commons.tag')},
 ]
 //测试计划-测试用例
 export const Test_Plan_List = [
@@ -65,7 +65,6 @@ export const Test_Case_Review_Case_List = [
   {id: 'num', label: i18n.t('commons.id')},
   {id: 'name', label: i18n.t('commons.name')},
   {id: 'priority', label: i18n.t('test_track.case.priority')},
-  {id: 'type', label: i18n.t('test_track.case.type')},
   {id: 'nodePath', label: i18n.t('test_track.case.module')},
   {id: 'projectName', label: i18n.t('test_track.review.review_project')},
   {id: 'reviewerName', label: i18n.t('test_track.review.reviewer')},

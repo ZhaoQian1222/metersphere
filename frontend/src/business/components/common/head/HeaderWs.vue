@@ -31,7 +31,7 @@
 import {
   fullScreenLoading,
   getCurrentUser,
-  getCurrentWorkspaceId, hasPermissions,
+  getCurrentWorkspaceId,
   saveLocalStorage,
   stopFullScreenLoading
 } from "@/common/js/utils";
@@ -72,7 +72,7 @@ export default {
   methods: {
     getCurrentWorkspaceId,
     initMenuData() {
-      this.$get("/workspace/list/userworkspace/" + encodeURIComponent(this.currentUserId), response => {
+      this.$get("/workspace/list/userworkspace", response => {
         this.workspaceList = response.data;
         this.wsListCopy = response.data;
         let workspace = response.data.filter(r => r.id === getCurrentWorkspaceId());
@@ -167,7 +167,6 @@ export default {
 
 .search-input >>> .el-input__inner {
   border-radius: 0;
-  color: #d2ced8;
   border-color: #b4aebe;
 }
 

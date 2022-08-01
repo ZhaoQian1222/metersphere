@@ -48,14 +48,16 @@
             <el-row>
               <el-col :span="12">
                 <el-form-item :label="$t('test_track.report.list.trigger_mode')" prop="runMode">
-                  <el-select size="small" style="margin-right: 10px" v-model="condition.triggerMode" @change="init">
+                  <el-select size="small" style="margin-right: 10px" v-model="condition.triggerMode" @change="init"
+                             :disabled="isDebugHistory">
                     <el-option v-for="item in runMode" :key="item.id" :value="item.id" :label="item.label"/>
                   </el-select>
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item :label="$t('commons.status')" prop="status">
-                  <el-select size="small" style="margin-right: 10px" v-model="condition.executionStatus" @change="init">
+                  <el-select size="small" style="margin-right: 10px" v-model="condition.executionStatus" @change="init"
+                             :disabled="isDebugHistory">
                     <el-option v-for="item in runStatus" :key="item.id" :value="item.id" :label="item.label"/>
                   </el-select>
                 </el-form-item>
@@ -65,7 +67,7 @@
               <el-col :span="12">
                 <el-form-item :label="$t('commons.executor')" prop="status">
                   <el-select v-model="condition.executor" :placeholder="$t('commons.executor')" filterable size="small"
-                             style="margin-right: 10px" @change="init">
+                             style="margin-right: 10px" @change="init" :disabled="isDebugHistory">
                     <el-option
                       v-for="item in maintainerOptions"
                       :key="item.id"
@@ -76,7 +78,7 @@
                 </el-form-item>
               </el-col>
               <el-col :span="12">
-                <el-button size="small" class="ms-task-stop" @click="stop(null)">
+                <el-button size="small" class="ms-task-stop" @click="stop(null)" :disabled="isDebugHistory">
                   {{ $t('report.stop_btn_all') }}
                 </el-button>
               </el-col>
@@ -109,34 +111,8 @@
                   <el-progress :percentage="getPercentage(item.executionStatus)" :format="format"/>
                 </el-col>
                 <el-col :span="4">
-                  <span v-if="item.executionStatus && item.executionStatus.toLowerCase() === 'error'"
-                        class="ms-task-error">
-                     Error
-                  </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'success'"
-                        class="ms-task-success">
-                       Success
-                  </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'stop'"
-                        class="ms-task-stopped">
-                      Stopped
-                  </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'unexecute'"
-                        class="ms-task-stopped">
-                      unexecute
-                  </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'errorreportresult'"
-                        class="ms-task-error-report-status">
-                      {{ $t('error_report_library.option.name') }}
-                  </span>
-                  <span v-else-if="item.executionStatus && item.executionStatus.toLowerCase() === 'running'"
-                        class="ms-task-running">
-                      Running
-                  </span>
-                  <span v-else>
-                      {{
-                      item.executionStatus ? item.executionStatus.toLowerCase()[0].toUpperCase() + item.executionStatus.toLowerCase().substr(1) : item.executionStatus
-                    }}
+                  <span :class="showClass(item.executionStatus.toLowerCase())">
+                     {{ showStatus(item.executionStatus.toLowerCase()) }}
                   </span>
                 </el-col>
               </el-row>
@@ -194,17 +170,17 @@ export default {
       ],
       runStatus: [
         {id: '', label: this.$t('api_test.definition.document.data_set.all')},
-        {id: 'saved', label: 'Saved'},
         {id: 'starting', label: 'Starting'},
         {id: 'running', label: 'Running'},
         {id: 'reporting', label: 'Reporting'},
         {id: 'completed', label: 'Completed'},
-        {id: 'error', label: 'Error'},
         {id: 'success', label: 'Success'},
         {id: 'waiting', label: 'Waiting'},
+        {id: "errorReportResult", label: 'FakeError'},
+        {id: 'unexecute', label: 'NotExecute'},
+        {id: 'stop', label: 'Stopped'},
+        {id: 'error', label: 'Error'},
         {id: 'fail', label: 'Fail'},
-        {id: 'unexecute', label: 'unexecute'},
-        {id: 'stop', label: 'Stopped'}
       ],
       condition: {triggerMode: "", executionStatus: ""},
       maintainerOptions: [],
@@ -213,6 +189,7 @@ export default {
       reportId: "",
       executionModule: "",
       reportType: "",
+      isDebugHistory: false
     };
   },
   props: {
@@ -241,6 +218,22 @@ export default {
     }
   },
   methods: {
+    showStatus(status) {
+      status = status.toLowerCase();
+      switch (status) {
+        case "unexecute":
+          return "NotExecute";
+        case "errorreportresult":
+          return "FakeError";
+        case "stop":
+          return "Stopped";
+        default:
+          return status.toLowerCase()[0].toUpperCase() + status.toLowerCase().substr(1);
+      }
+    },
+    showClass(status) {
+      return "ms-task-" + status;
+    },
     nextData() {
       this.loading = true;
       this.init();
@@ -257,9 +250,9 @@ export default {
         let request = {type: row.executionModule, reportId: row.id};
         array = [request];
       } else {
-        array.push({type: 'API', projectId: getCurrentProjectID(),userId:getCurrentUser().id});
-        array.push({type: 'SCENARIO', projectId: getCurrentProjectID(),userId:getCurrentUser().id});
-        array.push({type: 'PERFORMANCE', projectId: getCurrentProjectID(),userId:getCurrentUser().id});
+        array.push({type: 'API', projectId: getCurrentProjectID(), userId: getCurrentUser().id});
+        array.push({type: 'SCENARIO', projectId: getCurrentProjectID(), userId: getCurrentUser().id});
+        array.push({type: 'PERFORMANCE', projectId: getCurrentProjectID(), userId: getCurrentUser().id});
       }
       this.$post('/api/automation/stop/batch', array, response => {
         this.$success(this.$t('report.test_stop_success'));
@@ -267,7 +260,7 @@ export default {
       });
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
+      this.$get('/user/project/member/list', response => {
         this.maintainerOptions = response.data;
         this.condition.executor = getCurrentUser().id;
       });
@@ -436,6 +429,8 @@ export default {
     openHistory(id) {
       this.initCaseHistory(id);
       this.taskVisible = true;
+      this.isDebugHistory = true;
+      this.condition.triggerMode = "MANUAL";
       this.showType = "CASE";
     },
     openScenarioHistory(id) {
@@ -443,6 +438,8 @@ export default {
         this.taskData = response.data;
       });
       this.showType = "SCENARIO";
+      this.isDebugHistory = true;
+      this.condition.triggerMode = "MANUAL";
       this.taskVisible = true;
     }
   }
@@ -547,7 +544,7 @@ export default {
   color: #F56C6C;
 }
 
-.ms-task-error-report-status {
+.ms-task-errorreportresult {
   color: #F6972A;
 }
 
@@ -557,11 +554,15 @@ export default {
   margin-right: 20px;
 }
 
+.ms-task-unexecute {
+  color: #909399;
+}
+
 .ms-task-success {
   color: #67C23A;
 }
 
-.ms-task-stopped {
+.ms-task-stop {
   color: #909399;
 }
 
@@ -587,7 +588,7 @@ export default {
   position: fixed;
   right: 1372px;
   top: 50%;
-  z-index: 1;
+  z-index: 5;
   width: 20px;
   height: 60px;
   padding: 3px;

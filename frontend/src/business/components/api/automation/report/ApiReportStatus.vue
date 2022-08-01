@@ -16,7 +16,7 @@
       {{ showStatus(row.status) }}
     </el-tag>
     <el-tag size="mini" type="danger" style="background-color: #F6972A; color: #FFFFFF" v-else-if="row.status === 'errorReportResult'">
-      {{ $t('error_report_library.option.name') }}
+      FakeError
     </el-tag>
     <el-tag v-else size="mini" type="info">
       {{ showStatus(row.status) }}
@@ -36,9 +36,9 @@
         return status.toLowerCase();
       },
       showStatus(status) {
-        return status.toLowerCase()[0].toUpperCase() + status.toLowerCase().substr(1);
+        return status === "unexecute"? "NotExecute":
+          status.toLowerCase()[0].toUpperCase() + status.toLowerCase().substr(1);
       }
-
     }
   }
 </script>

@@ -137,11 +137,9 @@ public class BaseModuleService extends NodeTreeService<ModuleNodeDTO> {
         this.getDefaultNode(projectId, defaultName);
 
         List<ModuleNodeDTO> moduleNodes = extModuleNodeMapper.getNodeTreeByProjectId(tableName, projectId);
-
         if (getModuleCountFunc != null) {
             buildNodeCount(projectId, moduleNodes, getModuleCountFunc);
         }
-
         return getNodeTrees(moduleNodes);
     }
 

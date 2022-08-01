@@ -17,6 +17,7 @@ import io.metersphere.dto.ProjectConfig;
 import io.metersphere.log.vo.DetailColumn;
 import io.metersphere.log.vo.OperatingLogDetails;
 import io.metersphere.service.ProjectApplicationService;
+import io.metersphere.service.ProjectService;
 import io.metersphere.service.UserService;
 import io.metersphere.track.dto.*;
 import io.metersphere.track.request.testcase.TestPlanCaseBatchRequest;
@@ -70,7 +71,7 @@ public class TestPlanTestCaseService {
     @Resource
     private TestCaseService testCaseService;
     @Resource
-    private TestCaseIssueService testCaseIssueService;
+    private ProjectService projectService;
     @Resource
     private ProjectApplicationService projectApplicationService;
 
@@ -85,17 +86,44 @@ public class TestPlanTestCaseService {
     }
 
     public List<TestPlanCaseDTO> list(QueryTestPlanCaseRequest request) {
-        request.setOrders(ServiceUtils.getDefaultSortOrder(request.getOrders()));
+        List<OrderRequest> orders = ServiceUtils.getDefaultSortOrder(request.getOrders());
+        orders = ServiceUtils.replaceCustomNumOrder(request.getIsCustomNum(), orders);
+        request.setOrders(orders);
+
         List<TestPlanCaseDTO> list = extTestPlanTestCaseMapper.list(request);
-        QueryMemberRequest queryMemberRequest = new QueryMemberRequest();
-        queryMemberRequest.setProjectId(request.getProjectId());
-        Map<String, String> userMap = userService.getProjectMemberList(queryMemberRequest)
-                .stream().collect(Collectors.toMap(User::getId, User::getName));
-        list.forEach(item -> {
-            item.setExecutorName(userMap.get(item.getExecutor()));
-            item.setMaintainerName(userMap.get(item.getMaintainer()));
-        });
+        if (CollectionUtils.isNotEmpty(list)) {
+
+            Map<String, String> projectMap = ServiceUtils.getProjectNameMap(list.stream().map(TestPlanCaseDTO::getProjectId)
+                    .distinct()
+                    .collect(Collectors.toList()));
+
+            list.forEach(item -> {
+                // 设置项目名称
+                item.setProjectName(projectMap.get(item.getProjectId()));
+                if (!request.getIsCustomNum()) {
+                    // 如果配置是不启用自定义字段，则设置为 num
+                    item.setCustomNum(item.getNum().toString());
+                }
+            });
+
+            // 设置版本信息
+            ServiceUtils.buildVersionInfo(list);
+            QueryMemberRequest queryMemberRequest = new QueryMemberRequest();
+            queryMemberRequest.setProjectId(request.getProjectId());
+            Map<String, String> userMap = userService.getProjectMemberList(queryMemberRequest)
+                    .stream().collect(Collectors.toMap(User::getId, User::getName));
+            list.forEach(item -> {
+                item.setExecutorName(userMap.get(item.getExecutor()));
+                item.setMaintainerName(userMap.get(item.getMaintainer()));
+            });
+        }
         return list;
+    }
+
+    public QueryTestPlanCaseRequest wrapQueryTestPlanCaseRequest(QueryTestPlanCaseRequest request) {
+        ProjectApplication projectApplication = projectApplicationService.getProjectApplication(request.getProjectId(), ProjectApplicationType.CASE_CUSTOM_NUM.name());
+        request.setIsCustomNum(StringUtils.equals(projectApplication.getTypeValue(), "false") ? false : true);
+        return request;
     }
 
     public List<TestPlanCaseDTO> listByPlanId(QueryTestPlanCaseRequest request) {
@@ -125,6 +153,21 @@ public class TestPlanTestCaseService {
 
     public int deleteTestCase(String id) {
         return testPlanTestCaseMapper.deleteByPrimaryKey(id);
+    }
+
+    public int deleteToGc(List<String> caseIds) {
+        return updateIsDel(caseIds, true);
+    }
+
+    private int updateIsDel(List<String> caseIds, Boolean isDel) {
+        if (CollectionUtils.isNotEmpty(caseIds)) {
+            TestPlanTestCaseExample example = new TestPlanTestCaseExample();
+            example.createCriteria().andCaseIdIn(caseIds);
+            TestPlanTestCaseWithBLOBs record = new TestPlanTestCaseWithBLOBs();
+            record.setIsDel(isDel);
+            return testPlanTestCaseMapper.updateByExampleSelective(record, example);
+        }
+        return 0;
     }
 
     public void editTestCaseBath(TestPlanCaseBatchRequest request) {
@@ -452,4 +495,7 @@ public class TestPlanTestCaseService {
                 testPlanTestCaseMapper::updateByPrimaryKeySelective);
     }
 
+    public int reduction(List<String> caseIds) {
+        return updateIsDel(caseIds, false);
+    }
 }

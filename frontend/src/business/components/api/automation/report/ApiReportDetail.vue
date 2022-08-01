@@ -121,6 +121,7 @@ export default {
       fullTreeNodes: [],
       stepFilter: new STEP,
       exportReportIsOk: false,
+      tempResult: [],
     }
   },
   activated() {
@@ -408,7 +409,18 @@ export default {
             if (data.content) {
               let report = JSON.parse(data.content);
               this.content = report;
-              this.fullTreeNodes = report.steps;
+              if(data.reportType === "UI_INDEPENDENT"){
+                  this.tempResult = report.steps;
+                  //校对执行次序
+                  try{
+                    this.checkOrder(this.tempResult);
+                    this.fullTreeNodes = this.tempResult;
+                  }catch(e){
+                    this.fullTreeNodes = report.steps;
+                  }
+              }else{
+                this.fullTreeNodes = report.steps;
+              }
               this.content.console = report.console;
               this.content.error = report.error;
               let successCount = (report.total - report.error - report.errorCode - report.unExecute);
@@ -424,6 +436,58 @@ export default {
         this.$emit('invisible');
         this.$warning(this.$t('commons.report_delete'));
       }
+    },
+    checkOrder(origin){
+      if(!origin){
+        return;
+      }
+      if(Array.isArray(origin)){
+        this.sortChildren(origin);
+        origin.forEach(v => {
+          if(v.children){
+            this.checkOrder(v.children)
+          }
+        })
+      }
+    },
+    sortChildren(source){
+      if(!source){
+        return;
+      }
+      source.forEach( item =>{
+        let children = item.children;
+        if(children && children.length > 0){
+          let tempArr = new Array(children.length);
+          let tempMap = new Map();
+          for(let i = 0; i < children.length; i++){
+            if(!children[i].value || !children[i].value.startTime || children[i].value.startTime === 0){
+              //若没有value或未执行的，则step留在当前位置
+              tempArr[i] = children[i];
+              //进行标识
+              tempMap.set(children[i].stepId, children[i])
+            }
+          }
+          //过滤出还没有指定好位置的step
+          let arr = children.filter(m => {
+            return !tempMap.get(m.stepId);
+          }).sort((m, n) => {
+            //按时间排序
+            return m.value.startTime - n.value.startTime;
+          });
+          //找出arr(已经有序，从头取即可)中时间最小的插入 tempArr 可用位置
+          for(let j = 0, i = 0; j < tempArr.length; j++){
+            if(!tempArr[j]){
+              //占位
+              tempArr[j] = arr[i];
+              i++;
+            }
+            //重新排序
+            tempArr[j].index = j + 1;
+          }
+          //赋值
+          item.children = tempArr;
+        }
+      })
     },
     buildReport() {
       if (this.report) {
@@ -564,9 +628,8 @@ export default {
         return;
       }
       this.loading = true;
-      this.report.projectId = this.projectId;
-      let url = "/api/scenario/report/update";
-      this.result = this.$post(url, this.report, response => {
+      let url = "/api/scenario/report/reName";
+      this.result = this.$post(url, {id: this.report.id,name: this.report.name,reportType: this.report.reportType }, response => {
         this.$success(this.$t('commons.save_success'));
         this.loading = false;
         this.$emit('refresh');

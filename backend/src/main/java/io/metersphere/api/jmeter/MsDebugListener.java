@@ -89,10 +89,10 @@ public class MsDebugListener extends AbstractListenerElement implements SampleLi
         return getPropertyAsBoolean(SUCCESS_ONLY_LOGGING, false);
     }
 
-    public boolean isSampleWanted(boolean success) {
+    public boolean isSampleWanted(boolean success, SampleResult result) {
         boolean errorOnly = isErrorLogging();
         boolean successOnly = isSuccessOnlyLogging();
-        return isSampleWanted(success, errorOnly, successOnly);
+        return isSampleWanted(success, errorOnly, successOnly) && !StringUtils.containsIgnoreCase(result.getSampleLabel(), "MS_CLEAR_LOOPS_VAR_");
     }
 
     public static boolean isSampleWanted(boolean success, boolean errorOnly,
@@ -141,7 +141,7 @@ public class MsDebugListener extends AbstractListenerElement implements SampleLi
             LoggerUtil.debug("send. " + this.getName());
             WebSocketUtils.sendMessageSingle(dto);
         } catch (Exception ex) {
-            LoggerUtil.error("消息推送失败：" , ex);
+            LoggerUtil.error("消息推送失败：", ex);
         }
     }
 
@@ -153,7 +153,7 @@ public class MsDebugListener extends AbstractListenerElement implements SampleLi
     public void sampleOccurred(SampleEvent event) {
         SampleResult result = event.getResult();
         this.setVars(result);
-        if (isSampleWanted(result.isSuccessful()) && !StringUtils.equals(result.getSampleLabel(), RunningParamKeys.RUNNING_DEBUG_SAMPLER_NAME)) {
+        if (isSampleWanted(result.isSuccessful(), result) && !StringUtils.equals(result.getSampleLabel(), RunningParamKeys.RUNNING_DEBUG_SAMPLER_NAME)) {
             RequestResult requestResult = JMeterBase.getRequestResult(result);
             if (requestResult != null && ResultParseUtil.isNotAutoGenerateSampler(requestResult)) {
                 MsgDto dto = new MsgDto();

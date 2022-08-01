@@ -31,6 +31,10 @@
       @refresh="refreshIssue"
       ref="issueEdit"/>
 
+    <is-change-confirm
+      @confirm="changeConfirm"
+      ref="isChangeConfirm"/>
+
   </div>
 
 </template>
@@ -59,12 +63,14 @@ import {getTestCasesForMinder, getMinderExtraNode, getMinderTreeExtraNodeCount} 
 import {addIssueHotBox, getSelectedNodeData, handleIssueAdd, handleIssueBatch} from "./minderUtils";
 import IssueRelateList from "@/business/components/track/case/components/IssueRelateList";
 import TestPlanIssueEdit from "@/business/components/track/case/components/TestPlanIssueEdit";
+import {setPriorityView} from "vue-minder-editor-plus/src/script/tool/utils";
+import IsChangeConfirm from "@/business/components/common/components/IsChangeConfirm";
 
 const {getIssuesListById} = require("@/network/Issue");
 const {getCurrentWorkspaceId} = require("@/common/js/utils");
 export default {
 name: "TestCaseMinder",
-  components: {TestPlanIssueEdit, IssueRelateList, MsModuleMinder},
+  components: {IsChangeConfirm, TestPlanIssueEdit, IssueRelateList, MsModuleMinder},
   data() {
     return{
       testCase: [],
@@ -72,6 +78,8 @@ name: "TestCaseMinder",
       tags: [this.$t('api_test.definition.request.case'), this.$t('test_track.case.prerequisite'), this.$t('commons.remark'), this.$t('test_track.module.module')],
       result: {loading: false},
       needRefresh: false,
+      noRefresh: false,
+      noRefreshMinder: false,
       saveCases: [],
       saveModules: [],
       saveModuleNodeMap: new Map(),
@@ -90,6 +98,7 @@ name: "TestCaseMinder",
     currentVersion: String,
     condition: Object,
     projectId: String,
+    activeName: String
   },
   computed: {
     selectNodeIds() {
@@ -124,6 +133,12 @@ name: "TestCaseMinder",
     },
     currentVersion() {
       this.$refs.minder.initData();
+    },
+    treeNodes(newVal, oldVal) {
+      if (newVal !== oldVal && this.activeName === 'default')  {
+        // 模块刷新并且当前 tab 是用例列表时，提示是否刷新脑图
+        this.handleNodeUpdateForMinder();
+      }
     }
   },
   mounted() {
@@ -136,6 +151,36 @@ name: "TestCaseMinder",
     }
   },
   methods: {
+    handleNodeUpdateForMinder() {
+      if (this.noRefreshMinder) {
+        // 如果是保存触发的刷新模块，则不刷新脑图
+        this.noRefreshMinder = false;
+        return;
+      }
+      this.noRefresh = true;
+      // 如果脑图没有修改直接刷新，有修改提示
+      if (!this.$store.state.isTestCaseMinderChanged) {
+        if (this.$refs.minder) {
+          this.$refs.minder.initData();
+        }
+      } else {
+        this.$refs.isChangeConfirm.open();
+      }
+    },
+    changeConfirm(isSave) {
+      if (isSave) {
+        this.save(() => {
+          this.initData();
+        });
+      } else {
+        this.initData();
+      }
+    },
+    initData() {
+      if (this.$refs.minder) {
+        this.$refs.minder.initData();
+      }
+    },
     getMinderTreeExtraNodeCount() {
       return getMinderTreeExtraNodeCount;
     },
@@ -174,7 +219,7 @@ name: "TestCaseMinder",
 
         if (handleMinderIssueDelete(even.commandName))  return; // 删除缺陷不算有编辑脑图信息
 
-        if (['priority', 'resource', 'removenode', 'appendchildnode', 'appendparentnode', 'appendsiblingnode'].indexOf(even.commandName) > -1) {
+        if (['priority', 'resource', 'removenode', 'appendchildnode', 'appendparentnode', 'appendsiblingnode', 'paste'].indexOf(even.commandName) > -1) {
           // 这些情况则脑图有改变
           this.setIsChange(true);
         }
@@ -188,6 +233,11 @@ name: "TestCaseMinder",
               }
             });
           }
+        }
+
+        if ('resource' === even.commandName) {
+          // 设置完标签后，优先级显示有问题，重新设置下
+          setTimeout(() => setPriorityView(true, 'P'), 100);
         }
       });
 
@@ -207,7 +257,7 @@ name: "TestCaseMinder",
     setIsChange(isChanged) {
       this.$store.commit('setIsTestCaseMinderChanged', isChanged);
     },
-    save() {
+    save(callback) {
       this.saveCases = [];
       this.saveModules = [];
       this.deleteNodes = []; // 包含测试模块、用例和临时节点
@@ -240,8 +290,18 @@ name: "TestCaseMinder",
           item.isExtraNode = false;
         });
         this.extraNodeChanged = [];
-        this.$emit('refresh');
+        if (!this.noRefresh) {
+          this.$emit('refresh');
+          // 保存会刷新模块，刷新完模块，脑图也会自动刷新
+          // 如果是保存触发的刷新模块，则不刷新脑图
+          this.noRefreshMinder = true;
+        }
+        // 由于模块修改刷新的脑图，不刷新模块
+        this.noRefresh = false;
         this.setIsChange(false);
+        if (callback && callback instanceof Function) {
+          callback();
+        }
       });
 
     },
@@ -471,7 +531,7 @@ name: "TestCaseMinder",
             } else {
               testCase.moveMode = 'APPEND';
             }
-          } else if (this.isCaseNode(nextNode)) {
+          } else if (this.isCaseNode(nextNode) && !nextNode.data.isExtraNode) {
             let nextId = nextNode.data.id;
             if (nextId && nextId.length > 15) {
               testCase.targetId = nextId;

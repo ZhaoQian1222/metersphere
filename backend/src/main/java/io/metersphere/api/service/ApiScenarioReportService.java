@@ -12,6 +12,7 @@ import io.metersphere.api.dto.datacount.ApiDataCountResult;
 import io.metersphere.api.jmeter.FixedCapacityUtils;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
+import io.metersphere.base.mapper.ext.ExtApiDefinitionExecResultMapper;
 import io.metersphere.base.mapper.ext.ExtApiScenarioReportMapper;
 import io.metersphere.base.mapper.ext.ExtApiScenarioReportResultMapper;
 import io.metersphere.commons.constants.*;
@@ -30,9 +31,10 @@ import io.metersphere.service.SystemParameterService;
 import io.metersphere.service.UserService;
 import io.metersphere.track.dto.PlanReportCaseDTO;
 import io.metersphere.utils.LoggerUtil;
+import io.metersphere.xmind.utils.FileUtil;
 import org.apache.commons.beanutils.BeanMap;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -84,6 +87,8 @@ public class ApiScenarioReportService {
     private ApiScenarioReportStructureMapper apiScenarioReportStructureMapper;
     @Resource
     private ApiDefinitionExecResultMapper definitionExecResultMapper;
+    @Resource
+    private ExtApiDefinitionExecResultMapper extApiDefinitionExecResultMapper;
     @Resource
     private UiReportServiceProxy uiReportServiceProxy;
     @Resource
@@ -218,6 +223,7 @@ public class ApiScenarioReportService {
     }
 
     public List<APIScenarioReportResult> list(QueryAPIReportRequest request) {
+        request = this.initRequest(request);
         request.setOrders(ServiceUtils.getDefaultOrder(request.getOrders()));
         List<APIScenarioReportResult> list = extApiScenarioReportMapper.list(request);
         List<String> userIds = list.stream().map(APIScenarioReportResult::getUserId)
@@ -231,7 +237,20 @@ public class ApiScenarioReportService {
         return list;
     }
 
+    public QueryAPIReportRequest initRequest(QueryAPIReportRequest request){
+        if(request != null){
+            //初始化triggerMode的查询条件： 如果查询API的话，增加 JENKINS_RUN_TEST_PLAN(jenkins调用测试计划时执行的场景) 查询条件
+            if(MapUtils.isNotEmpty(request.getFilters()) && request.getFilters().containsKey("trigger_mode")
+                    && CollectionUtils.isNotEmpty(request.getFilters().get("trigger_mode"))
+                    && request.getFilters().get("trigger_mode").contains("API") && !request.getFilters().get("trigger_mode").contains(ReportTriggerMode.JENKINS_RUN_TEST_PLAN.name())){
+                request.getFilters().get("trigger_mode").add(ReportTriggerMode.JENKINS_RUN_TEST_PLAN.name());
+            }
+        }
+        return request;
+    }
+
     public List<String> idList(QueryAPIReportRequest request) {
+        request = this.initRequest(request);
         request.setOrders(ServiceUtils.getDefaultOrder(request.getOrders()));
         return extApiScenarioReportMapper.idList(request);
     }
@@ -289,6 +308,11 @@ public class ApiScenarioReportService {
         report.setUpdateTime(System.currentTimeMillis());
         if (StringUtils.isNotEmpty(report.getTriggerMode()) && report.getTriggerMode().equals("CASE")) {
             report.setTriggerMode(TriggerMode.MANUAL.name());
+        }
+        // UI 调试类型报告不记录更新状态
+        if(report.getExecuteType().equals(ExecuteType.Debug.name()) &&
+        report.getReportType().equals(ReportTypeConstants.UI_INDEPENDENT.name())){
+            return report;
         }
         apiScenarioReportMapper.updateByPrimaryKeySelective(report);
         return report;
@@ -407,43 +431,53 @@ public class ApiScenarioReportService {
         return report;
     }
 
+    private String getIntegrationReportStatus(List<String> reportStatus) {
+        boolean hasError = false, hasErrorReport = false, hasUnExecute = false, hasOtherStatus = false, hasStop = false;
+
+        if (CollectionUtils.isEmpty(reportStatus)) {
+            //查不到任何结果，按照未执行来处理
+            hasUnExecute = true;
+        }else {
+            for (String status : reportStatus) {
+                if (StringUtils.equalsIgnoreCase(status, ExecuteResult.SCENARIO_ERROR.toString())) {
+                    hasError = true;
+                } else if (StringUtils.equalsIgnoreCase(status, ExecuteResult.ERROR_REPORT_RESULT.toString())) {
+                    hasErrorReport = true;
+                } else if (StringUtils.equalsIgnoreCase(status, ExecuteResult.STOP.toString())) {
+                    hasStop = true;
+                } else if (StringUtils.equalsIgnoreCase(status, ExecuteResult.UN_EXECUTE.toString())) {
+                    hasUnExecute = true;
+                } else {
+                    hasOtherStatus = true;
+                }
+            }
+            if (hasError || hasErrorReport || hasOtherStatus) {
+                //根据状态优先级判定，只要存在失败/误报/其他待定状态 的数据， 则未执行和停止都为false （优先级最低）
+                hasUnExecute = false;
+                hasStop = false;
+            }
+        }
+
+        return hasError ? ScenarioStatus.Error.name() :
+                hasErrorReport ? ExecuteResult.ERROR_REPORT_RESULT.toString() :
+                        hasStop ? ExecuteResult.STOP.toString() :
+                                hasUnExecute ? ExecuteResult.UN_EXECUTE.toString() : ScenarioStatus.Success.name();
+    }
+
     public void margeReport(String reportId, String runMode, String console) {
         // 更新场景状态
+        List<String> statusList = null;
         if (StringUtils.equalsIgnoreCase(runMode, ApiRunMode.DEFINITION.name())) {
             ApiDefinitionExecResult result = definitionExecResultMapper.selectByPrimaryKey(reportId);
-            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-            execResultExample.createCriteria().andIntegratedReportIdEqualTo(reportId).andStatusEqualTo("Error");
-            long size = definitionExecResultMapper.countByExample(execResultExample);
-            result.setStatus(size > 0 ? ScenarioStatus.Error.name() : ScenarioStatus.Success.name());
+            statusList = extApiDefinitionExecResultMapper.selectDistinctStatusByReportId(reportId);
+            result.setStatus(this.getIntegrationReportStatus(statusList));
             result.setEndTime(System.currentTimeMillis());
             definitionExecResultMapper.updateByPrimaryKeySelective(result);
         } else {
             ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(reportId);
             if (report != null) {
-                List<String> statusList = extApiScenarioReportResultMapper.selectDistinctStatusByReportId(reportId);
-                boolean hasError = false, hasErrorReport = false, hasUnExecute = false, hasOtherStatus = false;
-                for (String status : statusList) {
-                    if (StringUtils.equalsIgnoreCase(status, ExecuteResult.Error.name())) {
-                        hasError = true;
-                    } else if (StringUtils.equalsIgnoreCase(status, ExecuteResult.errorReportResult.name())) {
-                        hasErrorReport = true;
-                    } else if (StringUtils.equalsIgnoreCase(status, ExecuteResult.unexecute.name())) {
-                        hasUnExecute = true;
-                    } else {
-                        hasOtherStatus = true;
-                    }
-                }
-
-                if (hasUnExecute && (hasError || hasErrorReport || hasOtherStatus)) {
-                    //只有全部状态都是未执行时，集合报告的状态才可以是未执行
-                    hasUnExecute = false;
-                }else if(CollectionUtils.isEmpty(statusList)){
-                    //查不到任何结果也按照未执行来处理
-                    hasUnExecute = true;
-                }
-                report.setStatus(hasError ? ScenarioStatus.Error.name() :
-                        hasErrorReport ? ExecuteResult.errorReportResult.name() :
-                        hasUnExecute ? ExecuteResult.unexecute.name() : ScenarioStatus.Success.name());
+                statusList = extApiScenarioReportResultMapper.selectDistinctStatusByReportId(reportId);
+                report.setStatus(this.getIntegrationReportStatus(statusList));
                 report.setEndTime(System.currentTimeMillis());
                 // 更新报告
                 apiScenarioReportMapper.updateByPrimaryKey(report);
@@ -472,7 +506,7 @@ public class ApiScenarioReportService {
             scenario = apiScenarioMapper.selectByPrimaryKey(report.getScenarioId());
         }
         if (scenario != null) {
-            if (StringUtils.equalsAnyIgnoreCase(status, ExecuteResult.errorReportResult.name())) {
+            if (StringUtils.equalsAnyIgnoreCase(status, ExecuteResult.ERROR_REPORT_RESULT.toString())) {
                 scenario.setLastResult(status);
             } else {
                 scenario.setLastResult(errorSize > 0 ? "Fail" : ScenarioStatus.Success.name());
@@ -513,7 +547,7 @@ public class ApiScenarioReportService {
             scenario = uiScenarioMapper.selectByPrimaryKey(report.getScenarioId());
         }
         if (scenario != null) {
-            if (StringUtils.equalsAnyIgnoreCase(status, ExecuteResult.errorReportResult.name())) {
+            if (StringUtils.equalsAnyIgnoreCase(status, ExecuteResult.ERROR_REPORT_RESULT.toString())) {
                 scenario.setLastResult(status);
             } else {
                 scenario.setLastResult(errorSize > 0 ? "Fail" : ScenarioStatus.Success.name());
@@ -527,6 +561,11 @@ public class ApiScenarioReportService {
                 executeTimes = scenario.getExecuteTimes().intValue();
             }
             scenario.setExecuteTimes(executeTimes + 1);
+            // 针对 UI 调试类型的不需要更新
+            if(report.getExecuteType().equals(ExecuteType.Debug.name()) &&
+                    report.getReportType().equals(ReportTypeConstants.UI_INDEPENDENT.name())){
+                return report;
+            }
             uiScenarioMapper.updateByPrimaryKey(scenario);
         }
 
@@ -629,27 +668,14 @@ public class ApiScenarioReportService {
 
 
     public void delete(DeleteAPIReportRequest request) {
-        apiScenarioReportDetailMapper.deleteByPrimaryKey(request.getId());
-        ApiScenarioReportResultExample example = new ApiScenarioReportResultExample();
-        example.createCriteria().andReportIdEqualTo(request.getId());
-        apiScenarioReportResultMapper.deleteByExample(example);
 
-        ApiScenarioReportStructureExample structureExample = new ApiScenarioReportStructureExample();
-        structureExample.createCriteria().andReportIdEqualTo(request.getId());
-        apiScenarioReportStructureMapper.deleteByExample(structureExample);
+        ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(request.getId());
 
-        if (BooleanUtils.isNotTrue(request.getIsUi())) {
-            ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-            definitionExecResultExample.createCriteria().andIdEqualTo(request.getId());
-            definitionExecResultMapper.deleteByExample(definitionExecResultExample);
+        deleteScenarioReportResource(request.getId());
 
-            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-            execResultExample.createCriteria().andIntegratedReportIdEqualTo(request.getId());
-            definitionExecResultMapper.deleteByExample(execResultExample);
-        }
+        deleteApiDefinitionResult(report.getId());
 
         // 补充逻辑，如果是集成报告则把零时报告全部删除
-        ApiScenarioReport report = apiScenarioReportMapper.selectByPrimaryKey(request.getId());
         if (report != null && StringUtils.isNotEmpty(report.getScenarioId())) {
             List<String> list = getReportIds(report.getScenarioId());
             if (CollectionUtils.isNotEmpty(list)) {
@@ -659,7 +685,20 @@ public class ApiScenarioReportService {
                 this.deleteAPIReportBatch(reportRequest);
             }
         }
-        apiScenarioReportMapper.deleteByPrimaryKey(request.getId());
+    }
+
+    public void deleteScenarioReportResource(String id) {
+        apiScenarioReportMapper.deleteByPrimaryKey(id);
+
+        apiScenarioReportDetailMapper.deleteByPrimaryKey(id);
+
+        ApiScenarioReportResultExample example = new ApiScenarioReportResultExample();
+        example.createCriteria().andReportIdEqualTo(id);
+        apiScenarioReportResultMapper.deleteByExample(example);
+
+        ApiScenarioReportStructureExample structureExample = new ApiScenarioReportStructureExample();
+        structureExample.createCriteria().andReportIdEqualTo(id);
+        apiScenarioReportStructureMapper.deleteByExample(structureExample);
     }
 
     public void delete(String id) {
@@ -685,32 +724,61 @@ public class ApiScenarioReportService {
 
     public void deleteByIds(List<String> ids) {
         if (CollectionUtils.isNotEmpty(ids)) {
-            ApiScenarioReportExample example = new ApiScenarioReportExample();
-            example.createCriteria().andIdIn(ids);
-            ApiScenarioReportDetailExample detailExample = new ApiScenarioReportDetailExample();
-            detailExample.createCriteria().andReportIdIn(ids);
-            apiScenarioReportDetailMapper.deleteByExample(detailExample);
-            apiScenarioReportMapper.deleteByExample(example);
-
-            ApiScenarioReportResultExample reportResultExample = new ApiScenarioReportResultExample();
-            reportResultExample.createCriteria().andReportIdIn(ids);
-            apiScenarioReportResultMapper.deleteByExample(reportResultExample);
-
-            ApiScenarioReportStructureExample structureExample = new ApiScenarioReportStructureExample();
-            structureExample.createCriteria().andReportIdIn(ids);
-            apiScenarioReportStructureMapper.deleteByExample(structureExample);
-
-            ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-            definitionExecResultExample.createCriteria().andIdIn(ids);
-            definitionExecResultMapper.deleteByExample(definitionExecResultExample);
-
-            ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-            execResultExample.createCriteria().andIntegratedReportIdIn(ids);
-            definitionExecResultMapper.deleteByExample(execResultExample);
+            deleteScenarioReportByIds(ids);
+            deleteApiDefinitionResultByIds(ids);
         }
     }
 
     public void deleteAPIReportBatch(APIReportBatchRequest reportRequest) {
+        List<String> ids = getIdsByDeleteBatchRequest(reportRequest);
+        ids = batchDeleteReportResource(reportRequest, ids, true);
+
+        //处理最后剩余的数据
+        if (!ids.isEmpty()) {
+            deleteScenarioReportByIds(ids);
+            deleteApiDefinitionResultByIds(ids);
+        }
+    }
+
+    public void deleteScenarioReportByIds(List<String> ids) {
+        ApiScenarioReportDetailExample detailExample = new ApiScenarioReportDetailExample();
+        detailExample.createCriteria().andReportIdIn(ids);
+        apiScenarioReportDetailMapper.deleteByExample(detailExample);
+
+        ApiScenarioReportExample apiTestReportExample = new ApiScenarioReportExample();
+        apiTestReportExample.createCriteria().andIdIn(ids);
+        apiScenarioReportMapper.deleteByExample(apiTestReportExample);
+
+        ApiScenarioReportResultExample reportResultExample = new ApiScenarioReportResultExample();
+        reportResultExample.createCriteria().andReportIdIn(ids);
+        apiScenarioReportResultMapper.deleteByExample(reportResultExample);
+
+        ApiScenarioReportStructureExample structureExample = new ApiScenarioReportStructureExample();
+        structureExample.createCriteria().andReportIdIn(ids);
+        apiScenarioReportStructureMapper.deleteByExample(structureExample);
+    }
+
+    private void deleteApiDefinitionResultByIds(List<String> ids) {
+        ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
+        definitionExecResultExample.createCriteria().andIdIn(ids);
+        definitionExecResultMapper.deleteByExample(definitionExecResultExample);
+
+        ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
+        execResultExample.createCriteria().andIntegratedReportIdIn(ids);
+        definitionExecResultMapper.deleteByExample(execResultExample);
+    }
+
+    private void deleteApiDefinitionResult(String id) {
+        ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
+        definitionExecResultExample.createCriteria().andIdEqualTo(id);
+        definitionExecResultMapper.deleteByExample(definitionExecResultExample);
+
+        ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
+        execResultExample.createCriteria().andIntegratedReportIdEqualTo(id);
+        definitionExecResultMapper.deleteByExample(execResultExample);
+    }
+
+    public List<String> getIdsByDeleteBatchRequest(APIReportBatchRequest reportRequest) {
         List<String> ids = reportRequest.getIds();
         if (reportRequest.isSelectAllDate()) {
             ids = this.idList(reportRequest);
@@ -718,16 +786,18 @@ public class ApiScenarioReportService {
                 ids.removeAll(reportRequest.getUnSelectIds());
             }
         }
+        return ids;
+    }
 
+    public List<String> batchDeleteReportResource(APIReportBatchRequest reportRequest, List<String> ids, boolean deleteApiResult) {
         List<String> myList = reportRequest.getIds().stream().distinct().collect(Collectors.toList());
         reportRequest.setIds(myList);
         //为预防数量太多，调用删除方法时引起SQL过长的Bug，此处采取分批执行的方式。
         //每次处理的数据数量
         int handleCount = 7000;
         //每次处理的集合
-        List<String> handleIdList = new ArrayList<>(handleCount);
         while (ids.size() > handleCount) {
-            handleIdList = new ArrayList<>(handleCount);
+            List<String> handleIdList = new ArrayList<>(handleCount);
             List<String> otherIdList = new ArrayList<>();
             for (int index = 0; index < ids.size(); index++) {
                 if (index < handleCount) {
@@ -737,62 +807,16 @@ public class ApiScenarioReportService {
                 }
             }
             //处理本次的数据
-            ApiScenarioReportDetailExample detailExample = new ApiScenarioReportDetailExample();
-            detailExample.createCriteria().andReportIdIn(handleIdList);
-            apiScenarioReportDetailMapper.deleteByExample(detailExample);
-            ApiScenarioReportExample apiTestReportExample = new ApiScenarioReportExample();
-            apiTestReportExample.createCriteria().andIdIn(handleIdList);
-            apiScenarioReportMapper.deleteByExample(apiTestReportExample);
+            deleteScenarioReportByIds(handleIdList);
 
-            ApiScenarioReportResultExample reportResultExample = new ApiScenarioReportResultExample();
-            reportResultExample.createCriteria().andReportIdIn(handleIdList);
-            apiScenarioReportResultMapper.deleteByExample(reportResultExample);
-
-            ApiScenarioReportStructureExample structureExample = new ApiScenarioReportStructureExample();
-            structureExample.createCriteria().andReportIdIn(handleIdList);
-            apiScenarioReportStructureMapper.deleteByExample(structureExample);
-
-            if (BooleanUtils.isNotTrue(reportRequest.getIsUi())) {
-                ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-                definitionExecResultExample.createCriteria().andIdIn(handleIdList);
-                definitionExecResultMapper.deleteByExample(definitionExecResultExample);
-
-                ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-                execResultExample.createCriteria().andIntegratedReportIdIn(handleIdList);
-                definitionExecResultMapper.deleteByExample(execResultExample);
+            if (deleteApiResult) {
+                deleteApiDefinitionResultByIds(handleIdList);
             }
 
             //转存剩余的数据
             ids = otherIdList;
         }
-
-        //处理最后剩余的数据
-        if (!ids.isEmpty()) {
-            ApiScenarioReportDetailExample detailExample = new ApiScenarioReportDetailExample();
-            detailExample.createCriteria().andReportIdIn(ids);
-            apiScenarioReportDetailMapper.deleteByExample(detailExample);
-            ApiScenarioReportExample apiTestReportExample = new ApiScenarioReportExample();
-            apiTestReportExample.createCriteria().andIdIn(ids);
-            apiScenarioReportMapper.deleteByExample(apiTestReportExample);
-
-            ApiScenarioReportResultExample reportResultExample = new ApiScenarioReportResultExample();
-            reportResultExample.createCriteria().andReportIdIn(ids);
-            apiScenarioReportResultMapper.deleteByExample(reportResultExample);
-
-            ApiScenarioReportStructureExample structureExample = new ApiScenarioReportStructureExample();
-            structureExample.createCriteria().andReportIdIn(ids);
-            apiScenarioReportStructureMapper.deleteByExample(structureExample);
-
-            if (BooleanUtils.isNotTrue(reportRequest.getIsUi())) {
-                ApiDefinitionExecResultExample definitionExecResultExample = new ApiDefinitionExecResultExample();
-                definitionExecResultExample.createCriteria().andIdIn(ids);
-                definitionExecResultMapper.deleteByExample(definitionExecResultExample);
-
-                ApiDefinitionExecResultExample execResultExample = new ApiDefinitionExecResultExample();
-                execResultExample.createCriteria().andIntegratedReportIdIn(ids);
-                definitionExecResultMapper.deleteByExample(execResultExample);
-            }
-        }
+        return ids;
     }
 
     public long countByProjectIdAndCreateAndByScheduleInThisWeek(String projectId) {
@@ -927,7 +951,7 @@ public class ApiScenarioReportService {
         for (ApiScenarioReportResult result : requestResults) {
             if (StringUtils.equalsIgnoreCase(result.getStatus(), ScenarioStatus.Error.name())) {
                 errorSize++;
-            } else if (StringUtils.equalsIgnoreCase(result.getStatus(), ExecuteResult.errorReportResult.name())) {
+            } else if (StringUtils.equalsIgnoreCase(result.getStatus(), ExecuteResult.ERROR_REPORT_RESULT.toString())) {
                 errorReportResultSize++;
             }
         }
@@ -935,9 +959,9 @@ public class ApiScenarioReportService {
         if (errorSize > 0) {
             status = ScenarioStatus.Error.name();
         } else if (errorReportResultSize > 0) {
-            status = ExecuteResult.errorReportResult.name();
+            status = ExecuteResult.ERROR_REPORT_RESULT.toString();
         } else {
-            status = requestResults.isEmpty() ? ScenarioStatus.Error.name() : ScenarioStatus.Success.name();
+            status = requestResults.isEmpty() ? ExecuteResult.UN_EXECUTE.toString() : ScenarioStatus.Success.name();
         }
 
         if (dto != null && dto.getArbitraryData() != null && dto.getArbitraryData().containsKey("TIMEOUT") && (Boolean) dto.getArbitraryData().get("TIMEOUT")) {
@@ -987,7 +1011,7 @@ public class ApiScenarioReportService {
     }
 
     public void reName(ApiScenarioReport reportRequest) {
-        if (StringUtils.equalsIgnoreCase(reportRequest.getReportType(), ReportTypeConstants.API_INDEPENDENT.name())) {
+        if (StringUtils.equalsAnyIgnoreCase(reportRequest.getReportType(), ReportTypeConstants.API_INDEPENDENT.name(), ReportTypeConstants.API_INTEGRATED.name())) {
             ApiDefinitionExecResult result = definitionExecResultMapper.selectByPrimaryKey(reportRequest.getId());
             if (result != null) {
                 result.setName(reportRequest.getName());
@@ -1004,5 +1028,20 @@ public class ApiScenarioReportService {
 
     public RequestResult selectReportContent(String stepId) {
         return apiScenarioReportStructureService.selectReportContent(stepId);
+    }
+
+    public void cleanUpUiReportImg(List<String> ids) {
+        try {
+            if (ids != null && CollectionUtils.isNotEmpty(ids)) {
+                for (String id : ids) {
+                    if (FileUtil.deleteDir(new File(FileUtils.UI_IMAGE_DIR + "/" + id))) {
+                        LogUtil.info("删除 UI 报告截图成功，报告 ID 为 ：" + id);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LogUtil.error(e.getMessage(), e);
+            MSException.throwException(e.getMessage());
+        }
     }
 }

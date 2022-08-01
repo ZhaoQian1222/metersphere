@@ -59,9 +59,11 @@ export default {
     annotation: '注释',
     clear: '清空',
     save: '保存',
+    not_save: '不保存',
     save_as: '另存为',
     update: '更新',
     save_success: '保存成功',
+    warning_module_add: "模块树深度最大为8层",
     send_success: '发送成功',
     delete_success: '删除成功',
     copy_success: '复制成功',
@@ -456,7 +458,14 @@ export default {
     repositoryName: 'Git存储库名称',
     repositoryUsername: '用户名',
     ui: 'UI 测试',
-    not_eligible_for_deletion:'不符合删除条件'
+    not_eligible_for_deletion: '不符合删除条件',
+    default_module: {
+      test_case: '未规划用例',
+      api_definition: '未规划接口',
+      api_scenario: '未规划场景',
+      ui_element: '未规划元素',
+      ui_scenario: '未规划场景'
+    }
   },
   login: {
     normal_Login: "普通登录",
@@ -855,6 +864,7 @@ export default {
     remove_member: '确定要移除该成员吗',
     org_remove_member: '将该用户从组织中移除，将同时移除该组织下所有工作空间的权限，确定要移除该成员吗？',
     input_id_or_email: '请输入用户 ID, 或者 用户邮箱',
+    input_id_or_email_or_name: '请输入用户 ID, 用户名, 或者 用户邮箱',
     no_such_user: '无此用户信息, 请输入正确的用户 ID 或者 用户邮箱！',
   },
   repository: {
@@ -975,6 +985,7 @@ export default {
     downloadZipFile: '下载执行文件',
     export: '导出',
     export_to_ms_format: '导出 MeterSphere 格式',
+    export_jmeter_format: '导出 Jmeter 格式',
     export_to_swagger3_format: '导出 Swagger3.0 格式',
     compare: '报告对比',
     generation_error: '报告生成错误, 无法查看, 请检查日志详情!',
@@ -1053,6 +1064,7 @@ export default {
     ramp_up_tips: 'RampUp 过大，图表渲染卡顿不予展示，这并不影响测试执行，请以实际结果为准',
     iterate_num: '迭代次数',
     by_iteration: '按迭代次数',
+    by_iteration_tip: '按迭代次数执行需要配置执行时长，JMeter会按照迭代次数和执行时长来决定是否结束测试',
     by_duration: '按持续时间',
     ramp_up_time_times: '次增加并发用户',
     advanced_config_error: '高级配置校验失败',
@@ -1139,6 +1151,8 @@ export default {
     hours: "时",
   },
   api_test: {
+    case_jump_message: "跳转的用例已经删除！",
+    scenario_jump_message: "跳转的场景已经删除！",
     is_continue: "是否继续",
     creator: "创建人",
     save_and_run: "保存并执行",
@@ -1284,6 +1298,7 @@ export default {
         batch_copy_end: "批量复制完成",
         delete_case_confirm: "确认删除用例",
         delete_confirm_step: "确认删除步骤",
+        debug_warning: "没有开启的步骤",
         assertions_rule: "断言规则",
         scenario_assertions: "场景断言",
         pre_operation: "前置操作",
@@ -1392,7 +1407,7 @@ export default {
       wait_controller: "等待控制器",
       if_controller: "条件控制器",
       loop_controller: "循环控制器",
-      transcation_controller: "事务控制器",
+      transaction_controller: "事务控制器",
       scenario_import: "场景导入",
       customize_script: "自定义脚本",
       customize_req: "自定义请求",
@@ -1919,7 +1934,7 @@ export default {
     },
     script: {
       tip_3: "脚本步骤会统计到场景执行结果中，执行报错时会影响场景的最终执行结果",
-      filter_request_type: "过滤请求类型",
+      filter_request_type: "忽略请求",
       execution_order: "脚本执行顺序",
       associated_scene_results: "关联场景结果",
       execute_before_step: "单个请求步骤前执行",
@@ -2039,6 +2054,11 @@ export default {
       minder_not_module_tip: "模块{0}，不能创建在非模块节点下",
       minder_all_module_tip: "全部用例为虚拟模块，请在其他模块创建用例",
       minder_issue_delete_tip: "取消缺陷关联成功",
+
+      minder_save_confirm_title: '请保存脑图',
+      minder_save_confirm_tip: '脑图未保存，确认保存脑图吗？',
+      minder_import_save_confirm_tip: '导入成功后会刷新脑图，确认保存脑图吗？',
+
       check_select: "请勾选用例",
       export_all_cases: '确定要导出全部用例吗?',
       input_test_case: '请输入关联用例名称',
@@ -2257,7 +2277,8 @@ export default {
       reviewed_by_me: "待我评审",
       creator: "创建人",
       done: "已评用例",
-      result_distribution: "结果分布"
+      result_distribution: "结果分布",
+      deadline_cannot_early_tips: "截止时间不能早于当前时间！",
     },
     comment: {
       no_comment: "暂无评论",
@@ -2423,10 +2444,20 @@ export default {
       use_third_party: "使用 Jira 缺陷模板",
       update_third_party_bugs: "更新第三方平台的缺陷",
       sync_bugs: "同步缺陷",
+      sync_complete: "同步完成",
+      issue_sync_tip: "当前项目正在同步缺陷, 请稍等!",
       save_before_open_comment: "请先保存缺陷再添加评论",
       delete_tip: "确认删除缺陷：",
       check_id_exist: "检查",
-      save_project_first: "请先保存项目"
+      save_project_first: "请先保存项目",
+      tapd_status_new: "新",
+      tapd_status_in_progress: "接受/处理",
+      tapd_status_reopened: "重新打开",
+      tapd_status_rejected: "已拒绝",
+      tapd_status_verified: "已验证",
+      tapd_status_closed: "已关闭",
+      tapd_status_resolved: "已解决",
+      please_choose_platform_status: "请选择平台状态"
     },
     report: {
       name: "测试计划报告",
@@ -2807,6 +2838,8 @@ export default {
     mail_subject: "邮件主题",
     mail_addressee: "收件人",
     mail_duplicate: "抄送人",
+    enter_mail_addressee: "输入回车添加邮箱",
+    enter_mail_duplicate: "输入回车添加邮箱",
   },
   notice: {
     operation: {

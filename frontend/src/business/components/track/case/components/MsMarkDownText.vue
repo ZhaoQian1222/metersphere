@@ -1,5 +1,5 @@
 <template>
-  <mavon-editor :id="id" :editable="!disabled" @imgAdd="imgAdd" :default-open="defaultOpen"
+  <mavon-editor :id="id" :editable="!disabled" @imgAdd="imgAdd" :default-open="defaultOpenValue"
                 :xss-options="xssOptions" :style="{'min-height': customMinHeight + 'px'}"
                 @change="$emit('change')"
                 :subfield="false" :toolbars="toolbars" :language="language" :toolbarsFlag="!disabled"
@@ -18,6 +18,12 @@ export default {
     data: Object,
     prop: String,
     disabled: Boolean,
+    defaultOpen: {
+      type: String,
+      default() {
+        return 'preview';
+      }
+    },
     autoReview: {
       type: Boolean,
       default() {
@@ -110,7 +116,7 @@ export default {
         },
         stripIgnoreTagBody: true
       },
-      defaultOpen: 'preview'
+      defaultOpenValue: 'preview'
     }
   },
 
@@ -134,28 +140,41 @@ export default {
       }
     }
   },
+  watch: {
+    defaultOpen() {
+      if (this.defaultOpen) {
+        this.defaultOpenValue = this.defaultOpen;
+      }
+    }
+  },
   mounted() {
     if (!this.disabled) {
       // 点击编辑，失去焦点展示
       let el = document.getElementById(this.id);
       if (!this.autoReview) {
-        this.defaultOpen = null;
+        this.defaultOpenValue = null;
+      }
+      if (this.defaultOpen) {
+        this.defaultOpenValue = this.defaultOpen;
       }
       if (el) {
         el.addEventListener('click', () => {
           let imagePreview = el.getElementsByClassName('v-note-img-wrapper');
           if (imagePreview.length > 0) { // 图片预览的时候不切换到编辑模式
-            if (this.autoReview)
-              this.defaultOpen = 'preview';
+            if (this.autoReview) {
+              this.defaultOpenValue = 'preview';
+            }
           } else {
-            if (this.autoReview)
-              this.defaultOpen = null;
+            if (this.autoReview) {
+              this.defaultOpenValue = null;
+            }
           }
         });
         let input = el.getElementsByClassName('auto-textarea-input');
         input[0].addEventListener('blur', () => {
-          if (this.autoReview)
-            this.defaultOpen = 'preview';
+          if (this.autoReview) {
+            this.defaultOpenValue = 'preview';
+          }
         });
       }
     }
@@ -164,9 +183,9 @@ export default {
   methods: {
     imgAdd(pos, file) {
       this.result.loading = true;
-      uploadMarkDownImg(file, (response, param) => {
+      uploadMarkDownImg(file, (data) => {
         this.$success(this.$t('commons.save_success'));
-        let url = '/resource/md/get?fileName=' + param.id + '_' + encodeURIComponent(param.fileName);
+        let url = '/resource/md/get?fileName=' + data;
         this.$refs.md.$img2Url(pos, url);
         this.result.loading = false;
       });
@@ -192,6 +211,10 @@ export default {
 
 /deep/ .v-note-wrapper {
   position: initial;
+}
+
+/deep/ .dropdown-item.dropdown-images {
+  display: none;
 }
 
 </style>

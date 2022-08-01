@@ -9,7 +9,8 @@
       :delete-permission="['PROJECT_TRACK_CASE:READ+DELETE']"
       :add-permission="['PROJECT_TRACK_CASE:READ+CREATE']"
       :update-permission="['PROJECT_TRACK_CASE:READ+EDIT']"
-      :default-label="$t('api_test.unplanned_case')"
+      default-label="未规划用例"
+      local-suffix="test_case"
       @add="add"
       @edit="edit"
       @drag="drag"
@@ -46,6 +47,12 @@
       @createCase="createCase"
       @refresh="refresh"
       ref="testCaseCreate"/>
+
+    <is-change-confirm
+      :tip="$t('test_track.case.minder_import_save_confirm_tip')"
+      @confirm="changeConfirm"
+      ref="isChangeConfirm"/>
+
   </div>
 
 </template>
@@ -63,10 +70,12 @@ import {getCurrentProjectID} from "@/common/js/utils";
 import ModuleTrashButton from "@/business/components/api/definition/components/module/ModuleTrashButton";
 import ModulePublicButton from "@/business/components/api/definition/components/module/ModulePublicButton";
 import {getTestCaseNodes} from "@/network/testCase";
+import IsChangeConfirm from "@/business/components/common/components/IsChangeConfirm";
 
 export default {
   name: "TestCaseNodeTree",
   components: {
+    IsChangeConfirm,
     MsSearchBar,
     TestCaseImport,
     TestCaseExport,
@@ -223,7 +232,9 @@ export default {
         this.$warning(this.$t('commons.check_project_tip'));
         return;
       }
-      this.$refs.testCaseImport.open();
+      if (!this.openMinderConfirm()) {
+        this.$refs.testCaseImport.open();
+      }
     },
     handleExport() {
       if (!this.projectId) {
@@ -274,6 +285,16 @@ export default {
         this.$emit("nodeSelectEvent", node, nodeIds, pNodes);
       }
     },
+    openMinderConfirm() {
+      let isTestCaseMinderChanged = this.$store.state.isTestCaseMinderChanged;
+      if (isTestCaseMinderChanged) {
+          this.$refs.isChangeConfirm.open();
+      }
+      return isTestCaseMinderChanged;
+    },
+    changeConfirm(isSave) {
+      this.$emit('importChangeConfirm', isSave);
+    }
   }
 };
 </script>

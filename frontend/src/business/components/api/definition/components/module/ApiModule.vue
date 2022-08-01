@@ -10,6 +10,7 @@
         :type="isReadOnly ? 'view' : 'edit'"
         :allLabel="$t('api_test.definition.api_all')"
         :default-label="$t('api_test.definition.unplanned_api')"
+        local-suffix="api_definition"
         @add="add"
         @edit="edit"
         @drag="drag"
@@ -209,12 +210,18 @@ export default {
       add(param) {
         param.projectId = this.projectId;
         param.protocol = this.condition.protocol;
-        this.$post("/api/module/add", param, () => {
-          this.$success(this.$t('commons.save_success'));
+        if (param && param.level >= 9) {
           this.list();
-        }, (error) => {
-          this.list();
-        });
+          this.$error(this.$t('commons.warning_module_add'));
+          return;
+        } else {
+          this.$post("/api/module/add", param, () => {
+            this.$success(this.$t('commons.save_success'));
+            this.list();
+          }, (error) => {
+            this.list();
+          });
+        }
       },
       remove(nodeIds) {
         this.$post("/api/module/delete", nodeIds, () => {

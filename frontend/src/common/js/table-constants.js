@@ -19,6 +19,25 @@ export const CUSTOM_FIELD_TYPE_OPTION = [
   {value: 'multipleInput',text: 'workspace.custom_filed.multipleInput'}
 ];
 
+export function CUSTOM_FIELD_TYPE_FILTERS(_this) {
+  return [
+    {value: 'input', text: _this.$t('workspace.custom_filed.input')},
+    {value: 'textarea', text: _this.$t('workspace.custom_filed.textarea')},
+    {value: 'select', text: _this.$t('workspace.custom_filed.select')},
+    {value: 'multipleSelect', text: _this.$t('workspace.custom_filed.multipleSelect')},
+    {value: 'radio', text: _this.$t('workspace.custom_filed.radio')},
+    {value: 'checkbox', text: _this.$t('workspace.custom_filed.checkbox')},
+    {value: 'member', text: _this.$t('workspace.custom_filed.member')},
+    {value: 'multipleMember', text: _this.$t('workspace.custom_filed.multipleMember')},
+    {value: 'date', text: _this.$t('workspace.custom_filed.date')},
+    {value: 'datetime', text: _this.$t('workspace.custom_filed.datetime')},
+    {value: 'richText', text: _this.$t('workspace.custom_filed.richText')},
+    {value: 'int', text: _this.$t('workspace.custom_filed.int')},
+    {value: 'float', text: _this.$t('workspace.custom_filed.float')},
+    {value: 'multipleInput', text: _this.$t('workspace.custom_filed.multipleInput')}
+  ];
+}
+
 export const UI_ELEMENT_LOCATION_TYPE_OPTION = [
   {value: 'id', text: 'id'},
   {value: 'name', text: 'name'},
@@ -105,6 +124,16 @@ export const ISSUE_STATUS_MAP = {
   'active': i18n.t('test_track.issue.status_active'),
   'delete': i18n.t('test_track.issue.status_delete'),
   'created':i18n.t('test_track.issue.status_new')
+}
+
+export const TAPD_ISSUE_STATUS_MAP = {
+  'new': i18n.t('test_track.issue.tapd_status_new'),
+  'in_progress': i18n.t('test_track.issue.tapd_status_in_progress'),
+  'reopened': i18n.t('test_track.issue.tapd_status_reopened'),
+  'rejected': i18n.t('test_track.issue.tapd_status_rejected'),
+  'verified': i18n.t('test_track.issue.tapd_status_verified'),
+  'closed':i18n.t('test_track.issue.tapd_status_closed'),
+  'resolved':i18n.t('test_track.issue.tapd_status_resolved')
 }
 
 export function API_SCENARIO_FILTERS () {

@@ -28,7 +28,7 @@
       <select-menu
         :data="projects"
         v-if="multipleProject"
-        width="160px"
+        width="64.5%"
         :current-data="currentProject"
         :title="$t('test_track.switch_project')"
         @dataChange="changeProject"/>
@@ -116,6 +116,7 @@ export default {
 
     open() {
       this.getProject();
+      this.selectCounts = null;
       this.$refs.relevanceDialog.open();
     },
 
@@ -154,7 +155,7 @@ export default {
     },
 
     getWorkSpaceList() {
-      this.$get("/workspace/list/userworkspace/" + encodeURIComponent(getCurrentUserId()), response => {
+      this.$get("/workspace/list/userworkspace", response => {
         this.workspaceList = response.data;
       });
     },

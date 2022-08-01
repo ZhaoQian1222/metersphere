@@ -107,6 +107,21 @@ public class TestReviewTestCaseService {
         return testCaseReviewTestCaseMapper.deleteByPrimaryKey(request.getId());
     }
 
+    public int deleteToGc(List<String> caseIds) {
+        return updateIsDel(caseIds, true);
+    }
+
+    private int updateIsDel(List<String> caseIds, Boolean isDel) {
+        if (CollectionUtils.isEmpty(caseIds)) {
+            return 0;
+        }
+        TestCaseReviewTestCaseExample example = new TestCaseReviewTestCaseExample();
+        example.createCriteria().andCaseIdIn(caseIds);
+        TestCaseReviewTestCase record = new TestCaseReviewTestCase();
+        record.setIsDel(isDel);
+        return testCaseReviewTestCaseMapper.updateByExampleSelective(record, example);
+    }
+
     private void checkReviewer(String reviewId) {
         List<String> userIds = testCaseReviewService.getTestCaseReviewerIds(reviewId);
         String currentId = SessionUtils.getUser().getId();
@@ -206,13 +221,18 @@ public class TestReviewTestCaseService {
             checkReviewCase(request.getReviewId());
         }
 
-        // 更新状态
+        // 更新状态{TestCase, TestCaseReviewTestCase}
         if (StringUtils.isNotBlank(request.getStatus())) {
             TestCaseExample example = new TestCaseExample();
             example.createCriteria().andIdIn(ids);
             TestCaseWithBLOBs testCase = new TestCaseWithBLOBs();
             testCase.setReviewStatus(request.getStatus());
             testCaseMapper.updateByExampleSelective(testCase, example);
+            TestCaseReviewTestCaseExample caseReviewTestCaseExample = new TestCaseReviewTestCaseExample();
+            caseReviewTestCaseExample.createCriteria().andReviewIdEqualTo(request.getReviewId()).andCaseIdIn(ids);
+            TestCaseReviewTestCase testCaseReviewTestCase = new TestCaseReviewTestCase();
+            testCaseReviewTestCase.setStatus(request.getStatus());
+            testCaseReviewTestCaseMapper.updateByExampleSelective(testCaseReviewTestCase, caseReviewTestCaseExample);
         }
     }
 
@@ -367,5 +387,9 @@ public class TestReviewTestCaseService {
                 extTestReviewCaseMapper::getPreOrder,
                 extTestReviewCaseMapper::getLastOrder,
                 testCaseReviewTestCaseMapper::updateByPrimaryKeySelective);
+    }
+
+    public int reduction(List<String> ids) {
+        return updateIsDel(ids, false);
     }
 }

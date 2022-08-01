@@ -16,6 +16,7 @@
               :custom-field-form="customFieldForm"
               :custom-field-rules="customFieldRules"
               :test-case-template="testCaseTemplate"
+              :default-open="richTextDefaultOpen"
               ref="testCaseBaseInfo"
             />
           </ms-aside-container>
@@ -70,17 +71,34 @@
               </div>
               <ms-form-divider :title="$t('test_track.case.step_info')"/>
 
-              <form-rich-text-item :disabled="readOnly" :label-width="formLabelWidth"
-                                   :title="$t('test_track.case.prerequisite')" :data="form" prop="prerequisite"/>
+              <form-rich-text-item :disabled="readOnly"
+                                   :label-width="formLabelWidth"
+                                   :title="$t('test_track.case.prerequisite')"
+                                   :data="form"
+                                   :default-open="richTextDefaultOpen"
+                                   prop="prerequisite"/>
 
               <step-change-item :label-width="formLabelWidth" :form="form"/>
-              <form-rich-text-item :disabled="readOnly" :label-width="formLabelWidth" v-if="form.stepModel === 'TEXT'"
-                                   :title="$t('test_track.case.step_desc')" :data="form" prop="stepDescription"/>
-              <form-rich-text-item :disabled="readOnly" :label-width="formLabelWidth" v-if="form.stepModel === 'TEXT'"
-                                   :title="$t('test_track.case.expected_results')" :data="form" prop="expectedResult"/>
+              <form-rich-text-item  v-if="form.stepModel === 'TEXT'"
+                                    prop="stepDescription"
+                                    :disabled="readOnly"
+                                    :label-width="formLabelWidth"
+                                    :title="$t('test_track.case.step_desc')"
+                                    :data="form"
+                                    :default-open="richTextDefaultOpen"/>
 
-              <test-case-step-item :label-width="formLabelWidth" v-if="form.stepModel === 'STEP' || !form.stepModel"
-                                   :form="form" :read-only="readOnly"/>
+              <form-rich-text-item  v-if="form.stepModel === 'TEXT'"
+                                    prop="expectedResult"
+                                    :disabled="readOnly"
+                                    :label-width="formLabelWidth"
+                                    :title="$t('test_track.case.expected_results')"
+                                    :data="form"
+                                    :default-open="richTextDefaultOpen"/>
+
+              <test-case-step-item v-if="form.stepModel === 'STEP' || !form.stepModel"
+                                   :label-width="formLabelWidth"
+                                   :form="form"
+                                   :read-only="readOnly"/>
 
               <ms-form-divider :title="$t('test_track.case.other_info')"/>
 
@@ -91,6 +109,7 @@
                                          @openComment="openComment"
                                          :is-click-attachment-tab.sync="isClickAttachmentTab"
                                          :version-enable="versionEnable"
+                                         :default-open="richTextDefaultOpen"
                                          ref="otherInfo"/>
               <test-case-comment :case-id="form.id"
                                  @getComments="getComments" ref="testCaseComment"/>
@@ -314,6 +333,9 @@ export default {
     },
     isCustomNum() {
       return this.$store.state.currentProjectIsCustomNum;
+    },
+    richTextDefaultOpen() {
+      return this.type === 'edit' ? 'preview' : 'edit';
     },
     readOnly() {
       const {rowClickHasPermission} = this.currentTestCaseInfo;
@@ -713,6 +735,8 @@ export default {
           }
           this.form.id = response.data.id;
           this.currentTestCaseInfo.id = response.data.id;
+          this.form.refId = response.data.refId;
+          this.currentTestCaseInfo.refId = response.data.refId;
           if (this.currentTestCaseInfo.isCopy) {
             this.currentTestCaseInfo.isCopy = null;
           }
@@ -835,7 +859,7 @@ export default {
       this.form.testId = '';
     },
     getMaintainerOptions() {
-      this.$post('/user/project/member/tester/list', {projectId: getCurrentProjectID()}, response => {
+      this.$get('/user/project/member/list', response => {
         this.maintainerOptions = response.data;
       });
     },
@@ -932,7 +956,9 @@ export default {
           this.currentProjectId = getCurrentProjectID();
         }
         this.versionData = response.data;
-        this.$refs.versionHistory.loading = false;
+        if (this.$refs.versionHistory) {
+          this.$refs.versionHistory.loading = false;
+        }
       });
     },
     setSpecialPropForCompare: function (that) {
@@ -954,11 +980,10 @@ export default {
             that.oldData = data[1].data.data;
             that.newData.createTime = row.createTime;
             that.oldData.createTime = this.$refs.versionHistory.versionOptions.filter(v => v.id === that.oldData.versionId)[0].createTime;
-            let testCase = that.versionData.filter(v => v.versionId === this.currentTestCaseInfo.versionId)[0];
             that.newData.versionName = that.versionData.filter(v => v.id === that.newData.id)[0].versionName;
             that.oldData.versionName = that.versionData.filter(v => v.id === that.oldData.id)[0].versionName;
             that.newData.userName = response.data.createName
-            that.oldData.userName = testCase.createName
+            that.oldData.userName = that.versionData.filter(v => v.id === that.oldData.id)[0].createName
             this.setSpecialPropForCompare(that);
             that.dialogVisible = true;
           }
@@ -985,7 +1010,11 @@ export default {
           return false;
         }
       });
-      let customValidate = this.$refs.testCaseBaseInfo.validateForm();
+      let baseInfoValidate = this.$refs.testCaseBaseInfo.validateForm();
+      if (!baseInfoValidate) {
+        return false;
+      }
+      let customValidate = this.$refs.testCaseBaseInfo.validateCustomForm();
       if (!customValidate) {
         let customFieldFormFields = this.$refs.testCaseBaseInfo.getCustomFields();
         for (let i = 0; i < customFieldFormFields.length; i++) {

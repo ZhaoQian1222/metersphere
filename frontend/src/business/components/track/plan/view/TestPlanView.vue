@@ -30,8 +30,6 @@
     <test-plan-report-content class="plan-report" v-if="activeIndex === 'report'" :plan-id="planId" :version-enable="versionEnable"/>
 
     <is-change-confirm
-      :title="'请保存脑图'"
-      :tip="'脑图未保存，确认保存脑图吗？'"
       @confirm="changeConfirm"
       ref="isChangeConfirm"/>
 
@@ -90,6 +88,12 @@ export default {
     }
   },
   watch: {
+    '$route.query.projectId'() {
+      let projectId = this.$route.query.projectId;
+      if (projectId && projectId !== getCurrentProjectID()) {
+        sessionStorage.setItem(PROJECT_ID, projectId);
+      }
+    },
     '$route.params.planId'() {
       this.genRedirectParam();
       this.getTestPlans();

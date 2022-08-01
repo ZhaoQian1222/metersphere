@@ -1,6 +1,6 @@
 <template>
   <div>
-    <el-dialog :close-on-click-modal="false" :title="title" :visible.sync="createVisible" destroy-on-close
+    <el-dialog :close-on-click-modal="false" :title="title" :visible.sync="createVisible" v-if="createVisible"
                @close="handleClose">
       <el-form v-loading="result.loading" :model="form" :rules="rules" ref="form" label-position="right" label-width="80px" size="small">
         <el-form-item :label-width="labelWidth" :label="$t('commons.name')" prop="name">
@@ -232,7 +232,14 @@ export default {
       listenGoBack(this.handleClose);
       if (row) {
         this.title = this.$t('project.edit');
-        row.issueConfigObj = row.issueConfig ? JSON.parse(row.issueConfig) : {};
+        row.issueConfigObj = row.issueConfig ? JSON.parse(row.issueConfig) : {jiraIssueTypeId: null, jiraStoryTypeId: null};
+        // 兼容性处理
+        if (!row.issueConfigObj.jiraIssueTypeId) {
+          row.issueConfigObj.jiraIssueTypeId = null;
+        }
+        if (!row.issueConfigObj.jiraStoryTypeId) {
+          row.issueConfigObj.jiraStoryTypeId = null;
+        }
         this.form = Object.assign({}, row);
         this.issueTemplateId = row.issueTemplateId;
       } else {
@@ -243,7 +250,7 @@ export default {
       }
       this.platformOptions = [];
       this.platformOptions.push(...ISSUE_PLATFORM_OPTION);
-      this.result = this.$get("/service/integration/all/" + getCurrentUser().lastWorkspaceId, response => {
+      this.result = this.$get("/service/integration/all", response => {
         let data = response.data;
         let platforms = data.map(d => d.platform);
         this.filterPlatformOptions(platforms, TAPD);

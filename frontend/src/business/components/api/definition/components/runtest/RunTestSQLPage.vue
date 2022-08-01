@@ -43,7 +43,7 @@
     <!-- 环境 -->
     <api-environment-config ref="environmentConfig" @close="environmentConfigClose"/>
     <!-- 执行组件 -->
-    <ms-run :debug="false" :environment="api.environment" :reportId="reportId" :run-data="runData"
+    <ms-run :debug="false" :reportId="reportId" :run-data="runData"
             @runRefresh="runRefresh" @errorRefresh="errorRefresh" ref="runTest"/>
 
   </div>
@@ -61,6 +61,7 @@ import MsRun from "../Run";
 import MsBasisParameters from "../request/database/BasisParameters";
 import {REQ_METHOD} from "../../model/JsonData";
 import {TYPE_TO_C} from "@/business/components/api/automation/scenario/Setting";
+import {mergeRequestDocumentData} from "@/business/components/api/definition/api-definition";
 
 export default {
   name: "RunTestSQLPage",
@@ -100,6 +101,7 @@ export default {
   props: {apiData: {}, currentProtocol: String, syncTabs: Array, projectId: String},
   methods: {
     handleCommand(e) {
+      mergeRequestDocumentData(this.api.request);
       switch (e) {
         case "load_case":
           return this.loadCase();
@@ -290,8 +292,14 @@ export default {
   created() {
     // 深度复制
     this.api = JSON.parse(JSON.stringify(this.apiData));
+    if (!this.api.environmentId) {
+      this.api.environmentId = this.$store.state.useEnvironment;
+    }
     this.api.protocol = this.currentProtocol;
     this.currentRequest = this.api.request;
+    if (!this.currentRequest.environmentId) {
+      this.currentRequest.environmentId = this.$store.state.useEnvironment;
+    }
     this.runLoading = false;
     this.getEnvironments();
     this.getResult();

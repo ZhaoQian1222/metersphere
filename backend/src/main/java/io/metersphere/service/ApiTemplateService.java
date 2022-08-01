@@ -105,7 +105,7 @@ public class ApiTemplateService extends TemplateBaseService {
      *
      * @param customField
      */
-    public void handleSystemFieldCreate(CustomField customField) {
+    public void handleSystemFieldCreate(CustomFieldDao customField) {
         ApiTemplate workspaceSystemTemplate = getWorkspaceSystemTemplate(customField.getProjectId());
         if (workspaceSystemTemplate == null) {
             createTemplateWithUpdateField(customField.getProjectId(), customField);
@@ -114,7 +114,7 @@ public class ApiTemplateService extends TemplateBaseService {
         }
     }
 
-    private void createTemplateWithUpdateField(String projectId, CustomField customField) {
+    private void createTemplateWithUpdateField(String projectId, CustomFieldDao customField) {
         UpdateApiFieldTemplateRequest request = new UpdateApiFieldTemplateRequest();
         ApiTemplate apiTemplate = new ApiTemplate();
         apiTemplate.setName("default");

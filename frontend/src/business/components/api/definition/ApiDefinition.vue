@@ -44,7 +44,8 @@
               right-content="CASE"
             >
               <template v-slot:version>
-                <version-select v-xpack :project-id="projectId" :version-id="trashVersion" @changeVersion="changeVersion"/>
+                <version-select v-xpack :project-id="projectId" :version-id="trashVersion"
+                                @changeVersion="changeVersion"/>
               </template>
               <!-- 列表集合 -->
               <ms-api-list
@@ -422,8 +423,8 @@ export default {
     let workspaceId = this.$route.params.workspaceId;
     if (workspaceId) {
       sessionStorage.setItem(WORKSPACE_ID, workspaceId);
-    }else {
-      if(this.$route.query.workspaceId){
+    } else {
+      if (this.$route.query.workspaceId) {
         workspaceId = this.$route.query.workspaceId;
         sessionStorage.setItem(WORKSPACE_ID, workspaceId);
       }
@@ -431,20 +432,20 @@ export default {
     let projectId = this.$route.params.projectId;
     if (projectId) {
       sessionStorage.setItem(PROJECT_ID, projectId);
-    }else {
+    } else {
       if (this.$route.query.projectId) {
         projectId = this.$route.query.projectId;
         sessionStorage.setItem(PROJECT_ID, this.$route.query.projectId);
       }
     }
     this.getEnv();
+  },
+  mounted() {
+    this.init();
     // 通知过来的数据跳转到编辑
     if (this.$route.query.caseId) {
       this.activeDom = 'middle';
     }
-  },
-  mounted() {
-    this.init();
   },
   methods: {
     setEnvironment(data) {
@@ -496,7 +497,7 @@ export default {
     },
     addTab(tab) {
       if (tab.name === 'add') {
-        this.result = this.$get('/project_application/get/config/' + this.projectId +"/API_QUICK_MENU", res => {
+        this.result = this.$get('/project_application/get/config/' + this.projectId + "/API_QUICK_MENU", res => {
           let projectData = res.data;
           if (projectData && projectData.apiQuickMenu === 'api') {
             this.handleTabAdd("ADD");
@@ -631,7 +632,7 @@ export default {
         }
       });
       if (message !== "") {
-        this.$alert(this.$t('commons.api') + " [ " + message.substr(0, message.length - 1) + " ] " + this.$t('commons.confirm_info'), '', {
+        this.$alert(this.$t('commons.api') + " [ " + message + " ] " + this.$t('commons.confirm_info'), '', {
           confirmButtonText: this.$t('commons.confirm'),
           cancelButtonText: this.$t('commons.cancel'),
           callback: (action) => {
@@ -713,10 +714,6 @@ export default {
       this.handleTabsEdit(this.$t('api_test.definition.request.fast_debug'), "debug", id);
     },
     init() {
-      let routeTestCase = this.$route.params.apiDefinition;
-      if (routeTestCase) {
-        this.editApi(routeTestCase);
-      }
       let dataRange = this.$route.params.dataSelectRange;
       let dataType = this.$route.params.dataType;
       if (dataRange) {
@@ -929,7 +926,6 @@ export default {
 
 .ms-api-button {
   position: absolute;
-  top: 86px;
   right: 10px;
   padding: 0;
   background: 0 0;

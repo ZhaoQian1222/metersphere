@@ -15,11 +15,15 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <shiro.version>1.8.0</shiro.version>
         <java.version>11</java.version>
-        <flyway.version>7.15.0</flyway.version>
-        <dubbo.version>2.7.15</dubbo.version>
         <skipAntRunForJenkins>false</skipAntRunForJenkins>
+        <!-- 第三方不包统一版本，如果不指定，Spring 会为我们选择匹配的版本 -->
+        <dubbo.version>2.7.15</dubbo.version>
+        <flyway.version>7.15.0</flyway.version>
+        <shiro.version>1.9.0</shiro.version>
+        <mssql-jdbc.version>7.4.1.jre8</mssql-jdbc.version>
+        <postgresql.version>42.3.2</postgresql.version>
+        <java-websocket.version>1.5.3</java-websocket.version>
     </properties>
 
     <dependencies>
@@ -116,7 +120,7 @@
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>3.17.0</version>
+            <version>3.17.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.session</groupId>
@@ -159,7 +163,7 @@
         <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>ms-jmeter-core</artifactId>
-            <version>1.1.9</version>
+            <version>1.2.1</version>
             <exclusions>
                 <exclusion>
                     <artifactId>netty</artifactId>
@@ -302,7 +306,7 @@
         <dependency>
             <groupId>org.java-websocket</groupId>
             <artifactId>Java-WebSocket</artifactId>
-            <version>1.5.0</version>
+            <version>${java-websocket.version}</version>
         </dependency>
         <!-- xmind export-->
         <dependency>
@@ -366,6 +370,13 @@
             <groupId>com.github.java-json-tools</groupId>
             <artifactId>json-schema-validator</artifactId>
             <version>2.2.14</version>
+        </dependency>
+
+        <!--解决升级JDK11后动态加载JAR 需要JVM的JCA签名信任才能作为加密提供者-->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.70</version>
         </dependency>
 
         <dependency>

@@ -153,6 +153,10 @@ export default {
           });
           // csv 处理
           d.fileMetadataList?.forEach(f => {
+            // 去掉重复的文件
+            if (this.fileList.filter(item => item.name === f.name).length > 0) {
+              return;
+            }
             this.fileList.push(f);
             this.tableData.push({
               name: f.name,
@@ -166,8 +170,8 @@ export default {
         this.$emit('fileChange', this.scenarios);
         this.$success(this.$t('test_track.case.import.success'));
         this.loadApiAutomationVisible = false;
+        this.selectIds.clear();
       });
-      this.selectIds.clear();
     },
     search() {
       this.getProjectScenarios();

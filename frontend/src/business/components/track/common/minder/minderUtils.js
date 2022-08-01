@@ -1,8 +1,9 @@
 import i18n from "@/i18n/i18n";
-import {getCurrentProjectID} from "../../../../../common/js/utils";
+import {getCurrentProjectID, getCurrentWorkspaceId} from "../../../../../common/js/utils";
 import {success, warning} from "../../../../../common/js/message";
 import {deleteIssueRelate} from "@/network/Issue";
 import {minderPageInfoMap} from "@/network/testCase";
+import {setPriorityView} from "vue-minder-editor-plus/src/script/tool/utils";
 
 export function listenNodeSelected(callback) {
   let minder = window.minder;
@@ -340,7 +341,7 @@ export function appendNextPageNode(parent) {
     }
   }
   let minderPageInfo = minderPageInfoMap.get(parent.data.id === 'root' ? '' : parent.data.id);
-  let total = minderPageInfo.total;
+  let total = minderPageInfo ? minderPageInfo.total : 0;
   if (total > caseNum) {
     let nexPageNode = {
       text: '...',
@@ -415,6 +416,8 @@ function expandNode(node) {
   node.expand();
   node.renderTree();
   window.minder.layout(60);
+  // 手动修改优先级的设置，避免展开时优先级显示不正确
+  setPriorityView(true, 'P');
 }
 
 
@@ -595,7 +598,12 @@ export function handleMinderIssueDelete(commandName, isPlan) {
         if (data.type === 'issue') {
           let caseResourceId = node.parent.data.id;
           let p = new Promise((resolve) => {
-            deleteIssueRelate({id: data.id, caseResourceId, isPlanEdit: isPlan}, () => {
+            deleteIssueRelate({
+              id: data.id,
+              caseResourceId,
+              isPlanEdit: isPlan,
+              workspaceId: getCurrentWorkspaceId()
+            }, () => {
               resolve();
             });
           });

@@ -43,11 +43,11 @@
               <template v-slot:default="scope">
                 <status-table-item v-if="scope.row.execResult === 'success'" :value="'Pass'"/>
                 <status-table-item v-else-if="scope.row.execResult === 'error'" :value="'Failure'"/>
-                <status-table-item v-else-if="scope.row.execResult === 'STOP'" :value="'STOP'"/>
+                <status-table-item v-else-if="scope.row.execResult === 'STOP'" :value="'ApiCaseStop'"/>
                 <status-table-item v-else-if="scope.row.execResult === 'errorReportResult'"
                                    :value="'ErrorReportResult'"/>
                 <status-table-item v-else-if="scope.row.execResult === 'Timeout'" :value="'Timeout'"/>
-                <status-table-item v-else :value="'Prepare'"/>
+                <status-table-item v-else :value="'ApiCasePrepare'"/>
               </template>
             </ms-table-column>
           </ms-table>
@@ -56,7 +56,7 @@
     </ms-aside-container>
     <ms-main-container>
       <el-card v-if="showResponse">
-        <ms-request-result-tail :response="response" ref="debugResult"/>
+        <ms-request-result-tail :response="response" ref="debugResult" :is-test-plan="showResponse"/>
       </el-card>
       <div class="empty" v-else>{{ $t('test_track.plan.load_case.content_empty') }}</div>
     </ms-main-container>
@@ -204,7 +204,11 @@ export default {
           getApiReport(row.id, (data) => {
             if (data && data.content) {
               this.showResponse = true;
-              this.response = JSON.parse(data.content);
+              try {
+                this.response = JSON.parse(data.content);
+              } catch (e) {
+                this.response = {};
+              }
             }
           });
         }

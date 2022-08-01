@@ -16,8 +16,8 @@ public class ResourceController {
     @Resource
     ResourceService resourceService;
     @PostMapping(value = "/md/upload", consumes = {"multipart/form-data"})
-    public void upload(@RequestPart(value = "request") MdUploadRequest request, @RequestPart(value = "file", required = false) MultipartFile file) {
-        resourceService.mdUpload(request, file);
+    public String upload(@RequestPart(value = "request") MdUploadRequest request, @RequestPart(value = "file", required = false) MultipartFile file) {
+        return resourceService.mdUpload(request, file);
     }
 
     @GetMapping(value = "/md/get")
@@ -26,13 +26,13 @@ public class ResourceController {
     }
 
     @GetMapping(value = "/md/get/url")
-    public ResponseEntity<byte[]> getFileByUrl(@RequestParam ("url") String url) {
-        return resourceService.getMdImageByUrl(url);
+    public ResponseEntity<byte[]> getFileByUrl(@RequestParam ("url") String url, @RequestParam (value = "platform", required = false) String platform) {
+        return resourceService.getMdImageByUrl(url, platform);
     }
 
     @GetMapping(value = "/ui/get")
-    public ResponseEntity<FileSystemResource> getUiFile(@RequestParam ("fileName") String fileName) {
-        return resourceService.getUiResultImage(fileName);
+    public ResponseEntity<FileSystemResource> getUiFile(@RequestParam ("fileName") String fileName, @RequestParam ("reportId") String reportId) {
+        return resourceService.getUiResultImage(fileName, reportId);
     }
 
     /**

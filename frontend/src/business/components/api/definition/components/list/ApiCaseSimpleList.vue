@@ -8,6 +8,7 @@
                 class="search-input" size="small"
                 v-model="condition.name"/>
       <el-button type="primary" style="float: right;margin-right: 10px" icon="el-icon-plus" size="small"
+                 v-permission="['PROJECT_API_DEFINITION:READ+CREATE_CASE']"
                  @click="addTestCase" v-if="apiDefinitionId">{{ $t('commons.add') }}
       </el-button>
       <ms-table
@@ -30,6 +31,7 @@
         operator-width="190px"
         @refresh="initTable"
         ref="caseTable"
+        class="api-case-simple-list"
       >
         <ms-table-column
           prop="deleteTime"
@@ -134,13 +136,20 @@
             min-width="180px"
             :field="item"
             :fields-width="fieldsWidth"
+            :show-overflow-tooltip=false
             :label="'API'+ $t('api_test.definition.api_path')"/>
 
-          <ms-table-column v-if="item.id=='tags'" prop="tags" width="120px" :label="$t('commons.tag')">
+          <ms-table-column v-if="item.id=='tags'" prop="tags" width="120px" :label="$t('commons.tag')"
+                           :show-overflow-tooltip=false>
             <template v-slot:default="scope">
-              <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
-                      :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=120"
-                      :content="itemName" style="margin-left: 0px; margin-right: 2px"/>
+              <el-tooltip class="item" effect="dark" placement="top">
+              <div v-html="getTagToolTips(scope.row.tags)" slot="content"></div>
+              <div class="oneLine">
+                <ms-tag v-for="(itemName,index)  in scope.row.tags" :key="index" type="success" effect="plain"
+                        :show-tooltip="scope.row.tags.length===1&&itemName.length*12<=100" :content="itemName"
+                        style="margin-left: 0px; margin-right: 2px"/>
+              </div>
+            </el-tooltip>
               <span/>
             </template>
           </ms-table-column>
@@ -488,14 +497,20 @@ export default {
     // 切换tab之后版本查询
     this.condition.versionId = this.currentVersion;
     this.initTable();
+    this.getVersionOptions();
+    this.checkVersionEnable();
+  },
+  mounted() {
     // 通知过来的数据跳转到编辑
     if (this.$route.query.caseId) {
       this.$get('/api/testcase/findById/' + this.$route.query.caseId, (response) => {
+        if(!response.data){
+          this.$error(this.$t('api_test.case_jump_message'));
+          return;
+        }
         this.handleTestCase(response.data);
       });
     }
-    this.getVersionOptions();
-    this.checkVersionEnable();
   },
   watch: {
     selectNodeIds() {
@@ -815,7 +830,7 @@ export default {
         }
         selectApi.url = request.path;
         this.$refs.caseList.runTestCase(selectApi, testCase.id);
-        let obj = {id:testCase.id};
+        let obj = {id: testCase.id};
         this.$post('/api/testcase/updateExecuteInfo', obj);
       });
     },
@@ -856,19 +871,28 @@ export default {
       });
     },
     handleCopy(row) {
-      this.$get('/api/testcase/findById/' + row.id, (response) => {
+      this.$get('/api/definition/get/' + row.apiDefinitionId, (response) => {
+        let api = response.data;
+        if (api) {
+          this.getCaseAndOpen(row.id, api.name, row.apiDefinitionId);
+        }
+      });
+    },
+    getCaseAndOpen(id, apiName, apiId) {
+      this.$get('/api/testcase/findById/' + id, (response) => {
         let data = response.data;
         let uuid = getUUID();
         let apiCaseRequest = JSON.parse(data.request);
         apiCaseRequest.id = uuid;
-        if(apiCaseRequest.type === "TCPSampler"){
+        if (apiCaseRequest.type === "TCPSampler") {
           apiCaseRequest.method = "TCP";
-        }else if(apiCaseRequest.type === "JDBCSampler"){
+        } else if (apiCaseRequest.type === "JDBCSampler") {
           apiCaseRequest.method = "SQL";
         }
+        apiCaseRequest.name = apiName;
         let obj = {
           name: "copy_" + data.name,
-          apiDefinitionId: row.apiDefinitionId,
+          apiDefinitionId: apiId,
           versionId: data.versionId,
           priority: data.priority,
           active: true,
@@ -1255,6 +1279,17 @@ export default {
           }
         });
       }
+    },
+    getTagToolTips(tags) {
+      try {
+        let showTips = "";
+        tags.forEach(item => {
+          showTips += item + ",";
+        })
+        return showTips.substr(0, showTips.length - 1);
+      } catch (e) {
+        return "";
+      }
     }
   },
 };
@@ -1306,6 +1341,17 @@ export default {
   color: #6D317C;
 }
 
+.oneLine {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .ms-unexecute {
 }
+
+.api-case-simple-list >>> .el-table {
+  height: calc(100vh - 262px) !important;
+}
+
 </style>

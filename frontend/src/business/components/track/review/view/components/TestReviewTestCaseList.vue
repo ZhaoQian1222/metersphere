@@ -80,18 +80,6 @@
         </ms-table-column>
 
         <ms-table-column
-          prop="type"
-          :field="item"
-          :fields-width="fieldsWidth"
-          :filters="typeFilters"
-          min-width="120px"
-          :label="$t('test_track.case.type')">
-          <template v-slot:default="scope">
-            <type-table-item :value="scope.row.type"/>
-          </template>
-        </ms-table-column>
-
-        <ms-table-column
           prop="maintainerName"
           :field="item"
           :fields-width="fieldsWidth"
@@ -194,8 +182,12 @@ import TestReviewTestCaseEdit from "./TestReviewTestCaseEdit";
 import ReviewStatus from "@/business/components/track/case/components/ReviewStatus";
 import {
   _handleSelectAll,
-  buildBatchParam, deepClone, getCustomTableWidth, getLastTableSortField,
-  getSelectDataCounts, getTableHeaderWithCustomFields,
+  buildBatchParam,
+  deepClone,
+  getCustomTableWidth,
+  getLastTableSortField,
+  getSelectDataCounts,
+  getTableHeaderWithCustomFields,
   initCondition,
   toggleAllSelection
 } from "@/common/js/tableUtils";
@@ -205,7 +197,7 @@ import HeaderLabelOperate from "@/business/components/common/head/HeaderLabelOpe
 import MsTableHeaderSelectPopover from "@/business/components/common/components/table/MsTableHeaderSelectPopover";
 import MsTableColumn from "@/business/components/common/components/table/MsTableColumn";
 import MsTable from "@/business/components/common/components/table/MsTable";
-import {editTestReviewTestCaseOrder, getTestPlanTestCase, getTestReviewTestCase} from "@/network/testCase";
+import {editTestReviewTestCaseOrder, getTestReviewTestCase} from "@/network/testCase";
 import {getCurrentProjectID, hasLicense} from "@/common/js/utils";
 
 export default {
@@ -236,6 +228,7 @@ export default {
       currentPage: 1,
       pageSize: 10,
       total: 0,
+      pageCount: 0,
       enableOrderDrag: true,
       selectRows: new Set(),
       testReview: {},
@@ -323,6 +316,9 @@ export default {
     currentVersion() {
       this.condition.versionId = this.currentVersion;
       this.initTableData();
+    },
+    pageCount() {
+      this.currentPage = 1;
     }
   },
   computed: {
@@ -335,6 +331,7 @@ export default {
   },
   created() {
     this.condition.orders = getLastTableSortField(this.tableHeaderKey);
+    this.pageCount = Math.ceil(this.total / this.pageSize);
   },
   mounted() {
     this.$emit('setCondition', this.condition);
@@ -382,14 +379,12 @@ export default {
       if (this.reviewId) {
         this.result = getTestReviewTestCase(this.currentPage, this.pageSize, this.condition, (data) => {
           this.total = data.itemCount;
+          this.pageCount = Math.ceil(this.total / this.pageSize);
           this.tableData = data.listObject;
           this.getPreData();
-          if (callback && typeof callback === "function") {
+          if (callback && callback instanceof Function) {
             callback();
           }
-          setTimeout(() => {
-            this.$refs.table.reloadTable()
-          }, 200);
         });
         this.getNexPageData();
       }

@@ -8,8 +8,8 @@
     @close="handleClose">
     {{tip}}
     <template v-slot:footer>
-      <el-button type="primary" @click="save" @keydown.enter.native.prevent>{{$t('保存')}}</el-button>
-      <el-button @click="cancel">{{$t('不保存')}}</el-button>
+      <el-button type="primary" @click="save" @keydown.enter.native.prevent>{{$t('commons.save')}}</el-button>
+      <el-button @click="cancel">{{$t('commons.not_save')}}</el-button>
     </template>
   </ms-edit-dialog>
 </template>
@@ -27,7 +27,20 @@ export default {
       }
     }
   },
-  props: ['title','tip', 'versionEnable'],
+  props: {
+    title: {
+      type: String,
+      default() {
+        return this.$t('test_track.case.minder_save_confirm_title');
+      }
+    },
+    tip: {
+      type: String,
+      default() {
+        return this.$t('test_track.case.minder_save_confirm_tip');
+      }
+    }
+  },
   methods: {
     open(item, temWorkspaceId) {
       this.visible = true;

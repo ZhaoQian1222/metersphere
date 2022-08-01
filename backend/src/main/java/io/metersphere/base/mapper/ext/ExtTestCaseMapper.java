@@ -5,6 +5,7 @@ import io.metersphere.base.domain.TestCaseWithBLOBs;
 import io.metersphere.controller.request.BaseQueryRequest;
 import io.metersphere.dto.RelationshipGraphData;
 import io.metersphere.track.dto.TestCaseDTO;
+import io.metersphere.track.request.testcase.DeleteTestCaseRequest;
 import io.metersphere.track.request.testcase.QueryTestCaseRequest;
 import io.metersphere.track.request.testcase.TestCaseBatchRequest;
 import io.metersphere.track.response.TrackCountResult;
@@ -23,6 +24,8 @@ public interface ExtTestCaseMapper {
     List<TestCaseDTO> publicList(@Param("request") QueryTestCaseRequest request);
 
     int moduleCount(@Param("request") QueryTestCaseRequest request);
+
+    List<String> getPublicProjectIdByWorkSpaceId(@Param("request") QueryTestCaseRequest request);
 
     List<TestCaseDTO> listByMethod(@Param("request") QueryTestCaseRequest request);
 
@@ -108,7 +111,7 @@ public interface ExtTestCaseMapper {
 
     List<TestCaseWithBLOBs> getCustomFieldsByIds(@Param("ids") List<String> ids);
 
-    int deleteToGc(@Param("request") TestCase testCase);
+    int deleteToGc(@Param("request") DeleteTestCaseRequest testCase);
 
     int deletePublic(@Param("request") TestCase testCase);
 
