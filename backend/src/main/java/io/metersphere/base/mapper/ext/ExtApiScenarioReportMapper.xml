@@ -213,6 +213,12 @@
                                     #{value}
                                 </foreach>
                             </when>
+                            <when test="key=='user_name' || key=='create_user'">
+                                and s_r.user_id in
+                                <foreach collection="values" item="value" separator="," open="(" close=")">
+                                    #{value}
+                                </foreach>
+                            </when>
                             <otherwise>
                                 and s_r.trigger_mode in
                                 <foreach collection="values" item="value" separator="," open="(" close=")">
@@ -454,6 +460,9 @@
         <foreach collection="request.projects" item="id" separator="," open="(" close=")">
             #{id}
         </foreach>
+    </select>
+    <select id="selectByProjectIdAndLessThanTime" resultType="java.lang.String">
+        select id from api_scenario_report where create_time &lt; #{time} and project_id = #{projectId}
     </select>
 
 </mapper>

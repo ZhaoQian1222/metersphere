@@ -5,6 +5,7 @@ import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.base.domain.Schedule;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.util.List;
 
 /**
@@ -35,6 +36,7 @@ public class ScheduleRequest extends Schedule {
     private List<KeyValue> headers;
     private List<KeyValue> arguments;
     private MsAuthManager authManager;
+    private Boolean coverModule = false;
     //自定义字段
     private String customFields;
 

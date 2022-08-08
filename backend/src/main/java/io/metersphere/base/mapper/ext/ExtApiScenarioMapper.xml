@@ -721,7 +721,7 @@
             JOIN project_version
             ON tmp.project_id = project_version.project_id AND
             tmp.version_id = project_version.id AND project_version.latest = TRUE
-            WHERE ref_id = #{refId,jdbcType=VARCHAR}
+            WHERE ref_id = #{refId,jdbcType=VARCHAR} and tmp.status != 'Trash'
             LIMIT 1
             )
             UNION ALL
@@ -770,4 +770,15 @@
         FROM api_scenario
         WHERE `status` != 'Trash' AND project_id IN (SELECT id FROM project);
     </select>
+    <select id="selectRepeatByBLOBs" resultType="io.metersphere.base.domain.ApiScenarioWithBLOBs">
+        SELECT * from api_scenario
+        where name in
+        <foreach collection="names" item="name" separator="," open="(" close=")">
+            #{name}
+        </foreach>
+        and status != 'Trash'
+        and project_id = #{projectId}
+    </select>
+
 </mapper>
+

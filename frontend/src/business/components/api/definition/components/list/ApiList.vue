@@ -243,9 +243,11 @@ import MsTipButton from "@/business/components/common/components/MsTipButton";
 import CaseBatchMove from "@/business/components/api/definition/components/basis/BatchMove";
 import {
   buildBatchParam,
+  deepClone,
   getCustomTableHeader,
   getCustomTableWidth,
   getLastTableSortField,
+  getSelectDataCounts,
   initCondition
 } from "@/common/js/tableUtils";
 import HeaderLabelOperate from "@/business/components/common/head/HeaderLabelOperate";
@@ -254,6 +256,7 @@ import {editApiDefinitionOrder} from "@/network/api";
 import {getProtocolFilter} from "@/business/components/api/definition/api-definition";
 import {getGraphByCondition} from "@/network/graph";
 import ListItemDeleteConfirm from "@/business/components/common/components/ListItemDeleteConfirm";
+import {buildNodePath} from "@/business/components/api/definition/model/NodeTree";
 
 const requireComponent = require.context('@/business/components/xpack/', true, /\.vue$/);
 const relationshipGraphDrawer = requireComponent.keys().length > 0 ? requireComponent("./graph/RelationshipGraphDrawer.vue") : {};
@@ -406,20 +409,7 @@ export default {
         {text: this.$t('test_track.review.pass'), value: '通过'},
         {text: this.$t('test_track.review.un_pass'), value: '未通过'},
       ],
-      methodFilters: [
-        {text: 'GET', value: 'GET'},
-        {text: 'POST', value: 'POST'},
-        {text: 'PUT', value: 'PUT'},
-        {text: 'PATCH', value: 'PATCH'},
-        {text: 'DELETE', value: 'DELETE'},
-        {text: 'OPTIONS', value: 'OPTIONS'},
-        {text: 'HEAD', value: 'HEAD'},
-        {text: 'CONNECT', value: 'CONNECT'},
-        {text: 'DUBBO', value: 'DUBBO'},
-        {text: 'dubbo://', value: 'dubbo://'},
-        {text: 'SQL', value: 'SQL'},
-        {text: 'TCP', value: 'TCP'},
-      ],
+      methodFilters: [],
       userFilters: [],
       versionFilters: [],
       valueArr: {
@@ -489,7 +479,14 @@ export default {
     },
     editApiDefinitionOrder() {
       return editApiDefinitionOrder;
-    }
+    },
+    moduleOptionsNew() {
+      let moduleOptions = [];
+      this.moduleOptions.forEach(node => {
+        buildNodePath(node, {path: ''}, moduleOptions);
+      });
+      return moduleOptions;
+    },
   },
   created: function () {
     if (!this.projectName || this.projectName === "") {
@@ -509,7 +506,7 @@ export default {
     this.getMaintainerOptions();
     this.getVersionOptions();
     this.checkVersionEnable();
-
+    this.getProtocolFilter();
 
     // 通知过来的数据跳转到编辑
     if (this.$route.query.resourceId) {
@@ -530,6 +527,7 @@ export default {
       }
     },
     currentProtocol() {
+      this.getProtocolFilter();
       this.currentPage = 1;
       initCondition(this.condition, false);
       this.closeCaseModel();
@@ -556,6 +554,9 @@ export default {
     },
   },
   methods: {
+    getProtocolFilter() {
+      this.methodFilters = getProtocolFilter(this.currentProtocol);
+    },
     getProjectName() {
       this.$get('project/get/' + this.projectId, response => {
         let project = response.data;
@@ -565,6 +566,10 @@ export default {
       });
     },
     generateGraph() {
+      if (getSelectDataCounts(this.condition, this.total, this.$refs.table.selectRows) > 100) {
+        this.$warning(this.$t('test_track.case.generate_dependencies_warning'));
+        return;
+      }
       getGraphByCondition('API', buildBatchParam(this, this.$refs.table.selectIds), (data) => {
         this.graphData = data;
         this.$refs.relationshipGraph.open();
@@ -572,11 +577,11 @@ export default {
     },
     handleBatchMove() {
       this.isMoveBatch = true;
-      this.$refs.testCaseBatchMove.open(this.moduleTree, [], this.moduleOptions);
+      this.$refs.testCaseBatchMove.open(this.moduleTree, [], this.moduleOptionsNew);
     },
     handleBatchCopy() {
       this.isMoveBatch = false;
-      this.$refs.testCaseBatchMove.open(this.moduleTree, this.$refs.table.selectIds, this.moduleOptions);
+      this.$refs.testCaseBatchMove.open(this.moduleTree, this.$refs.table.selectIds, this.moduleOptionsNew);
     },
     closeCaseModel() {
       //关闭案例弹窗
@@ -628,6 +633,9 @@ export default {
       if (currentProtocol) {
         this.condition.moduleIds = [];
       }
+      if (!this.condition.filters.status) {
+        this.condition.filters = {status: ["Prepare", "Underway", "Completed"]};
+      }
 
       if (this.condition.projectId) {
         this.result = this.$post("/api/definition/list/" + this.currentPage + "/" + this.pageSize, this.condition, response => {
@@ -641,6 +649,9 @@ export default {
             item.caseTotal = parseInt(item.caseTotal);
           });
           this.$emit('getTrashApi');
+          if (this.$refs.table) {
+            this.$refs.table.clearSelection();
+          }
         });
       }
       if (this.needRefreshModule()) {
@@ -805,6 +816,7 @@ export default {
       param.projectId = this.projectId;
       param.condition = this.condition;
       param.moduleId = param.nodeId;
+      param.modulePath = param.nodePath;
       let url = '/api/definition/batch/editByParams';
       if (!this.isMoveBatch)
         url = '/api/definition/batch/copy';
@@ -909,12 +921,43 @@ export default {
         let obj = response.data;
         if (type == 'MS') {
           obj.protocol = this.currentProtocol;
-          obj.nodeTree = nodeTree;
+          obj.nodeTree = this.getExportNodeTree(nodeTree, obj.data);
           downloadFile("Metersphere_Api_" + this.projectName + ".json", JSON.stringify(obj));
         } else {
           downloadFile("Swagger_Api_" + this.projectName + ".json", JSON.stringify(obj));
         }
       });
+    },
+    getExportNodeTree(nodeTree, apis) {
+      let idSet = new Set();
+      apis.forEach((item) => {
+        idSet.add(item.moduleId);
+      });
+      let exportTree = deepClone(nodeTree);
+      for (let i = exportTree.length - 1; i >= 0; i--) {
+        if (!this.cutDownTree(exportTree[i], idSet)) {
+          exportTree.splice(i, 1);
+        }
+      }
+      return exportTree;
+    },
+    // 去掉没有数据的模块再导出
+    cutDownTree(nodeTree, nodeIdSet) {
+      let hasData = false;
+      if (nodeIdSet.has(nodeTree.id)) {
+        hasData = true;
+      }
+      let children = nodeTree.children;
+      if (children) {
+        for (let i = children.length - 1; i >= 0; i--) {
+          if (!this.cutDownTree(children[i], nodeIdSet)) {
+            children.splice(i, 1);
+          } else {
+            hasData = true;
+          }
+        }
+      }
+      return hasData;
     },
     headerDragend(newWidth, oldWidth, column, event) {
       let finalWidth = newWidth;

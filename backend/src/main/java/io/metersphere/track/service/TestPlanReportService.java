@@ -425,9 +425,9 @@ public class TestPlanReportService {
         LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3: TestPlanReportId--" +  " , time:" + timeStamp32);
         TestPlanSimpleReportDTO reportDTO = testPlanService.buildPlanReport(testPlanReport, reportContent);
         reportDTO.setStartTime(testPlanReport.getStartTime());
+        reportContent = parseReportDaoToReportContent(testPlanReport.getStatus(), reportDTO, reportContent);
         Timestamp timeStamp34 = new Timestamp(System.currentTimeMillis());
         LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.4: TestPlanReportId--" +  " , time:" + timeStamp34);
-        reportContent = parseReportDaoToReportContent(reportDTO, reportContent);
         return reportContent;
     }
 
@@ -551,7 +551,7 @@ public class TestPlanReportService {
         TestPlanSimpleReportDTO reportDTO = testPlanService.buildPlanReport(testPlan.getId(), false);
         if (!testPlanReportContentList.isEmpty()) {
             testPlanReportContent = testPlanReportContentList.get(0);
-            testPlanReportContentMapper.updateByPrimaryKeySelective(parseReportDaoToReportContent(reportDTO, testPlanReportContent));
+            testPlanReportContentMapper.updateByPrimaryKeySelective(parseReportDaoToReportContent(testPlanReport.getStatus(), reportDTO, testPlanReportContent));
         }
 
         if (reportDTO.getStartTime() == null) {
@@ -568,7 +568,7 @@ public class TestPlanReportService {
         testPlanMessageService.checkTestPlanStatusAndSendMessage(testPlanReport, null, false);
     }
 
-    public TestPlanReportContentWithBLOBs parseReportDaoToReportContent(TestPlanSimpleReportDTO reportDTO, TestPlanReportContentWithBLOBs testPlanReportContentWithBLOBs) {
+    public TestPlanReportContentWithBLOBs parseReportDaoToReportContent(String testPlanReportStatus, TestPlanSimpleReportDTO reportDTO, TestPlanReportContentWithBLOBs testPlanReportContentWithBLOBs) {
         String id = testPlanReportContentWithBLOBs.getId();
         String testPlanReportId = testPlanReportContentWithBLOBs.getTestPlanReportId();
         if (testPlanReportContentWithBLOBs.getEndTime() != null) {
@@ -626,13 +626,14 @@ public class TestPlanReportService {
             testPlanReportContentWithBLOBs.setUnExecuteScenarios(JSONObject.toJSONString(reportDTO.getUnExecuteScenarios()));
         }
 
-        // 更新测试计划报告通过率字段 passRate
-        TestPlanReportContentExample contentExample = new TestPlanReportContentExample();
-        contentExample.createCriteria().andTestPlanReportIdEqualTo(testPlanReportId);
-        TestPlanReportContentWithBLOBs content = new TestPlanReportContentWithBLOBs();
-        content.setPassRate(reportDTO.getPassRate());
-        testPlanReportContentMapper.updateByExampleSelective(content, contentExample);
-
+        // 如果报告已结束，则更新测试计划报告通过率字段 passRate
+        if (!StringUtils.equalsIgnoreCase(testPlanReportStatus, "running")) {
+            TestPlanReportContentExample contentExample = new TestPlanReportContentExample();
+            contentExample.createCriteria().andTestPlanReportIdEqualTo(testPlanReportId);
+            TestPlanReportContentWithBLOBs content = new TestPlanReportContentWithBLOBs();
+            content.setPassRate(reportDTO.getPassRate());
+            testPlanReportContentMapper.updateByExampleSelective(content, contentExample);
+        }
         return testPlanReportContentWithBLOBs;
     }
 

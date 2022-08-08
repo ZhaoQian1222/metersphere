@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import io.metersphere.api.dto.ApiTestImportRequest;
+import io.metersphere.api.dto.definition.request.auth.MsAuthManager;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
 import io.metersphere.api.dto.definition.request.variable.JsonSchemaItem;
 import io.metersphere.api.dto.definition.response.HttpResponse;
@@ -11,7 +12,6 @@ import io.metersphere.api.dto.scenario.Body;
 import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.api.dto.scenario.request.RequestType;
 import io.metersphere.base.domain.ApiDefinitionWithBLOBs;
-import io.metersphere.base.domain.ApiModule;
 import io.metersphere.commons.constants.SwaggerParameterType;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.utils.LoggerUtil;
@@ -47,6 +47,12 @@ public class Swagger2Parser extends SwaggerAbstractParser {
 
         } else {
             sourceStr = getApiTestStr(source);  //  导入的二进制文件转换为 String
+            JSONObject jsonObject = JSONObject.parseObject(sourceStr);
+            if (jsonObject.get("swagger") == null || jsonObject.get("swagger") == "null" || jsonObject.get("swagger") == " ") {
+                if (jsonObject.get("openapi") == null || jsonObject.get("openapi") == "null" || jsonObject.get("openapi") == " ") {
+                    MSException.throwException("wrong format");
+                }
+            }
             swagger = new SwaggerParser().readWithInfo(sourceStr, false).getSwagger();
         }
         if (swagger == null || swagger.getSwagger() == null) {  //  不是 2.0 版本，则尝试转换 3.0
@@ -67,7 +73,7 @@ public class Swagger2Parser extends SwaggerAbstractParser {
         if (request.getAuthManager() != null
                 && StringUtils.isNotBlank(request.getAuthManager().getUsername())
                 && StringUtils.isNotBlank(request.getAuthManager().getPassword())
-                && request.getAuthManager().getVerification().equals("Basic Auth")) {
+                && MsAuthManager.mechanismMap.containsKey(request.getAuthManager().getVerification())) {
             AuthorizationValue authorizationValue = new AuthorizationValue();
             authorizationValue.setType("header");
             authorizationValue.setKeyName("Authorization");
@@ -115,15 +121,6 @@ public class Swagger2Parser extends SwaggerAbstractParser {
 
         List<ApiDefinitionWithBLOBs> results = new ArrayList<>();
 
-        ApiModule selectModule = null;
-        String selectModulePath = null;
-        if (StringUtils.isNotBlank(importRequest.getModuleId())) {
-            selectModule = ApiDefinitionImportUtil.getSelectModule(importRequest.getModuleId());
-            if (selectModule != null) {
-                selectModulePath = ApiDefinitionImportUtil.getSelectModulePath(selectModule.getName(), selectModule.getParentId());
-            }
-        }
-
         String basePath = swagger.getBasePath();
         for (String pathName : pathNames) {
             Path path = paths.get(pathName);
@@ -132,6 +129,7 @@ public class Swagger2Parser extends SwaggerAbstractParser {
             for (HttpMethod method : httpMethods) {
                 Operation operation = operationMap.get(method);
                 MsHTTPSamplerProxy request = buildRequest(operation, pathName, method.name());
+                request.setFollowRedirects(true);
                 ApiDefinitionWithBLOBs apiDefinition = buildApiDefinition(request.getId(), operation, pathName, method.name(), importRequest);
                 parseParameters(operation, request);
                 addBodyHeader(request);
@@ -142,7 +140,8 @@ public class Swagger2Parser extends SwaggerAbstractParser {
                 }
                 apiDefinition.setRequest(JSON.toJSONString(request));
                 apiDefinition.setResponse(JSON.toJSONString(parseResponse(operation, operation.getResponses())));
-                buildModule(selectModule, apiDefinition, operation.getTags(), selectModulePath);
+
+                buildModulePath(apiDefinition, operation.getTags());
                 if (operation.isDeprecated() != null && operation.isDeprecated()) {
                     apiDefinition.setTags("[\"Deleted\"]");
                 }
@@ -152,6 +151,31 @@ public class Swagger2Parser extends SwaggerAbstractParser {
 
         this.definitions = null;
         return results;
+    }
+
+    private void buildModulePath(ApiDefinitionWithBLOBs apiDefinition, List<String> tags) {
+        StringBuilder modulePathBuilder = new StringBuilder();
+        String modulePath = getModulePath(tags, modulePathBuilder);
+        apiDefinition.setModulePath(modulePath);
+    }
+
+    private String getModulePath(List<String> tagTree, StringBuilder modulePath) {
+        if (tagTree == null) {
+            return "";
+        }
+        for (String s : tagTree) {
+            if (s.contains("/")) {
+                String[] split = s.split("/");
+                if (split.length > 0) {
+                    getModulePath(List.of(split), modulePath);
+                }
+            } else {
+                if (StringUtils.isNotBlank(s)) {
+                    modulePath.append("/").append(s);
+                }
+            }
+        }
+        return modulePath.toString();
     }
 
     private ApiDefinitionWithBLOBs buildApiDefinition(String id, Operation operation, String path, String method, ApiTestImportRequest importRequest) {

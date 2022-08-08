@@ -170,6 +170,8 @@ public class PerformanceTestService {
 
             testPlanLoadCaseService.deleteByTestId(test.getId());
 
+            testCaseService.deleteTestCaseTestByTestId(test.getId());
+
             detachFileByTestId(test.getId());
 
             deleteFollows(test.getId());
@@ -573,6 +575,7 @@ public class PerformanceTestService {
                 lock.unlock();
             }
         } else {
+            engine.start();
             LogUtil.error("check load test quota fail, quotaService is null.");
         }
     }
@@ -1033,7 +1036,9 @@ public class PerformanceTestService {
     public List<LoadTest> getLoadCaseByIds(List<String> ids) {
         if (org.apache.commons.collections.CollectionUtils.isNotEmpty(ids)) {
             LoadTestExample example = new LoadTestExample();
-            example.createCriteria().andIdIn(ids);
+            example.createCriteria()
+                    .andIdIn(ids)
+                    .andStatusNotEqualTo(CommonConstants.TrashStatus);
             return loadTestMapper.selectByExample(example);
         }
         return new ArrayList<>();
