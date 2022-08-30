@@ -939,7 +939,8 @@ export default {
     please_select_group: 'Please Select Group',
     global: 'Global',
     unable_to_remove_current_member: 'Unable to remove currently logged in user!',
-    ws_admin_global: 'Only workspace administrators can create global user groups'
+    ws_admin_global: 'Only workspace administrators can create global user groups',
+    ws_share: 'Workspace sharing'
   },
   role: {
     please_choose_role: 'Please Choose Role',
@@ -1507,6 +1508,8 @@ export default {
       name: "Scenario Name",
       base_url: "Base URL",
       base_url_description: "Base URL as URL prefix for all requests",
+      scenario_step_is_empty: "Scenario: {0} has none step!",
+      base_scenario_step_is_empty:"Scenario step is empty!",
       url_invalid: "Invalid URL",
       variables: "Variables",
       headers: "Headers",
@@ -3277,5 +3280,22 @@ export default {
     ui_debug_mode: 'UI debugging mode',
     ui_local_debug: 'local',
     ui_server_debug: 'server',
+    all_element: "All elements",
+    element_name: "Element name",
+    element_locator: "Element locator",
+    element_locator_type: "Locator type",
+    screenshot: "screenshot",
+    update_user: "Update user",
+    create_user: "Create user",
+    all_scenario: "All scenario",
+    scenario_list: "Scenario list",
+    log: "log",
+    performance_mode: "Performance mode",
+    error_handling: "error handling",
+    other_settings: "Other settings",
+    step_results: "Step results",
+    treatment_method: "Treatment method",
+    scenario_steps: "Scenario steps",
+    basic_information: "Basic information"
   }
 };

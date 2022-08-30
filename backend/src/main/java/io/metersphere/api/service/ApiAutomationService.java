@@ -267,6 +267,7 @@ public class ApiAutomationService {
             msScenario.setHashTree(new LinkedList<>());
             request.setScenarioDefinition(msScenario);
         }
+        request.setNewCreate(true);
         checkNameExist(request, false);
         int nextNum = getNextNum(request.getProjectId());
         if (StringUtils.isBlank(request.getCustomNum())) {
@@ -744,15 +745,31 @@ public class ApiAutomationService {
                 .andProjectIdEqualTo(request.getProjectId())
                 .andStatusNotEqualTo("Trash")
                 .andIdNotEqualTo(request.getId())
-                .andVersionIdEqualTo(request.getVersionId())
                 .andApiScenarioModuleIdEqualTo(request.getApiScenarioModuleId());
         if (moduleIdNotExist) {
             criteria.andModulePathEqualTo(request.getModulePath());
         } else {
             criteria.andApiScenarioModuleIdEqualTo(request.getApiScenarioModuleId());
         }
+        if (apiScenarioMapper.countByExample(example) > 0 && request.getNewCreate() != null && request.getNewCreate()) {
+            MSException.throwException(Translator.get("automation_versions_create"));
+        }
+        criteria.andVersionIdEqualTo(request.getVersionId());
         if (apiScenarioMapper.countByExample(example) > 0) {
             MSException.throwException(Translator.get("automation_name_already_exists") + " :" + Translator.get("api_definition_module") + request.getModulePath() + " ," + Translator.get("automation_name") + " :" + request.getName());
+        }
+        if (StringUtils.isNotBlank(request.getId())) {
+            ApiScenarioWithBLOBs scenario = apiScenarioMapper.selectByPrimaryKey(request.getId());
+            if (scenario != null) {
+                example = new ApiScenarioExample();
+                example.createCriteria().andRefIdEqualTo(scenario.getRefId()).andStatusNotEqualTo("Trash");
+                List<ApiScenario> apiScenarios = apiScenarioMapper.selectByExample(example);
+                if (apiScenarios != null && apiScenarios.size() > 1) {
+                    if (!StringUtils.equals(scenario.getName(), request.getName())) {
+                        MSException.throwException(Translator.get("automation_versions_update"));
+                    }
+                }
+            }
         }
     }
 
@@ -1465,6 +1482,9 @@ public class ApiAutomationService {
             }
             if (item.getVersionId() == null || (!item.getVersionId().equals("new") && !item.getVersionId().equals("update"))) {
                 item.setNum(num);
+            }
+            if (StringUtils.isBlank(item.getLevel())) {
+                item.setLevel("P0");
             }
             if (BooleanUtils.isFalse(request.getOpenCustomNum())) {
                 // 如果未开启，即使有自定值也直接覆盖

@@ -66,5 +66,7 @@ public class SaveApiScenarioRequest {
 
     private String versionId;
 
+    private Boolean newCreate;
+
     private List<String> repositoryFileIds;
 }

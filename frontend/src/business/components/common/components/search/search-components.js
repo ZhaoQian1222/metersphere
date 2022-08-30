@@ -152,11 +152,12 @@ export const UI_REPORT_STATUS = {
     options: [OPERATORS.IN, OPERATORS.NOT_IN]
   },
   options: [
-    {label: "Saved", value: "Saved"},
     {label: "Running", value: "Running"},
-    {label: 'Stopped', value: 'stop'},
     {label: "Error", value: "Error"},
-    {label: "Success", value: "Success"}
+    {label: "Success", value: "Success"},
+    {label: 'Stopped', value: 'stop'},
+    {label: "NotExecute", value: "unexecute"},
+    // {label: "Saved", value: "Saved"},
   ],
   props: { // 尾部控件的props，一般为element ui控件的props
     multiple: true
@@ -304,6 +305,35 @@ export const CREATOR = {
   }
 }
 
+//获取项目下的人员列表
+export const PROJECT_CREATOR = {
+  key: "creator",
+  name: 'MsTableSearchSelect',
+  label: 'api_test.creator',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN, OPERATORS.CURRENT_USER],
+    change: function (component, value) { // 运算符change事件
+      if (value === OPERATORS.CURRENT_USER.value) {
+        component.value = value;
+      }
+    }
+  },
+  options: { // 异步获取候选项
+    url: "/user/project/member/list",
+    labelKey: "name",
+    valueKey: "id",
+    showLabel: option => {
+      return option.label + "(" + option.value + ")";
+    }
+  },
+  props: {
+    multiple: true
+  },
+  isShow: operator => {
+    return operator !== OPERATORS.CURRENT_USER.value;
+  }
+}
+
 export const EXECUTOR = {
   key: "executor",
   name: 'MsTableSearchSelect',
@@ -357,9 +387,25 @@ export const TRIGGER_MODE = {
     options: [OPERATORS.IN, OPERATORS.NOT_IN]
   },
   options: [
-    {label: "commons.trigger_mode.manual", value: "MANUAL"},
-    // {label: "commons.trigger_mode.schedule", value: "SCHEDULE"},
-    // {label: "commons.trigger_mode.api", value: "API"}
+    {label: 'test_track.report.trigger_mode.manual', value: 'manual'},
+    {label: 'commons.trigger_mode.schedule', value: 'SCHEDULE'},
+    {label: 'commons.trigger_mode.api', value: 'API'},
+    {label: 'api_test.automation.batch_execute', value: 'BATCH'}
+  ],
+  props: {
+    multiple: true
+  }
+}
+//ui报告触发方式
+export const UI_TRIGGER_MODE = {
+  key: "triggerMode",
+  name: 'MsTableSearchSelect',
+  label: 'commons.trigger_mode.name',
+  operator: {
+    options: [OPERATORS.IN, OPERATORS.NOT_IN]
+  },
+  options: [
+    {label: 'test_track.report.trigger_mode.manual', value: 'manual'},
   ],
   props: {
     multiple: true
@@ -600,7 +646,9 @@ export const REPORT_CONFIGS = [NAME, TEST_NAME, CREATE_TIME, STATUS, CREATOR, TR
 
 export const REPORT_CASE_CONFIGS = [NAME, CREATE_TIME, STATUS, CREATOR, TRIGGER_MODE];
 
-export const UI_REPORT_CONFIGS = [NAME, TEST_NAME, CREATE_TIME, UI_REPORT_STATUS, CREATOR, TRIGGER_MODE];
+export const UI_REPORT_CONFIGS = [NAME, TEST_NAME, CREATE_TIME, UI_REPORT_STATUS, PROJECT_CREATOR, UI_TRIGGER_MODE];
+
+export const UI_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_SCENARIO_RESULT, UPDATE_TIME, CREATE_TIME, PROJECT_CREATOR];
 
 export const TEST_CASE_CONFIGS = [NAME, API_TAGS, MODULE, PRIORITY, CREATE_TIME, UPDATE_TIME, CREATOR, CASE_REVIEW_STATUS];
 
@@ -608,11 +656,11 @@ export const TEST_PLAN_CONFIGS = [NAME, UPDATE_TIME, CREATE_TIME, PRINCIPAL, TES
 
 export const API_DEFINITION_CONFIGS = [NAME, API_METHOD, API_PATH, API_STATUS, API_TAGS, UPDATE_TIME, CREATE_TIME, PRINCIPALAPI, ISREFERENCE];
 
-export const API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_CASE_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR,ISREFERENCE];
+export const API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_CASE_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR, ISREFERENCE];
 
 export const API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_SCENARIO_RESULT, UPDATE_TIME, CREATE_TIME, CREATOR,GITBRANCH, GITPATH];
 
-export const TEST_PLAN_REPORT_CONFIGS = [NAME, TEST_PLAN_NAME,CREATOR, CREATE_TIME, TEST_PLAN_TRIGGER_MODE, TEST_PLAN_REPORT_STATUS];
+export const TEST_PLAN_REPORT_CONFIGS = [NAME, TEST_PLAN_NAME, CREATOR, CREATE_TIME, TEST_PLAN_TRIGGER_MODE, TEST_PLAN_REPORT_STATUS];
 
 // 测试计划 功能用例
 export const TEST_PLAN_TEST_CASE_CONFIGS = [NAME, API_TAGS, MODULE, PRIORITY, CREATE_TIME, UPDATE_TIME, EXECUTOR, CASE_REVIEW_STATUS, PLAN_CASE_STATUS];
@@ -622,9 +670,9 @@ export const TEST_PLAN_RELEVANCE_FUNC_CONFIGS = [NAME, API_TAGS, CREATE_TIME, UP
 export const TEST_PLAN_RELEVANCE_API_DEFINITION_CONFIGS = [NAME, API_METHOD, API_PATH, API_TAGS, UPDATE_TIME, CREATE_TIME, CREATOR];
 export const TEST_PLAN_RELEVANCE_API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, UPDATE_TIME, CREATOR];
 export const TEST_PLAN_RELEVANCE_API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, API_SCENARIO_RESULT, CREATE_TIME, UPDATE_TIME, CREATOR];
-export const TEST_PLAN_RELEVANCE_LOAD_CASE= [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
+export const TEST_PLAN_RELEVANCE_LOAD_CASE = [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
 
 // 测试用例关联测试
 export const TEST_CASE_RELEVANCE_API_CASE_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, CREATOR];
 export const TEST_CASE_RELEVANCE_API_SCENARIO_CONFIGS = [NAME, API_CASE_PRIORITY, API_TAGS, CREATOR];
-export const TEST_CASE_RELEVANCE_LOAD_CASE= [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];
+export const TEST_CASE_RELEVANCE_LOAD_CASE = [NAME, STATUS, CREATE_TIME, UPDATE_TIME, CREATOR];

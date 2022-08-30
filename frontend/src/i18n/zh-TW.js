@@ -943,7 +943,8 @@ export default {
     please_select_group: '請選擇用戶組',
     global: '全局',
     unable_to_remove_current_member: '無法移除當前登錄用戶！',
-    ws_admin_global: '工作空間管理員才可以創建全局用戶組'
+    ws_admin_global: '工作空間管理員才可以創建全局用戶組',
+    ws_share: '工作空間共享'
   },
   role: {
     please_choose_role: '請選擇角色',
@@ -1512,6 +1513,8 @@ export default {
       name: "場景名稱",
       base_url: "基礎URL",
       base_url_description: "基礎URL作為所有請求的URL前綴",
+      scenario_step_is_empty: "場景: {0} 的步驟為空，無法導入",
+      base_scenario_step_is_empty:"原場景步驟為空",
       variables: "自定義變量",
       headers: "請求頭",
       kv_description: "所有請求可以使用自定義變量",
@@ -3280,5 +3283,22 @@ export default {
     ui_debug_mode: 'UI自動化調試管道',
     ui_local_debug: '本地調試',
     ui_server_debug: '後端調試',
+    all_element: "全部元素",
+    element_name: "元素名稱",
+    element_locator: "元素定位",
+    element_locator_type: "定位類型",
+    screenshot: "截圖",
+    update_user: "更新人",
+    create_user: "創建人",
+    all_scenario: "全部場景",
+    scenario_list: "場景列表",
+    log: "日誌",
+    performance_mode: "性能模式",
+    error_handling: "錯誤處理",
+    other_settings: "其他設置",
+    step_results: "步骤结果",
+    treatment_method: "處理方式",
+    scenario_steps: "場景步驟",
+    basic_information: "基礎信息"
   }
 };

@@ -484,20 +484,30 @@ export default {
       this.$refs['httpForm'].validate((valid) => {
         if (valid) {
           this.setParameter();
+          this.$refs['customFieldForm'].validate((valid) => {
+            if (valid){
+              this.setParameter();
 
-          if (!this.httpForm.versionId) {
-            if (this.$refs.versionHistory && this.$refs.versionHistory.currentVersion) {
-              this.httpForm.versionId = this.$refs.versionHistory.currentVersion.id;
+              if (!this.httpForm.versionId) {
+                if (this.$refs.versionHistory && this.$refs.versionHistory.currentVersion) {
+                  this.httpForm.versionId = this.$refs.versionHistory.currentVersion.id;
+                }
+              }
+              this.$emit('saveApi', this.httpForm);
+              this.count = 0;
+              this.$store.state.apiMap.delete(this.httpForm.id);
+              if (!this.httpForm.versionId) {
+                if (this.$refs.versionHistory) {
+                  this.httpForm.versionId = this.$refs.versionHistory.currentVersion.id;
+                }
+              }
+              this.$emit('saveApi', this.httpForm);
+              this.count = 0;
+              this.$store.state.apiMap.delete(this.httpForm.id);
             }
-          }
-          this.$emit('saveApi', this.httpForm);
-          this.count = 0;
-          this.$store.state.apiStatus.set("fromChange", false);
-          this.$store.state.apiMap.set(this.httpForm.id, this.$store.state.apiStatus);
+          });
+
         } else {
-          if (this.$refs.versionHistory) {
-            this.$refs.versionHistory.loading = false;
-          }
           return false;
         }
       });

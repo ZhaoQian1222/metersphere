@@ -944,7 +944,8 @@ export default {
     please_select_group: '请选择用户组',
     global: '全局',
     unable_to_remove_current_member: '无法移除当前登录用户！',
-    ws_admin_global: '工作空间管理员才可以创建全局用户组'
+    ws_admin_global: '工作空间管理员才可以创建全局用户组',
+    ws_share: '工作空间共享'
   },
   role: {
     please_choose_role: '请选择角色',
@@ -1513,6 +1514,8 @@ export default {
       name: "场景名称",
       base_url: "基础URL",
       base_url_description: "基础URL作为所有请求的URL前缀",
+      scenario_step_is_empty: "场景: {0} 的步骤为空,无法导入",
+      base_scenario_step_is_empty:"原场景步骤为空",
       variables: "自定义变量",
       headers: "请求头",
       kv_description: "所有请求可以使用自定义变量",
@@ -3332,5 +3335,21 @@ export default {
     ui_debug_mode: 'UI自动化调试方式',
     ui_local_debug: '本地调试',
     ui_server_debug: '后端调试',
+    all_element: "全部元素",
+    element_name: "元素名称",
+    element_locator: "元素定位",
+    element_locator_type: "定位类型",
+    screenshot: "截图",
+    update_user: "更新人",
+    create_user: "创建人",
+    all_scenario: "全部场景",
+    log: "日志",
+    performance_mode: "性能模式",
+    error_handling: "错误处理",
+    other_settings: "其他设置",
+    step_results: "步骤结果",
+    treatment_method: "处理方式",
+    scenario_steps: "场景步骤",
+    basic_information: "基础信息"
   }
 };
