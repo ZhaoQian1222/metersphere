@@ -21,6 +21,7 @@
     <result column="third_part_template" jdbcType="BIT" property="thirdPartTemplate" />
     <result column="version_enable" jdbcType="BIT" property="versionEnable" />
     <result column="api_template_id" jdbcType="VARCHAR" property="apiTemplateId" />
+    <result column="yunxiao_key" jdbcType="VARCHAR" property="yunxiaoKey" />
   </resultMap>
   <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="io.metersphere.base.domain.Project">
     <result column="issue_config" jdbcType="LONGVARCHAR" property="issueConfig" />
@@ -86,7 +87,7 @@
   <sql id="Base_Column_List">
     id, workspace_id, `name`, description, create_time, update_time, tapd_id, jira_key, 
     zentao_id, azure_devops_id, case_template_id, issue_template_id, create_user, system_id,
-    azure_filter_id, platform, third_part_template, version_enable,api_template_id
+    azure_filter_id, platform, third_part_template, version_enable,api_template_id,yunxiao_key
   </sql>
   <sql id="Blob_Column_List">
     issue_config
@@ -146,14 +147,14 @@
       azure_devops_id, case_template_id, issue_template_id,
       create_user, system_id, azure_filter_id, api_template_id,
       platform, third_part_template, version_enable,
-      issue_config)
+      issue_config,yunxiao_key)
     values (#{id,jdbcType=VARCHAR}, #{workspaceId,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, 
       #{description,jdbcType=VARCHAR}, #{createTime,jdbcType=BIGINT}, #{updateTime,jdbcType=BIGINT}, 
       #{tapdId,jdbcType=VARCHAR}, #{jiraKey,jdbcType=VARCHAR}, #{zentaoId,jdbcType=VARCHAR}, 
       #{azureDevopsId,jdbcType=VARCHAR}, #{caseTemplateId,jdbcType=VARCHAR}, #{issueTemplateId,jdbcType=VARCHAR},
       #{createUser,jdbcType=VARCHAR}, #{systemId,jdbcType=VARCHAR}, #{azureFilterId,jdbcType=VARCHAR},
       #{platform,jdbcType=VARCHAR}, #{thirdPartTemplate,jdbcType=BIT}, #{versionEnable,jdbcType=BIT},
-      #{issueConfig,jdbcType=LONGVARCHAR},#{apiTemplateId,jdbcType=VARCHAR})
+      #{issueConfig,jdbcType=LONGVARCHAR},#{apiTemplateId,jdbcType=VARCHAR},#{yunxiaoKey,jdbcType=VARCHAR})
   </insert>
   <insert id="insertSelective" parameterType="io.metersphere.base.domain.Project">
     insert into project
@@ -218,6 +219,9 @@
       <if test="issueConfig != null">
         issue_config,
       </if>
+      <if test="yunxiaoKey != null">
+        yunxiao_key
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides=",">
       <if test="id != null">
@@ -279,6 +283,9 @@
       </if>
       <if test="issueConfig != null">
         #{issueConfig,jdbcType=LONGVARCHAR},
+      </if>
+      <if test="yunxiaoKey != null">
+        #{yunxiaoKey,jdbcType=VARCHAR},
       </if>
     </trim>
   </insert>
@@ -351,6 +358,9 @@
       <if test="record.issueConfig != null">
         issue_config = #{record.issueConfig,jdbcType=LONGVARCHAR},
       </if>
+      <if test="record.yunxiaoKey != null">
+        yunxiao_key = #{yunxiaoKey,jdbcType=VARCHAR},
+      </if>
     </set>
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
@@ -377,7 +387,8 @@
       third_part_template = #{record.thirdPartTemplate,jdbcType=BIT},
       version_enable = #{record.versionEnable,jdbcType=BIT},
       api_template_id = #{record.apiTemplateId,jdbcType=VARCHAR},
-      issue_config = #{record.issueConfig,jdbcType=LONGVARCHAR}
+      issue_config = #{record.issueConfig,jdbcType=LONGVARCHAR},
+      yunxiao_key = #{yunxiaoKey,jdbcType=VARCHAR}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -402,7 +413,8 @@
       platform = #{record.platform,jdbcType=VARCHAR},
       third_part_template = #{record.thirdPartTemplate,jdbcType=BIT},
       version_enable = #{record.versionEnable,jdbcType=BIT},
-      api_template_id = #{record.apiTemplateId,jdbcType=VARCHAR}
+      api_template_id = #{record.apiTemplateId,jdbcType=VARCHAR},
+      yunxiao_key = #{yunxiaoKey,jdbcType=VARCHAR}
     <if test="_parameter != null">
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -467,6 +479,9 @@
       <if test="issueConfig != null">
         issue_config = #{issueConfig,jdbcType=LONGVARCHAR},
       </if>
+      <if test="yunxiaoKey != null">
+        yunxiao_key = #{yunxiaoKey,jdbcType=VARCHAR},
+      </if>
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
@@ -490,7 +505,8 @@
       third_part_template = #{thirdPartTemplate,jdbcType=BIT},
       version_enable = #{versionEnable,jdbcType=BIT},
       api_template_id = #{apiTemplateId,jdbcType=VARCHAR},
-      issue_config = #{issueConfig,jdbcType=LONGVARCHAR}
+      issue_config = #{issueConfig,jdbcType=LONGVARCHAR},
+      yunxiao_key = #{yunxiaoKey,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
   <update id="updateByPrimaryKey" parameterType="io.metersphere.base.domain.Project">
@@ -512,7 +528,8 @@
       platform = #{platform,jdbcType=VARCHAR},
       third_part_template = #{thirdPartTemplate,jdbcType=BIT},
       version_enable = #{versionEnable,jdbcType=BIT},
-      api_template_id = #{apiTemplateId,jdbcType=VARCHAR}
+      api_template_id = #{apiTemplateId,jdbcType=VARCHAR},
+      yunxiao_key = #{yunxiaoKey,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

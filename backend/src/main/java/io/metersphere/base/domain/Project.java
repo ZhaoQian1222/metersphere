@@ -45,5 +45,7 @@ public class Project implements Serializable {
 
     private String apiTemplateId;
 
+    private String yunxiaoKey;
+
     private static final long serialVersionUID = 1L;
 }

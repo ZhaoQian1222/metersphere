@@ -76,6 +76,11 @@
           <el-input v-model="form.azureFilterId" autocomplete="off"/>
           <ms-instructions-icon content="非必填项，用例关联需求时，可以只筛选出，所填的 workItem 下的选项" effect="light"/>
         </el-form-item>
+
+        <el-form-item :label-width="labelWidth" :label="$t('project.yunxiao_key')" v-if="yunxiao">
+          <el-input v-model="form.yunxiaoKey" autocomplete="off"/>
+          <el-button @click="check" type="primary" class="checkButton">{{ $t('test_track.issue.check_id_exist') }}</el-button>
+        </el-form-item>
       </el-form>
       <template v-slot:footer>
         <div class="dialog-footer">
@@ -101,7 +106,7 @@ import {
   removeGoBackListener
 } from "@/common/js/utils";
 
-import {AZURE_DEVOPS, JIRA, PROJECT_ID, TAPD, ZEN_TAO} from "@/common/js/constants";
+import {AZURE_DEVOPS, JIRA, PROJECT_ID, TAPD, YUN_XIAO, ZEN_TAO} from "@/common/js/constants";
 import {PROJECT_CONFIGS} from "@/business/components/common/components/search/search-components";
 import MsInstructionsIcon from "@/business/components/common/components/MsInstructionsIcon";
 import TemplateSelect from "@/business/components/project/template/TemplateSelect";
@@ -194,6 +199,9 @@ export default {
     azuredevops() {
       return this.form.platform === AZURE_DEVOPS && this.platformOptions.map(i => i.value).indexOf(AZURE_DEVOPS) > -1;
     },
+    yunxiao() {
+      return this.form.platform === YUN_XIAO && this.platformOptions.map(i => i.value).indexOf(YUN_XIAO) > -1;
+    },
   },
   inject: [
     'reload'
@@ -257,6 +265,7 @@ export default {
         this.filterPlatformOptions(platforms, JIRA);
         this.filterPlatformOptions(platforms, ZEN_TAO);
         this.filterPlatformOptions(platforms, AZURE_DEVOPS);
+        this.filterPlatformOptions(platforms, YUN_XIAO);
         this.issueOptions = this.platformOptions;
       });
     },

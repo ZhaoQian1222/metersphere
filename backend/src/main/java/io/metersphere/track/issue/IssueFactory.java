@@ -28,6 +28,8 @@ public class IssueFactory {
             }
         } else if (StringUtils.equalsIgnoreCase(IssuesManagePlatform.Local.toString(), platform)) {
             return new LocalPlatform(addIssueRequest);
+        } else if (StringUtils.equalsIgnoreCase(IssuesManagePlatform.Yunxiao.toString(), platform)) {
+            return new YunxiaoPlatform(addIssueRequest);
         }
         return null;
     }

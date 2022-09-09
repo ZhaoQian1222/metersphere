@@ -51,7 +51,8 @@
                p.platform,
                p.third_part_template,
                p.issue_config,
-               p.api_template_id
+               p.api_template_id,
+               p.yunxiao_key
         FROM project p
                      JOIN workspace w ON p.workspace_id = w.id
                      LEFT JOIN user ON user.id = p.create_user
@@ -108,6 +109,13 @@
                             <when test="key == 'azure_devops_id'">
                                 AND p.platform = 'AzureDevops'
                                 AND p.azure_devops_id IN
+                                <foreach collection="values" item="value" separator="," open="(" close=")">
+                                    #{value}
+                                </foreach>
+                            </when>
+                            <when test="key == 'yunxiao_key'">
+                                AND p.platform = 'Yunxiao'
+                                AND p.yunxiao_key IN
                                 <foreach collection="values" item="value" separator="," open="(" close=")">
                                     #{value}
                                 </foreach>

@@ -19,7 +19,7 @@
         <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
                       prop="demandId">
           <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions"
-                       clearable filterable :filter-method="filterDemand">
+                       clearable filterable :filter-method="filterDemand" @change="changeDemandValue(demandValue)">
             <template slot-scope="{ node, data }">
               <span class="demand-span" :title="data.label">{{ data.label }}</span>
             </template>
@@ -31,6 +31,7 @@
                       v-if="form.demandId=='other'">
           <el-input :disabled="readOnly" v-model="form.demandName"></el-input>
         </el-form-item>
+          <a :href="demandLink" style="text-decoration-line: underline;color: #1D8CE0" v-if="form.demandId!=='other'">{{demandLink}}</a>
       </el-col>
     </el-tab-pane>
 
@@ -145,6 +146,8 @@ export default {
   ],
   data() {
     return {
+      demandLink:'',
+      disable:true,
       result: {},
       tabActiveName: "remark",
       uploadList: [],
@@ -198,6 +201,17 @@ export default {
     }
   },
   methods: {
+    changeDemandValue(demandValue){
+      let label = '';
+      this.demandOptions.forEach(item=>{
+        if(item.value===demandValue.toString()){
+          this.demandLink= item.link;
+          label = item.label;
+        }
+      });
+      this.$emit('syncTags',label);
+
+    },
     updateRemark(text) {
       this.form.remark = text;
     },
@@ -369,12 +383,14 @@ export default {
       data.forEach(item => {
         let option = {
           label: item.platform + ': ' + item.name,
-          value: item.id
+          value: item.id,
+          link: item.href
         }
         options.push(option);
         pathArray.push(item.id);
         if (item.id === this.form.demandId) {
           this.demandValue = [...pathArray]; // 回显级联选项
+          this.demandLink = item.href;
         }
         if (item.children && item.children.length > 0) {
           option.children = [];

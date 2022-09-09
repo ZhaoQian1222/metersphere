@@ -1,6 +1,6 @@
 // 模板
 import i18n from "@/i18n/i18n";
-import {AZURE_DEVOPS, JIRA, LOCAL, TAPD, ZEN_TAO} from "@/common/js/constants";
+import {AZURE_DEVOPS, JIRA, LOCAL, TAPD, YUN_XIAO, ZEN_TAO} from "@/common/js/constants";
 
 export const CUSTOM_FIELD_TYPE_OPTION = [
   {value: 'input',text: 'workspace.custom_filed.input'},
@@ -76,6 +76,7 @@ export const ISSUE_PLATFORM_OPTION = [
   {value: JIRA, text: 'JIRA'},
   {value: ZEN_TAO, text: 'Zentao'},
   {value: AZURE_DEVOPS, text: 'Azure Devops'},
+  {value: YUN_XIAO, text: '天玑'},
 ];
 
 export const FIELD_TYPE_MAP = {

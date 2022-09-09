@@ -30,10 +30,7 @@ import io.metersphere.performance.request.DeleteTestPlanRequest;
 import io.metersphere.performance.request.QueryProjectFileRequest;
 import io.metersphere.performance.service.PerformanceReportService;
 import io.metersphere.performance.service.PerformanceTestService;
-import io.metersphere.track.issue.AbstractIssuePlatform;
-import io.metersphere.track.issue.JiraPlatform;
-import io.metersphere.track.issue.TapdPlatform;
-import io.metersphere.track.issue.ZentaoPlatform;
+import io.metersphere.track.issue.*;
 import io.metersphere.track.request.testcase.IssuesRequest;
 import io.metersphere.track.service.TestCaseService;
 import io.metersphere.track.service.TestPlanProjectService;
@@ -44,6 +41,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -299,6 +297,9 @@ public class ProjectService {
         } else if (StringUtils.equalsIgnoreCase(project.getPlatform(), IssuesManagePlatform.Zentao.name())) {
             ZentaoPlatform zentao = new ZentaoPlatform(issuesRequest);
             this.doCheckThirdProjectExist(zentao, project.getZentaoId());
+        } else if (StringUtils.equalsIgnoreCase(project.getPlatform(), IssuesManagePlatform.Yunxiao.name())) {
+            YunxiaoPlatform yunxiao = new YunxiaoPlatform(issuesRequest);
+            this.doCheckThirdProjectExist(yunxiao, project.getYunxiaoKey());
         }
     }
 

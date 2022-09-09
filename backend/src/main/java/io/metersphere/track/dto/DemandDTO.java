@@ -10,6 +10,7 @@ import java.util.List;
 public class DemandDTO {
     protected String id;
     protected String name;
+    protected String href;
     protected String platform;
     protected List<? extends DemandDTO> children;
 }

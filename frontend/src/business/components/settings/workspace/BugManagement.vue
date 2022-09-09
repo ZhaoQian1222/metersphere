@@ -15,6 +15,9 @@
         <el-radio label="AzureDevops" v-xpack>
           <img class="platform" src="../../../../assets/AzureDevops.png" alt="AzureDevops"/>
         </el-radio>
+        <el-radio label="Yunxiao" v-xpack>
+          <img class="platform" src="../../../../assets/yunxiao.jpg" alt="Yunxiao"/>
+        </el-radio>
       </el-radio-group>
     </div>
 
@@ -22,6 +25,7 @@
     <jira-setting v-if="jiraEnable" ref="jiraSetting"/>
     <zentao-setting v-if="zentaoEnable" ref="zentaoSetting"/>
     <azuredevops-setting v-if="azuredevopsEnable" ref="azureDevopsSetting"/>
+    <yunxiao-setting v-if="yunxiaoEnable" ref="yunxiaoSetting"/>
   </div>
 </template>
 
@@ -30,17 +34,19 @@ import TapdSetting from "@/business/components/settings/workspace/components/Tap
 import JiraSetting from "@/business/components/settings/workspace/components/JiraSetting";
 import ZentaoSetting from "@/business/components/settings/workspace/components/ZentaoSetting";
 import AzuredevopsSetting from "@/business/components/settings/workspace/components/AzureDevopsSetting";
-import {JIRA, TAPD, ZEN_TAO, AZURE_DEVOPS} from "@/common/js/constants";
+import YunxiaoSetting from "@/business/components/settings/workspace/components/YunxiaoSetting";
+import {JIRA, TAPD, ZEN_TAO, AZURE_DEVOPS, YUN_XIAO} from "@/common/js/constants";
 
 export default {
   name: "BugManagement",
-  components: {TapdSetting, JiraSetting, ZentaoSetting, AzuredevopsSetting},
+  components: {TapdSetting, JiraSetting, ZentaoSetting, AzuredevopsSetting,YunxiaoSetting},
   data() {
     return {
       tapdEnable: true,
       jiraEnable: false,
       zentaoEnable: false,
       azuredevopsEnable:false,
+      yunxiaoEnable:false,
       result: {},
       platform: TAPD
     }
@@ -52,21 +58,31 @@ export default {
         this.jiraEnable = false;
         this.zentaoEnable = false;
         this.azuredevopsEnable = false;
+        this.yunxiaoEnable = false;
       } else if (platform === JIRA) {
         this.tapdEnable = false;
         this.jiraEnable = true;
         this.zentaoEnable = false;
         this.azuredevopsEnable = false;
+        this.yunxiaoEnable = false;
       } else if (platform === ZEN_TAO) {
         this.tapdEnable = false;
         this.jiraEnable = false;
         this.zentaoEnable = true;
         this.azuredevopsEnable = false;
+        this.yunxiaoEnable = false;
       } else if (platform === AZURE_DEVOPS) {
         this.tapdEnable = false;
         this.jiraEnable = false;
         this.zentaoEnable = false;
         this.azuredevopsEnable = true;
+        this.yunxiaoEnable = false;
+      }else if(platform === YUN_XIAO){
+        this.tapdEnable = false;
+        this.jiraEnable = false;
+        this.zentaoEnable = false;
+        this.azuredevopsEnable = false;
+        this.yunxiaoEnable = true;
       }
     }
   }

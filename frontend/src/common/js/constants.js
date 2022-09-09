@@ -44,6 +44,7 @@ export const JIRA = 'Jira';
 export const ZEN_TAO = 'Zentao';
 export const LOCAL = 'Local';
 export const AZURE_DEVOPS = 'AzureDevops';
+export const YUN_XIAO = 'Yunxiao';
 
 export const GROUP_SYSTEM = 'SYSTEM';
 export const GROUP_WORKSPACE = 'WORKSPACE';
