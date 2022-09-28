@@ -185,7 +185,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
     }
 
     @Override
-    public List<DemandDTO> getDemandList(String projectId) {
+    public List<DemandDTO> getDemandList(String projectId,String keyWord) {
         List<DemandDTO> list = new ArrayList<>();
         Project project = getProject();
         int maxResults = 50, startAt = 0;

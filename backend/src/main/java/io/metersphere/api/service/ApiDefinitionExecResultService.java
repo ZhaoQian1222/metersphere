@@ -405,29 +405,45 @@ public class ApiDefinitionExecResultService {
         if (startTime == null) {
             return new ArrayList<>(0);
         } else {
-            List<ExecutedCaseInfoResult> list = extApiDefinitionExecResultMapper.findFaliureCaseInfoByProjectIDAndExecuteTimeAndLimitNumber(projectId, startTime.getTime());
+            TreeMap<Long, List<ExecutedCaseInfoResult>> treeMap = new TreeMap<>();
+
+            List<ExecutedCaseInfoResult> apiCaseList = extApiDefinitionExecResultMapper.findFaliureApiCaseInfoByProjectID(projectId, startTime.getTime(), limitNumber);
+            List<ExecutedCaseInfoResult> scenarioCaseList = extApiDefinitionExecResultMapper.findFaliureScenarioInfoByProjectID(projectId, startTime.getTime(), limitNumber);
+            apiCaseList.forEach(item -> {
+                if(treeMap.containsKey(item.getFailureTimes())){
+                    treeMap.get(item.getFailureTimes()).add(item);    
+                }else {
+                    treeMap.put(item.getFailureTimes(),new ArrayList<>(){{this.add(item);}});
+                }
+            });
+            scenarioCaseList.forEach(item -> {
+                if(treeMap.containsKey(item.getFailureTimes())){
+                    treeMap.get(item.getFailureTimes()).add(item);
+                }else {
+                    treeMap.put(item.getFailureTimes(),new ArrayList<>(){{this.add(item);}});
+                }
+            });
 
             List<ExecutedCaseInfoResult> returnList = new ArrayList<>(limitNumber);
-
-            for (int i = 0; i < list.size(); i++) {
-                if (i < limitNumber) {
-                    //开始遍历查询TestPlan信息 --> 提供前台做超链接
-                    ExecutedCaseInfoResult item = list.get(i);
-
-                    QueryTestPlanRequest planRequest = new QueryTestPlanRequest();
-                    planRequest.setProjectId(projectId);
-                    if ("scenario".equals(item.getCaseType())) {
-                        planRequest.setScenarioId(item.getTestCaseID());
-                    } else if ("apiCase".equals(item.getCaseType())) {
-                        planRequest.setApiId(item.getTestCaseID());
-                    } else if ("load".equals(item.getCaseType())) {
-                        planRequest.setLoadId(item.getTestCaseID());
+            NavigableMap<Long, List<ExecutedCaseInfoResult>> descendingMap = treeMap.descendingMap();
+            caseInfoListforeach:for (List<ExecutedCaseInfoResult> itemList : descendingMap.values()) {
+                for (ExecutedCaseInfoResult item : itemList) {
+                    if (returnList.size() <= 10) {
+                        QueryTestPlanRequest planRequest = new QueryTestPlanRequest();
+                        planRequest.setProjectId(projectId);
+                        if ("scenario".equals(item.getCaseType())) {
+                            planRequest.setScenarioId(item.getTestCaseID());
+                        } else if ("apiCase".equals(item.getCaseType())) {
+                            planRequest.setApiId(item.getTestCaseID());
+                        } else if ("load".equals(item.getCaseType())) {
+                            planRequest.setLoadId(item.getTestCaseID());
+                        }
+                        List<TestPlanDTO> dtoList = extTestPlanMapper.selectTestPlanByRelevancy(planRequest);
+                        item.setTestPlanDTOList(dtoList);
+                        returnList.add(item);
+                    } else {
+                        break caseInfoListforeach;
                     }
-                    List<TestPlanDTO> dtoList = extTestPlanMapper.selectTestPlanByRelevancy(planRequest);
-                    item.setTestPlanDTOList(dtoList);
-                    returnList.add(item);
-                } else {
-                    break;
                 }
             }
 

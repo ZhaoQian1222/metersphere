@@ -1,6 +1,7 @@
 package io.metersphere.api.service;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.Feature;
 import io.metersphere.api.dto.*;
@@ -9,6 +10,7 @@ import io.metersphere.api.dto.automation.ExecuteType;
 import io.metersphere.api.dto.automation.ScenarioStatus;
 import io.metersphere.api.dto.datacount.ApiDataCountResult;
 import io.metersphere.api.jmeter.FixedCapacityUtils;
+import io.metersphere.api.service.utils.PassRateUtil;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
 import io.metersphere.base.mapper.ext.ExtApiDefinitionExecResultMapper;
@@ -241,7 +243,16 @@ public class ApiScenarioReportService {
     public List<String> idList(QueryAPIReportRequest request) {
         request = this.initRequest(request);
         request.setOrders(ServiceUtils.getDefaultOrder(request.getOrders()));
-        return extApiScenarioReportMapper.idList(request);
+        //检查必填参数caseType
+        if (request.getIsUi()) {
+            //ui报告对应的用例类型也是scenario
+            request.setCaseType(ReportTypeConstants.SCENARIO.name());
+        }
+        if (StringUtils.equalsAny(request.getCaseType(), ReportTypeConstants.API.name(), ReportTypeConstants.SCENARIO.name())) {
+            return extApiScenarioReportMapper.idList(request);
+        } else {
+            return new ArrayList<>(0);
+        }
     }
 
     private void checkNameExist(APIScenarioReportResult request) {
@@ -330,7 +341,7 @@ public class ApiScenarioReportService {
     }
 
     public ApiScenarioReport updatePlanCase(ResultDTO dto) {
-         String status = getStatus(dto);
+        String status = getStatus(dto);
         ApiScenarioReport report = editReport(dto.getReportType(), dto.getReportId(), status, dto.getRunMode());
         TestPlanApiScenario testPlanApiScenario = testPlanApiScenarioMapper.selectByPrimaryKey(dto.getTestId());
         if (testPlanApiScenario != null) {
@@ -527,11 +538,10 @@ public class ApiScenarioReportService {
             if (StringUtils.equalsAnyIgnoreCase(status, ExecuteResult.ERROR_REPORT_RESULT.toString())) {
                 scenario.setLastResult(status);
             } else {
-                scenario.setLastResult(errorSize > 0 ? "Fail" : ScenarioStatus.Success.name());
+                scenario.setLastResult(errorSize > 0 ? ScenarioStatus.Fail.name() : ScenarioStatus.Success.name());
             }
 
-            long successSize = requestResults.stream().filter(requestResult -> StringUtils.equalsIgnoreCase(requestResult.getStatus(), ScenarioStatus.Success.name())).count();
-            scenario.setPassRate(new DecimalFormat("0%").format((float) successSize / requestResults.size()));
+            scenario.setPassRate(PassRateUtil.calculatePassRate(requestResults, report));
             scenario.setReportId(dto.getReportId());
             int executeTimes = 0;
             if (scenario.getExecuteTimes() != null) {
@@ -659,6 +669,7 @@ public class ApiScenarioReportService {
                 APIReportBatchRequest reportRequest = new APIReportBatchRequest();
                 reportRequest.setIsUi(request.getIsUi());
                 reportRequest.setIds(list);
+                reportRequest.setCaseType(ReportTypeConstants.SCENARIO.name());
                 this.deleteAPIReportBatch(reportRequest);
             }
         }
@@ -709,8 +720,7 @@ public class ApiScenarioReportService {
     public void deleteAPIReportBatch(APIReportBatchRequest reportRequest) {
         List<String> ids = getIdsByDeleteBatchRequest(reportRequest);
         ids = batchDeleteReportResource(reportRequest, ids, true);
-
-        //处理最后剩余的数据
+        //处理报告关联数据
         if (!ids.isEmpty()) {
             deleteScenarioReportByIds(ids);
             deleteApiDefinitionResultByIds(ids);
@@ -932,7 +942,20 @@ public class ApiScenarioReportService {
 
         long errorReportResultSize = dto.getRequestResults().stream().filter(requestResult ->
                 StringUtils.equalsIgnoreCase(requestResult.getStatus(), ExecuteResult.ERROR_REPORT_RESULT.toString())).count();
-
+        //类型为ui时的统计
+        if (StringUtils.isNotEmpty(dto.getRunMode()) && dto.getRunMode().startsWith(ReportTypeConstants.UI.name())) {
+            try {
+                errorSize = dto.getRequestResults().stream().filter(requestResult ->
+                                StringUtils.isNotEmpty(requestResult.getResponseResult().getHeaders())
+                                        && JSONArray.parseArray(requestResult.getResponseResult().getHeaders()).stream().filter(
+                                        r -> ((JSONObject) r).containsKey("success") && !((JSONObject) r).getBoolean("success")
+                                ).count() > 0)
+                        .count();
+            } catch (Exception e) {
+                // UI 返回的结果在 headers 里面，格式不符合规范的直接认定结果为失败
+                errorSize = 1;
+            }
+        }
         String status = dto.getRequestResults().isEmpty() ? ExecuteResult.UN_EXECUTE.toString() : ScenarioStatus.Success.name();
         if (errorSize > 0) {
             status = ScenarioStatus.Error.name();
@@ -953,12 +976,19 @@ public class ApiScenarioReportService {
 
     public void cleanUpReport(long time, String projectId) {
         List<String> ids = extApiScenarioReportMapper.selectByProjectIdAndLessThanTime(projectId, time);
-        List<String> definitionExecIds = extApiDefinitionExecResultMapper.selectByProjectIdAndLessThanTime(projectId, time);
-        ids.addAll(definitionExecIds);
         if (CollectionUtils.isNotEmpty(ids)) {
             APIReportBatchRequest request = new APIReportBatchRequest();
             request.setIds(ids);
             request.setSelectAllDate(false);
+            request.setCaseType(ReportTypeConstants.SCENARIO.name());
+            deleteAPIReportBatch(request);
+        }
+        List<String> definitionExecIds = extApiDefinitionExecResultMapper.selectByProjectIdAndLessThanTime(projectId, time);
+        if (CollectionUtils.isNotEmpty(definitionExecIds)) {
+            APIReportBatchRequest request = new APIReportBatchRequest();
+            request.setIds(definitionExecIds);
+            request.setSelectAllDate(false);
+            request.setCaseType(ReportTypeConstants.API.name());
             deleteAPIReportBatch(request);
         }
     }

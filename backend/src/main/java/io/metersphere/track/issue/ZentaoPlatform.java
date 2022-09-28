@@ -91,7 +91,7 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
     }
 
     @Override
-    public List<DemandDTO> getDemandList(String projectId) {
+    public List<DemandDTO> getDemandList(String projectId,String keyWord) {
         //getTestStories
         List<DemandDTO> list = new ArrayList<>();
         try {

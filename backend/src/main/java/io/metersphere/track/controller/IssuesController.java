@@ -2,6 +2,7 @@ package io.metersphere.track.controller;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import io.metersphere.api.dto.IssuesStatusCountDao;
 import io.metersphere.base.domain.Issues;
 import io.metersphere.base.domain.IssuesDao;
 import io.metersphere.base.domain.IssuesWithBLOBs;
@@ -25,11 +26,13 @@ import io.metersphere.track.request.testcase.AuthUserIssueRequest;
 import io.metersphere.track.request.testcase.IssuesRequest;
 import io.metersphere.track.request.testcase.IssuesUpdateRequest;
 import io.metersphere.track.service.IssuesService;
+import oracle.jdbc.proxy.annotation.Post;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
 
 @RequestMapping("issues")
 @RestController
@@ -62,8 +65,7 @@ public class IssuesController {
     @PostMapping("/add")
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_ISSUE_READ_CREATE)
     @MsAuditLog(module = OperLogModule.TRACK_BUG, type = OperLogConstants.CREATE, content = "#msClass.getLogDetails(#issuesRequest)", msClass = IssuesService.class)
-    @SendNotice(taskType = NoticeConstants.TaskType.DEFECT_TASK, target = "#issuesRequest",
-            event = NoticeConstants.Event.CREATE, subject = "缺陷通知")
+    @SendNotice(taskType = NoticeConstants.TaskType.DEFECT_TASK, event = NoticeConstants.Event.CREATE, subject = "缺陷通知")
     public IssuesWithBLOBs addIssues(@RequestBody IssuesUpdateRequest issuesRequest) {
         return issuesService.addIssues(issuesRequest);
     }
@@ -71,10 +73,9 @@ public class IssuesController {
     @PostMapping("/update")
     @RequiresPermissions(PermissionConstants.PROJECT_TRACK_ISSUE_READ_EDIT)
     @MsAuditLog(module = OperLogModule.TRACK_BUG, type = OperLogConstants.UPDATE, beforeEvent = "#msClass.getLogDetails(#issuesRequest.id)", content = "#msClass.getLogDetails(#issuesRequest.id)", msClass = IssuesService.class)
-    @SendNotice(taskType = NoticeConstants.TaskType.DEFECT_TASK, target = "#issuesRequest",
-            event = NoticeConstants.Event.UPDATE, subject = "缺陷通知")
-    public void updateIssues(@RequestBody IssuesUpdateRequest issuesRequest) {
-        issuesService.updateIssues(issuesRequest);
+    @SendNotice(taskType = NoticeConstants.TaskType.DEFECT_TASK, event = NoticeConstants.Event.UPDATE, subject = "缺陷通知")
+    public IssuesWithBLOBs updateIssues(@RequestBody IssuesUpdateRequest issuesRequest) {
+        return issuesService.updateIssues(issuesRequest);
     }
 
     @GetMapping("/get/case/{refType}/{id}")
@@ -153,7 +154,7 @@ public class IssuesController {
     }
 
     @PostMapping("/status/count")
-    public List<IssuesDao> getCountByStatus(@RequestBody IssuesRequest request) {
+    public List<IssuesStatusCountDao> getCountByStatus(@RequestBody IssuesRequest request) {
         return issuesService.getCountByStatus(request);
     }
 
@@ -163,8 +164,8 @@ public class IssuesController {
     }
 
     @PostMapping("/up/follows/{issueId}")
-    public void saveFollows(@PathVariable String issueId,@RequestBody List<String> follows) {
-        issuesService.saveFollows(issueId,follows);
+    public void saveFollows(@PathVariable String issueId, @RequestBody List<String> follows) {
+        issuesService.saveFollows(issueId, follows);
     }
 
     @GetMapping("/thirdpart/template/{projectId}")
@@ -177,9 +178,9 @@ public class IssuesController {
         return issuesService.getIssueTypes(request);
     }
 
-    @GetMapping("/demand/list/{projectId}")
-    public List<DemandDTO> getDemandList(@PathVariable String projectId) {
-        return issuesService.getDemandList(projectId);
+    @PostMapping("/demand/list")
+    public List<DemandDTO> getDemandList(@RequestBody Map<String,String> map) {
+        return issuesService.getDemandList(map.get("projectId"),map.get("keyWord"));
     }
 
     @PostMapping("/platform/transitions")

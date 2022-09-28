@@ -908,7 +908,8 @@ export default {
     add_project_batch: '批量添加到項目',
     add_workspace_batch: "批量添加到工作空間",
     add_project_batch_tip: '默認為成員添加只讀用戶組(系統)',
-    import_user_tip: '用戶組只支持系統默認用戶組'
+    import_user_tip: '用戶組只支持系統默認用戶組',
+    search_get_more_tip: '搜索獲取其他選項'
   },
   group: {
     add: '添加用戶組',
@@ -987,7 +988,7 @@ export default {
     downloadZipFile: '下載執行文件',
     export: '導出',
     export_to_ms_format: '導出 MeterSphere 格式',
-    export_jmeter_format: '導出 Jmeter 格式',
+    export_jmeter_format: '導出 JMeter 格式',
     export_to_swagger3_format: '導出 Swagger3.0 格式',
     compare: '報告對比',
     generation_error: '報告生成錯誤, 無法查看, 請檢查日誌詳情!',
@@ -1471,6 +1472,8 @@ export default {
       generate_report: "生成報告",
       rerun: "失敗重跑",
       rerun_warning: "連接異常，請檢查環境配置",
+      csv_warning: "請添加 csv 文件",
+      variable_warning: "變量名不能為空"
     },
     environment: {
       id: '環境ID',
@@ -1514,7 +1517,7 @@ export default {
       base_url: "基礎URL",
       base_url_description: "基礎URL作為所有請求的URL前綴",
       scenario_step_is_empty: "場景: {0} 的步驟為空，無法導入",
-      base_scenario_step_is_empty:"原場景步驟為空",
+      base_scenario_step_is_empty: "原場景步驟為空",
       variables: "自定義變量",
       headers: "請求頭",
       kv_description: "所有請求可以使用自定義變量",
@@ -2191,6 +2194,8 @@ export default {
       case_desc: "用例描述",
       passing_rate: '用例通過率',
       sync_to_new_version: "復製以下信息到新版本",
+      exists_multiple_prerequisite_node: "下存在多個前置條件",
+      exists_multiple_remark_node: "下存在多個備註"
     },
     plan: {
       test_plan: "測試計劃",

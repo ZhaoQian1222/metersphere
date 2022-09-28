@@ -99,7 +99,7 @@
                            sortable
                            :field="item"
                            :fields-width="fieldsWidth"
-                           :filters="!trashEnable ? apiscenariofilters.STATUS_FILTERS : apiscenariofilters.TRASH_FILTERS"
+                           :filters="!trashEnable ? apiscenariofilters.STATUS_FILTERS : null"
                            min-width="120px">
             <template v-slot:default="scope">
               <plan-status-table-item :value="scope.row.status"/>
@@ -719,7 +719,7 @@ export default {
       this.selectRows = new Set();
       this.condition.moduleIds = this.selectNodeIds;
       if (this.trashEnable) {
-        this.condition.filters = {status: ["Trash"]};
+        this.condition.filters = {...this.condition.filters, status: ["Trash"]}
         this.condition.moduleIds = [];
       }
 

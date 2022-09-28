@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -27,12 +28,12 @@ public class YunxiaoClient extends BaseClient {
 
     private String INTERFACEURL;
 
-    protected  String USER_NAME;
+    protected String USER_NAME;
 
-    protected  String PASSWD;
+    protected String PASSWD;
 
     public TapdGetIssueResponse getIssueForPage(String projectId, int pageNum, int limit) {
-       return getIssueForPageByIds(projectId, pageNum, limit, null);
+        return getIssueForPageByIds(projectId, pageNum, limit, null);
     }
 
     public Map<String, String> getStatusMap(String projectId) {
@@ -81,27 +82,58 @@ public class YunxiaoClient extends BaseClient {
         return (TapdGetIssueResponse) getResultForObject(TapdGetIssueResponse.class, response);
     }
 
-    public JSONArray getDemands(String projectId) {
+    public JSONArray getDemands(String projectId, String keyWord) {
         JSONArray objects = new JSONArray();
-        try{
-            //本地测试链接
-//            String url = getBaseUrl() + "/hello?akProjectId={1}&stamp=Req&perPage=200&page=1";
-            String url = getBaseUrl() + "/SearchIssue?akProjectId={1}&stamp=Req&perPage=200&page=1";
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId);
-            objects.addAll(JSONArray.parseObject(response.getBody()).getJSONArray("result"));
-            //总页数
-            Integer totalPages = (Integer) JSONObject.parseObject(response.getBody()).get("totalPages");
-            if(totalPages>1){
-                for (int i = 2; i <= totalPages; i++) {
-                    url = getBaseUrl() + "/SearchIssue?akProjectId={1}&stamp=Req&perPage=200&page="+i;
+        try {
+            if (keyWord==null || keyWord.equals("") ) {
+                //本地测试链接
+//                String url = getBaseUrl() + "/hello?akProjectId={1}&stamp=Req&perPage=50&page=1";
+            String url = getBaseUrl() + "/SearchIssue?akProjectId={1}&stamp=Req&perPage=50&page=1";
+                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId);
+                objects.addAll(JSONArray.parseObject(response.getBody()).getJSONArray("result"));
+            } else {
+                String  regex= "^\\d{3,6}$";
+                String url = "";
+                boolean matches = keyWord.matches(regex);
+                if(matches){
                     //本地测试链接
-//                    url = getBaseUrl() + "/hello?akProjectId={1}&stamp=Req&perPage=200&page="+i;
-                    response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId);
+//                    url = getBaseUrl() + "/hello?akProjectId={1}&stamp=Req&perPage=200&page=1&idList={2}";
+                    url = getBaseUrl() + "/SearchIssue?akProjectId={1}&stamp=Req&perPage=200&page=1&idList={2}";
+                    ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId , keyWord);
                     objects.addAll(JSONArray.parseObject(response.getBody()).getJSONArray("result"));
+                    //总页数
+                    Integer totalPages = (Integer) JSONObject.parseObject(response.getBody()).get("totalPages");
+                    if (totalPages > 1) {
+                        for (int i = 2; i <= totalPages; i++) {
+                            //本地测试链接
+//                          url = getBaseUrl() + "/hello?akProjectId={1}&idList={2}&stamp=Req&perPage=200&page=" + i;
+                            url = getBaseUrl() + "/SearchIssue?akProjectId={1}&idList={2}&stamp=Req&perPage=200&page="+i;
+                            response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId,keyWord);
+                            objects.addAll(JSONArray.parseObject(response.getBody()).getJSONArray("result"));
+                        }
+                    }
+                }else{
+                    //本地测试链接
+//                    url = getBaseUrl() + "/hello?akProjectId={1}&stamp=Req&perPage=200&page=1&subject={2}";
+                    url = getBaseUrl() + "/SearchIssue?akProjectId={1}&stamp=Req&perPage=200&page=1&subject={2}";
+                    ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId , keyWord);
+                    objects.addAll(JSONArray.parseObject(response.getBody()).getJSONArray("result"));
+                    //总页数
+                    Integer totalPages = (Integer) JSONObject.parseObject(response.getBody()).get("totalPages");
+                    if (totalPages > 1) {
+                        for (int i = 2; i <= totalPages; i++) {
+                            //本地测试链接
+//                            url = getBaseUrl() + "/hello?akProjectId={1}&subject={2}&stamp=Req&perPage=200&page=" + i;
+                            url = getBaseUrl() + "/SearchIssue?akProjectId={1}&subject={2}&stamp=Req&perPage=200&page="+i;
+                            response = restTemplate.exchange(url, HttpMethod.GET, null, String.class, projectId,keyWord);
+                            objects.addAll(JSONArray.parseObject(response.getBody()).getJSONArray("result"));
+                        }
+                    }
                 }
+
             }
-        }catch (Exception e){
-            LogUtil.error("云效接口返回体解析报错"+e.getMessage());
+        } catch (Exception e) {
+            LogUtil.error("云效接口返回体解析报错" + e.getMessage());
         }
         return objects;
     }

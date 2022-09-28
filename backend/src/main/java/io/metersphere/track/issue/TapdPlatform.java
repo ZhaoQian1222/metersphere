@@ -77,7 +77,7 @@ public class TapdPlatform extends AbstractIssuePlatform {
     }
 
     @Override
-    public List<DemandDTO> getDemandList(String projectId) {
+    public List<DemandDTO> getDemandList(String projectId,String keyWord) {
         List<DemandDTO> demandList = new ArrayList<>();
         JSONArray demands = tapdClient.getDemands(getProjectId(projectId));
         for (int i = 0; i < demands.size(); i++) {

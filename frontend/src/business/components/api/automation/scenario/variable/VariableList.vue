@@ -303,7 +303,7 @@ export default {
     addParameters(v) {
       v.id = getUUID();
       if (v.type === 'CSV') {
-        v.delimiter = ",";
+        v.delimiter = v.delimiter ? v.delimiter : ",";
       }
       this.variables.push(v);
       let index = 1;
@@ -347,6 +347,9 @@ export default {
       this.headersOld = JSON.parse(JSON.stringify(this.headers));
       this.visible = true;
       this.disabled = disabled;
+      this.$nextTick(() => {
+        this.$refs.variableTable.doLayout();
+      });
     },
     save() {
       this.visible = false;
@@ -362,6 +365,8 @@ export default {
       });
       this.selectVariable = "";
       this.searchType = "";
+      this.selectType = "CONSTANT";
+      this.editData = {};
       if (jsondiffpatch.diff(JSON.parse(JSON.stringify(this.variables)), this.variablesOld) || jsondiffpatch.diff(JSON.parse(JSON.stringify(this.headers)), this.headersOld)) {
         this.$emit('setVariables', saveVariables, this.headers);
       }
@@ -377,9 +382,16 @@ export default {
     },
     confirmVariable() {
       if (this.editData && (this.editData.name == undefined || this.editData.name == '')) {
-        this.$warning("变量名不能为空");
+        this.$warning(this.$t('api_test.automation.variable_warning'));
         return;
       }
+      //新增校验和git存储，先注释
+      // if (this.editData.type === 'CSV' && this.$refs.csv) {
+      //   if (this.editData.files.length === 0) {
+      //     this.$warning(this.$t('api_test.automation.csv_warning'));
+      //     return;
+      //   }
+      // }
       if (hasLicense()) {
         // 校验并拉取git仓库中的文件，并复制文件到本地路径下，返回文件的ID和文件的名称,以及文件的commitId
         this.validateRepository(res => {

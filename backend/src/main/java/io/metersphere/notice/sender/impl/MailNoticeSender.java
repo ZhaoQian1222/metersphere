@@ -179,7 +179,7 @@ public class MailNoticeSender extends AbstractNoticeSender {
         }
 
         props.put("mail.smtp.ssl.trust", javaMailSender.getHost());
-        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.auth", "false");
         props.put("mail.smtp.timeout", "30000");
         props.put("mail.smtp.connectiontimeout", "5000");
         javaMailSender.setJavaMailProperties(props);

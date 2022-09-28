@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import io.metersphere.api.dto.IssuesStatusCountDao;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.IssueFollowMapper;
 import io.metersphere.base.mapper.IssuesMapper;
@@ -108,16 +109,17 @@ public class IssuesService {
             });
         }
         saveFollows(issuesRequest.getId(), issuesRequest.getFollows());
-        return issues;
+        return getIssue(issues.getId());
     }
 
 
-    public void updateIssues(IssuesUpdateRequest issuesRequest) {
+    public IssuesWithBLOBs updateIssues(IssuesUpdateRequest issuesRequest) {
         issuesRequest.getId();
         List<AbstractIssuePlatform> platformList = getUpdatePlatforms(issuesRequest);
         platformList.forEach(platform -> {
             platform.updateIssue(issuesRequest);
         });
+        return getIssue(issuesRequest.getId());
         // todo 缺陷更新事件？
     }
 
@@ -351,10 +353,6 @@ public class IssuesService {
         platform.deleteIssue(id);
     }
 
-    public IssuesWithBLOBs get(String id) {
-        return issuesMapper.selectByPrimaryKey(id);
-    }
-
     public List<ZentaoBuild> getZentaoBuilds(IssuesRequest request) {
         try {
             ZentaoPlatform platform = (ZentaoPlatform) IssueFactory.createPlatform(IssuesManagePlatform.Zentao.name(), request);
@@ -428,7 +426,7 @@ public class IssuesService {
         List<TestCaseIssues> testCaseIssues = testCaseIssuesMapper.selectByExample(example);
 
         List<String> caseIds = testCaseIssues.stream().map(x ->
-                x.getRefType().equals(IssueRefType.PLAN_FUNCTIONAL.name()) ? x.getRefId() : x.getResourceId())
+                        x.getRefType().equals(IssueRefType.PLAN_FUNCTIONAL.name()) ? x.getRefId() : x.getResourceId())
                 .collect(Collectors.toList());
 
         List<TestCaseDTO> notInTrashCase = testCaseService.getTestCaseByIds(caseIds);
@@ -717,7 +715,7 @@ public class IssuesService {
         issuesMapper.updateByPrimaryKeySelective(issues);
     }
 
-    public List<IssuesDao> getCountByStatus(IssuesRequest request) {
+    public List<IssuesStatusCountDao> getCountByStatus(IssuesRequest request) {
         return extIssuesMapper.getCountByStatus(request);
 
     }
@@ -773,14 +771,14 @@ public class IssuesService {
         }
     }
 
-    public List<DemandDTO> getDemandList(String projectId) {
+    public List<DemandDTO> getDemandList(String projectId,String keyWord) {
         Project project = projectService.getProjectById(projectId);
         String workspaceId = project.getWorkspaceId();
         IssuesRequest issueRequest = new IssuesRequest();
         issueRequest.setWorkspaceId(workspaceId);
         issueRequest.setProjectId(projectId);
         AbstractIssuePlatform platform = IssueFactory.createPlatform(project.getPlatform(), issueRequest);
-        return platform.getDemandList(projectId);
+        return platform.getDemandList(projectId,keyWord);
     }
 
     public List<IssuesDao> listByWorkspaceId(IssuesRequest request) {

@@ -41,5 +41,7 @@ public class ApiTestImportRequest {
     private String protocol;
     //自定义字段
     private String customFields;
+    //上传文件来源，目前用于辨别是否是idea插件
+    private String origin;
 
 }

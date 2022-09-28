@@ -171,8 +171,7 @@ public class FileUtils {
             });
         }
     }
-
-
+    
     public static void copyBodyFiles(String sourceId, String targetId) {
         try {
             String sourcePath = BODY_FILE_DIR + "/" + sourceId;

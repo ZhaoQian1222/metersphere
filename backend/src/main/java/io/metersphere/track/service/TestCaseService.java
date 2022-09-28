@@ -198,7 +198,6 @@ public class TestCaseService {
             request.setCustomNum(request.getNum().toString());
         }
         request.setReviewStatus(TestCaseReviewStatus.Prepare.name());
-        request.setStatus(TestCaseReviewStatus.Prepare.name());
         request.setDemandId(request.getDemandId());
         request.setDemandName(request.getDemandName());
         request.setCreateUser(SessionUtils.getUserId());
@@ -760,7 +759,6 @@ public class TestCaseService {
                         LogUtil.error("Parse case exec status error:" + e.getMessage());
                     }
                 }
-                data.setStatus(dataStatus);
             }
         }
         return returnList;
@@ -1087,7 +1085,9 @@ public class TestCaseService {
                     }
                     num++;
                     testCase.setReviewStatus(TestCaseReviewStatus.Prepare.name());
-                    testCase.setStatus(TestCaseReviewStatus.Prepare.name());
+                    if (StringUtils.isEmpty(testCase.getStatus())) {
+                        testCase.setStatus(TestCaseReviewStatus.Prepare.name());
+                    }
                     testCase.setOrder(Long.valueOf(testCases.size() - (num - beforeInsertId)) * ServiceUtils.ORDER_STEP);
                     testCase.setRefId(testCase.getId());
                     testCase.setVersionId(request.getVersionId());
@@ -1689,6 +1689,10 @@ public class TestCaseService {
                 if (StringUtils.equals(request.getCustomField().getName(), CaseCustomFields.MAINTAINER.getValue())) {
                     testCase.setMaintainer((String) request.getCustomField().getValue());
                 }
+
+                if (StringUtils.equals(request.getCustomField().getName(), CaseCustomFields.STATUS.getValue())) {
+                    testCase.setStatus((String) request.getCustomField().getValue());
+                }
                 testCase.setUpdateTime(System.currentTimeMillis());
                 TestCaseExample example = new TestCaseExample();
                 example.createCriteria().andIdEqualTo(testCase.getId());
@@ -1927,7 +1931,7 @@ public class TestCaseService {
         return editTestCase(request);
     }
 
-    public String editTestCase(EditTestCaseRequest request, List<MultipartFile> files) {
+    public String editTestCase(EditTestCaseRequest request, List<MultipartFile> files, boolean isTestPlanEdit) {
         String testCaseId = testPlanTestCaseMapper.selectByPrimaryKey(request.getId()).getCaseId();
         request.setId(testCaseId);
         TestCaseWithBLOBs testCaseWithBLOBs = testCaseMapper.selectByPrimaryKey(testCaseId);
@@ -1936,20 +1940,21 @@ public class TestCaseService {
         }
         testCaseWithBLOBs.setRemark(request.getRemark());
         // 新选择了一个文件，删除原来的文件
-        List<FileMetadata> updatedFiles = request.getUpdatedFileList();
-        List<FileMetadata> originFiles = fileService.getFileMetadataByCaseId(testCaseId);
-        List<String> updatedFileIds = updatedFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
-        List<String> originFileIds = originFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
-        // 相减
-        List<String> deleteFileIds = ListUtils.subtract(originFileIds, updatedFileIds);
-        fileService.deleteFileRelatedByIds(deleteFileIds);
+        if (!isTestPlanEdit) {
+            List<FileMetadata> updatedFiles = request.getUpdatedFileList();
+            List<FileMetadata> originFiles = fileService.getFileMetadataByCaseId(testCaseId);
+            List<String> updatedFileIds = updatedFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
+            List<String> originFileIds = originFiles.stream().map(FileMetadata::getId).collect(Collectors.toList());
+            // 相减
+            List<String> deleteFileIds = ListUtils.subtract(originFileIds, updatedFileIds);
+            fileService.deleteFileRelatedByIds(deleteFileIds);
 
-        if (!CollectionUtils.isEmpty(deleteFileIds)) {
-            TestCaseFileExample testCaseFileExample = new TestCaseFileExample();
-            testCaseFileExample.createCriteria().andFileIdIn(deleteFileIds);
-            testCaseFileMapper.deleteByExample(testCaseFileExample);
+            if (!CollectionUtils.isEmpty(deleteFileIds)) {
+                TestCaseFileExample testCaseFileExample = new TestCaseFileExample();
+                testCaseFileExample.createCriteria().andFileIdIn(deleteFileIds);
+                testCaseFileMapper.deleteByExample(testCaseFileExample);
+            }
         }
-
 
         if (files != null) {
             files.forEach(file -> {
@@ -2242,8 +2247,8 @@ public class TestCaseService {
     }
 
     public void reduction(TestCaseBatchRequest request) {
-        List<String> ids = new ArrayList<>();
-        if (request.getCondition().isSelectAll()) {
+        List<String> ids;
+        if (request.getCondition() != null && request.getCondition().isSelectAll()) {
             List<TestCaseDTO> allReductionTestCases = listTestCase(request.getCondition());
             ids = allReductionTestCases.stream().map(TestCaseDTO::getId).collect(Collectors.toList());
         } else {

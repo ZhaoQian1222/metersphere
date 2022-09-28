@@ -77,11 +77,11 @@ public class YunxiaoPlatform extends AbstractIssuePlatform {
     }
 
     @Override
-    public List<DemandDTO> getDemandList(String projectId) {
+    public List<DemandDTO> getDemandList(String projectId,String keyWord) {
         List<DemandDTO> demandList = new ArrayList<>();
         YunxiaoConfig config = getConfig();
         Project project = projectService.getProjectById(projectId);
-        JSONArray demands = yunxiaoClient.getDemands(getProjectId(projectId));
+        JSONArray demands = yunxiaoClient.getDemands(getProjectId(projectId),keyWord);
         for (int i = 0; i < demands.size(); i++) {
             JSONObject o = demands.getJSONObject(i);
             DemandDTO demandDTO = new DemandDTO();
@@ -90,7 +90,7 @@ public class YunxiaoPlatform extends AbstractIssuePlatform {
             //获取需求名subject
             String subject = (String) o.get("subject");
             demandDTO.setId(id.toString());
-            demandDTO.setName(subject+"("+id+")");
+            demandDTO.setName(subject);
             demandDTO.setPlatform(key);
             //天玑接口地址http://phecda.cicc.group/req?from=ak&akProjectId=690136#openTaskId=41415
             demandDTO.setHref(config.getUrl()+"?from=ak&akProjectId="+project.getYunxiaoKey()+"#openTaskId="+id);

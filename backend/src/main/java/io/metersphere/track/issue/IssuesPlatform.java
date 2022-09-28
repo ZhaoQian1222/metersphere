@@ -24,7 +24,7 @@ public interface IssuesPlatform {
     List<IssuesDao> getIssue(IssuesRequest request);
 
     /*获取平台相关需求*/
-    List<DemandDTO> getDemandList(String projectId);
+    List<DemandDTO> getDemandList(String projectId,String keyWord);
 
     /**
      * 添加缺陷到缺陷平台

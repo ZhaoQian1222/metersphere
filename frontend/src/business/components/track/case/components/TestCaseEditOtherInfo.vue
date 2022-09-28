@@ -15,15 +15,29 @@
     </el-tab-pane>
 
     <el-tab-pane :label="$t('test_track.related_requirements')" name="demand">
-      <el-col :span="8">
+      <el-col :span="10">
         <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
                       prop="demandId">
-          <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions"
-                       clearable filterable :filter-method="filterDemand" @change="changeDemandValue(demandValue)">
-            <template slot-scope="{ node, data }">
-              <span class="demand-span" :title="data.label">{{ data.label }}</span>
-            </template>
-          </el-cascader>
+
+          <!--          <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions"-->
+          <!--                       clearable filterable :filter-method="filterDemand" :debounce="3000" @change="changeDemandValue(demandValue)">-->
+          <!--            <template slot-scope="{ node, data }">-->
+          <!--              <span class="demand-span" :title="data.label">{{ data.label }}</span>-->
+          <!--            </template>-->
+          <!--          </el-cascader>-->
+          <el-select v-model="demandValue" clearable filterable remote :remote-method="remoteMethod"
+                     placeholder="请输入关键词" :loading="loading"  @change="changeDemandValue(demandValue)">
+            <el-option
+              v-for="item in demandOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value">
+            </el-option>
+          </el-select>
+
+          <!--          <el-button type="primary" size="medium" @click="search" style="margin-left: 15px">-->
+          <!--            {{ $t('test_track.search') }}-->
+          <!--          </el-button>-->
         </el-form-item>
       </el-col>
       <el-col :span="8" :offset="2">
@@ -31,7 +45,8 @@
                       v-if="form.demandId=='other'">
           <el-input :disabled="readOnly" v-model="form.demandName"></el-input>
         </el-form-item>
-          <a :href="demandLink" style="text-decoration-line: underline;color: #1D8CE0" v-if="form.demandId!=='other'">{{demandLink}}</a>
+        <a :href="demandLink" style="text-decoration-line: underline;color: #1D8CE0" v-if="form.demandId!=='other'"
+           target="_blank">{{ demandLink }}</a>
       </el-col>
     </el-tab-pane>
 
@@ -146,8 +161,9 @@ export default {
   ],
   data() {
     return {
-      demandLink:'',
-      disable:true,
+      loading:false,
+      demandLink: '',
+      disable: true,
       result: {},
       tabActiveName: "remark",
       uploadList: [],
@@ -194,23 +210,38 @@ export default {
     },
     demandValue() {
       if (this.demandValue.length > 0) {
-        this.form.demandId = this.demandValue[this.demandValue.length - 1];
+        // this.form.demandId = this.demandValue[this.demandValue.length - 1];
+        this.form.demandId = this.demandValue;
       } else {
         this.form.demandId = null;
       }
     }
   },
   methods: {
-    changeDemandValue(demandValue){
+    remoteMethod(query) {
+      if (query !== '') {
+        this.loading = true;
+        setTimeout(() => {
+          this.loading = false;
+          // this.options = this.list.filter(item => {
+          //   return item.label.toLowerCase()
+          //     .indexOf(query.toLowerCase()) > -1;
+          // });
+          this.search(query);
+        }, 200);
+      } else {
+        this.options = [];
+      }
+    },
+    changeDemandValue(demandValue) {
       let label = '';
-      this.demandOptions.forEach(item=>{
-        if(item.value===demandValue.toString()){
-          this.demandLink= item.link;
+      this.demandOptions.forEach(item => {
+        if (item.value === demandValue.toString()) {
+          this.demandLink = item.link;
           label = item.label;
         }
       });
-      this.$emit('syncTags',label);
-
+      this.$emit('syncTags', label);
     },
     updateRemark(text) {
       this.form.remark = text;
@@ -352,59 +383,74 @@ export default {
     getDemandOptions() {
       if (this.demandOptions.length === 0) {
         this.result = {loading: true};
-        this.$get("/issues/demand/list/" + this.projectId).then(response => {
-          this.demandOptions = [];
-          if (response.data.data && response.data.data.length > 0) {
-            this.buildDemandCascaderOptions(response.data.data, this.demandOptions, []);
-          }
-          this.demandOptions.unshift({
-            value: 'other',
-            label: 'Other: ' + this.$t('test_track.case.other'),
-            platform: 'Other'
-          });
-          if (this.form.demandId === 'other') {
-            this.demandValue = ['other'];
-          }
-          this.result = {loading: false};
-        }).catch(() => {
-          this.demandOptions.unshift({
-            value: 'other',
-            label: 'Other: ' + this.$t('test_track.case.other'),
-            platform: 'Other'
-          });
-          if (this.form.demandId === 'other') {
-            this.demandValue = ['other'];
-          }
-          this.result = {loading: false};
-        });
+        this.search(null);
       }
+    },
+    search(keyWord){
+      this.$post("/issues/demand/list", {"projectId": this.projectId, "keyWord": keyWord}).then(response => {
+        this.demandOptions = [];
+        if (response.data.data && response.data.data.length > 0) {
+          this.buildDemandCascaderOptions(response.data.data, this.demandOptions, []);
+        }
+        this.demandOptions.unshift({
+          value: 'other',
+          label: 'Other: ' + this.$t('test_track.case.other'),
+          platform: 'Other'
+        });
+        if (this.form.demandId === 'other') {
+          this.demandValue = ['other'];
+        }
+        this.result = {loading: false};
+      }).catch(() => {
+        this.demandOptions.unshift({
+          value: 'other',
+          label: 'Other: ' + this.$t('test_track.case.other'),
+          platform: 'Other'
+        });
+        if (this.form.demandId === 'other') {
+          this.demandValue = ['other'];
+        }
+        this.result = {loading: false};
+      });
     },
     buildDemandCascaderOptions(data, options, pathArray) {
       data.forEach(item => {
         let option = {
-          label: item.platform + ': ' + item.name,
+          label: "[" + item.id + "]" + item.name + "[" + item.platform + "]",
           value: item.id,
           link: item.href
         }
         options.push(option);
-        pathArray.push(item.id);
-        if (item.id === this.form.demandId) {
-          this.demandValue = [...pathArray]; // 回显级联选项
-          this.demandLink = item.href;
+        // pathArray.push(item.id);
+        pathArray.push("[" + item.id + "]" + item.name + "[" + item.platform + "]");
+        if(this.form.demandId!=null){
+          if (item.id === this.form.demandId) {
+            this.demandValue = [...pathArray]; // 回显级联选项
+            this.demandLink = item.href;
+          }
+          if(this.demandValue.length<=0){
+            this.demandValue = this.form.demandId;
+            this.$post("/issues/demand/list", {"projectId": this.projectId, "keyWord": this.form.demandId}).then(response => {
+              if (response.data.data && response.data.data.length > 0) {
+                response.data.data.forEach(it =>{
+                  pathArray.push("[" + it.id + "]" + it.name + "[" + it.platform + "]");
+                  this.demandValue = [...pathArray]; // 回显级联选项
+                  this.demandLink = it.href;
+                })
+              }
+            }).catch(() => {
+              this.result = {loading: false};
+            });
+          }
         }
-        if (item.children && item.children.length > 0) {
-          option.children = [];
-          this.buildDemandCascaderOptions(item.children, option.children, pathArray);
-        }
+        /*中金这边不需要子集*/
+        // if (item.children && item.children.length > 0) {
+        //   option.children = [];
+        //   this.buildDemandCascaderOptions(item.children, option.children, pathArray);
+        // }
         pathArray.pop();
       });
     },
-    filterDemand(node, keyword) {
-      if (keyword && node.text.toLowerCase().indexOf(keyword.toLowerCase()) !== -1) {
-        return true;
-      }
-      return false;
-    }
   }
 };
 </script>

@@ -104,10 +104,6 @@ public class UserService {
         return extUserMapper.queryNameByIds(userIds);
     }
 
-    public Map<String, User> queryName() {
-        return extUserMapper.queryName();
-    }
-
     public UserDTO insert(UserRequest userRequest) {
         checkUserParam(userRequest);
         String id = userRequest.getId();
@@ -143,7 +139,7 @@ public class UserService {
             } else {
                 List<String> ids = (List<String>) map.get("ids");
                 Group group = groupMapper.selectByPrimaryKey(groupId);
-                checkQuota(quotaService, group.getType(), ids, 1);
+                checkQuota(quotaService, group.getType(), ids, Collections.singletonList(userId));
                 SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
                 UserGroupMapper mapper = sqlSession.getMapper(UserGroupMapper.class);
                 for (String id : ids) {
@@ -165,9 +161,9 @@ public class UserService {
         }
     }
 
-    private void checkQuota(QuotaService quotaService, String type, List<String> sourceIds, int size) {
+    private void checkQuota(QuotaService quotaService, String type, List<String> sourceIds, List<String> userIds) {
         if (quotaService != null) {
-            Map<String, Integer> addMemberMap = sourceIds.stream().collect(Collectors.toMap(id -> id, id -> size));
+            Map<String, List<String>> addMemberMap = sourceIds.stream().collect(Collectors.toMap(id -> id, id -> userIds));
             quotaService.checkMemberCount(addMemberMap, type);
         }
     }
@@ -462,7 +458,7 @@ public class UserService {
         if (!CollectionUtils.isEmpty(request.getUserIds())) {
             QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
             if (CollectionUtils.isNotEmpty(request.getUserIds())) {
-                checkQuota(quotaService, "WORKSPACE", Collections.singletonList(request.getWorkspaceId()), request.getUserIds().size());
+                checkQuota(quotaService, "WORKSPACE", Collections.singletonList(request.getWorkspaceId()), request.getUserIds());
             }
             for (String userId : request.getUserIds()) {
                 UserGroupExample userGroupExample = new UserGroupExample();
@@ -881,7 +877,7 @@ public class UserService {
         QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
         List<String> worksapceIds = request.getBatchProcessValue();
         if (CollectionUtils.isNotEmpty(userIds)) {
-            checkQuota(quotaService, "WORKSPACE", worksapceIds, userIds.size());
+            checkQuota(quotaService, "WORKSPACE", worksapceIds, userIds);
         }
         for (String userId : userIds) {
             UserGroupExample userGroupExample = new UserGroupExample();
@@ -953,7 +949,7 @@ public class UserService {
                         List<String> sourceIds = userGroups.stream().map(UserGroup::getSourceId).collect(Collectors.toList());
                         List<String> list = sourceMap.get(group);
                         list.removeAll(sourceIds);
-                        checkQuota(quotaService, gp.getType(), list, 1);
+                        checkQuota(quotaService, gp.getType(), list, Collections.singletonList(userId));
                         SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
                         UserGroupMapper mapper = sqlSession.getMapper(UserGroupMapper.class);
                         for (String sourceId : list) {
@@ -997,7 +993,7 @@ public class UserService {
         QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
         List<String> projectIds = request.getBatchProcessValue();
         if (CollectionUtils.isNotEmpty(userIds)) {
-            checkQuota(quotaService, "PROJECT", projectIds, userIds.size());
+            checkQuota(quotaService, "PROJECT", projectIds, userIds);
         }
         for (String userId : userIds) {
             UserGroupExample userGroupExample = new UserGroupExample();
@@ -1204,7 +1200,7 @@ public class UserService {
         }
         QuotaService quotaService = CommonBeanFactory.getBean(QuotaService.class);
         if (CollectionUtils.isNotEmpty(request.getUserIds())) {
-            checkQuota(quotaService, "PROJECT", Collections.singletonList(request.getProjectId()), request.getUserIds().size());
+            checkQuota(quotaService, "PROJECT", Collections.singletonList(request.getProjectId()), request.getUserIds());
         }
         for (String userId : request.getUserIds()) {
             UserGroupExample userGroupExample = new UserGroupExample();
@@ -1333,7 +1329,7 @@ public class UserService {
                 } else {
                     List<String> ids = (List<String>) map.get("ids");
                     Group group = groupMapper.selectByPrimaryKey(groupId);
-                    checkQuota(quotaService, group.getType(), ids, 1);
+                    checkQuota(quotaService, group.getType(), ids, Collections.singletonList(userId));
                     SqlSession sqlSession = sqlSessionFactory.openSession(ExecutorType.BATCH);
                     UserGroupMapper mapper = sqlSession.getMapper(UserGroupMapper.class);
                     for (String id : ids) {
@@ -1485,5 +1481,13 @@ public class UserService {
 
     public List<User> getProjectMemberOption(String projectId) {
         return extUserGroupMapper.getProjectMemberOption(projectId);
+    }
+
+    public Map<String, User> getUserIdMapByIds(List<String> userIdList) {
+        return extUserMapper.queryNameByIds(userIdList);
+    }
+
+    public User selectById(String id) {
+        return userMapper.selectByPrimaryKey(id);
     }
 }

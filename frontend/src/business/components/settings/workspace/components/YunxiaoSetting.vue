@@ -22,7 +22,6 @@
     <bug-manage-btn @save="save"
                     @init="init"
                     :edit-permission="['WORKSPACE_SERVICE:READ+EDIT']"
-                    @testConnection="testConnection"
                     @cancelIntegration="cancelIntegration"
                     @reloadPassInput="reloadPassInput"
                     :form="form"

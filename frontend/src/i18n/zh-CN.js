@@ -917,6 +917,7 @@ export default {
     add_workspace_batch: "批量添加到工作空间",
     add_project_batch_tip: '默认为成员添加只读用户组(系统)',
     import_user_tip: '用户组只支持系统默认用户组',
+    search_get_more_tip: '搜索获取其他选项'
   },
   group: {
     add: '添加用户组',
@@ -995,7 +996,7 @@ export default {
     downloadZipFile: '下载执行文件',
     export: '导出',
     export_to_ms_format: '导出 MeterSphere 格式',
-    export_jmeter_format: '导出 Jmeter 格式',
+    export_jmeter_format: '导出 JMeter 格式',
     export_to_swagger3_format: '导出 Swagger3.0 格式',
     compare: '报告对比',
     generation_error: '报告生成错误, 无法查看, 请检查日志详情!',
@@ -1479,6 +1480,8 @@ export default {
       generate_report: "生成报告",
       rerun: "失败重跑",
       rerun_warning: "连接异常，请检查环境配置",
+      csv_warning: "请添加 csv 文件",
+      variable_warning: "变量名不能为空"
     },
     environment: {
       id: '环境ID',
@@ -1522,7 +1525,7 @@ export default {
       base_url: "基础URL",
       base_url_description: "基础URL作为所有请求的URL前缀",
       scenario_step_is_empty: "场景: {0} 的步骤为空,无法导入",
-      base_scenario_step_is_empty:"原场景步骤为空",
+      base_scenario_step_is_empty: "原场景步骤为空",
       variables: "自定义变量",
       headers: "请求头",
       kv_description: "所有请求可以使用自定义变量",
@@ -2048,6 +2051,7 @@ export default {
     project: "项目",
     save: "保 存",
     return: "返 回",
+    search: "搜索",
     length_less_than: "长度必须小于",
     recent_plan: "我最近的计划",
     recent_case: "我最近的用例",
@@ -2202,6 +2206,8 @@ export default {
       passing_rate: '用例通过率',
       version: "版本",
       sync_to_new_version: "复制以下信息到新版本",
+      exists_multiple_prerequisite_node: "下存在多个前置条件",
+      exists_multiple_remark_node: "下存在多个备注",
     },
     plan: {
       test_plan: "测试计划",

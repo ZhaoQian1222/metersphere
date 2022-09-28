@@ -27,9 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Transactional
@@ -49,6 +47,8 @@ public class TestPlanMessageService {
     @Resource
     private TestPlanReportService testPlanReportService;
 
+    public static final Integer FULL_MARKS = 100;
+
 
     @Async
     public void checkTestPlanStatusAndSendMessage(TestPlanReport report, TestPlanReportContentWithBLOBs testPlanReportContent, boolean sendMessage) {
@@ -61,8 +61,10 @@ public class TestPlanMessageService {
         if (!report.getIsApiCaseExecuting() && !report.getIsPerformanceExecuting() && !report.getIsScenarioExecuting()) {
             //更新TestPlan状态为完成
             TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(report.getTestPlanId());
-            if (testPlan != null && !StringUtils.equals(testPlan.getStatus(), TestPlanStatus.Completed.name())) {
-                testPlan.setStatus(TestPlanStatus.Completed.name());
+            if (testPlan != null
+                    && !StringUtils.equalsAny(testPlan.getStatus(), TestPlanStatus.Completed.name(), TestPlanStatus.Finished.name())) {
+
+                testPlan.setStatus(calcTestPlanStatusWithPassRate(testPlan));
                 testPlanService.editTestPlan(testPlan);
             }
             try {
@@ -78,6 +80,40 @@ public class TestPlanMessageService {
                 LogUtil.error(e);
             }
         }
+    }
+
+    public String calcTestPlanStatusWithPassRate(TestPlanWithBLOBs testPlan) {
+        try {
+            // 计算通过率
+            TestPlanDTOWithMetric testPlanDTOWithMetric = BeanUtils.copyBean(new TestPlanDTOWithMetric(), testPlan);
+            testPlanService.calcTestPlanRate(Collections.singletonList(testPlanDTOWithMetric));
+            //测试进度
+            Double testRate = Optional.ofNullable(testPlanDTOWithMetric.getTestRate()).orElse(0.0);
+            //通过率
+            Double passRate = Optional.ofNullable(testPlanDTOWithMetric.getPassRate()).orElse(0.0);
+
+            // 已完成：测试进度=100% 且 通过率=100%
+            if (testRate >= FULL_MARKS && passRate >= FULL_MARKS) {
+                return TestPlanStatus.Completed.name();
+            }
+
+            // 已结束：超过了计划结束时间（如有） 或 测试进度=100% 且 通过率非100%
+            Long plannedEndTime = testPlan.getPlannedEndTime();
+            long currentTime = System.currentTimeMillis();
+            if(Objects.nonNull(plannedEndTime) && currentTime >= plannedEndTime){
+                return TestPlanStatus.Finished.name();
+            }
+
+            if(testRate >= FULL_MARKS && passRate < FULL_MARKS){
+                return TestPlanStatus.Finished.name();
+            }
+
+        } catch (Exception e) {
+            LogUtil.error("计算通过率失败！", e);
+        }
+
+        // 进行中：0 < 测试进度 < 100%
+        return TestPlanStatus.Underway.name();
     }
 
     @Async

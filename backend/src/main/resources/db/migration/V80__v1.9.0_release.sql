@@ -91,6 +91,9 @@ values ('f2b70824-471e-426e-9219-f82aba6dd560','禅道-默认模版','Zentao','�
 insert into issue_template (id,name,platform,description,title,`system`,`global`,workspace_id,content,create_time,update_time)
 values ('f2cd9e48-f136-4528-8249-a649c15aa3a4','TAPD-默认模版','Tapd','TAPD默认模版','',1,1,'global','',unix_timestamp() * 1000,unix_timestamp() * 1000);
 
+insert into issue_template (id,name,platform,description,title,`system`,`global`,workspace_id,content,create_time,update_time)
+values ('f2cd9e48-f136-4528-8249-a649c15aa999','云效-默认模版','Yunxiao','云效默认模版','',1,1,'global','',unix_timestamp() * 1000,unix_timestamp() * 1000);
+
 
 -- 字段模板关联表
 CREATE TABLE IF NOT EXISTS `custom_field_template` (

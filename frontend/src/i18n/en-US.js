@@ -905,6 +905,7 @@ export default {
     add_workspace_batch: "Batch Add User To Workspace",
     add_project_batch_tip: 'Add a read-only user group for members by default (system)',
     import_user_tip: 'User group only supports system default user group',
+    search_get_more_tip: 'Search for other options'
   },
   group: {
     add: 'Add User Group',
@@ -983,7 +984,7 @@ export default {
     test_execute_again: 'Test Execute Again',
     export: 'Export',
     export_to_ms_format: 'Export to MeterSphere format',
-    export_jmeter_format: 'Export to Jmeter format',
+    export_jmeter_format: 'Export to JMeter format',
     export_to_swagger3_format: 'Export to Swagger3.0 format',
     compare: 'Compare',
     generation_error: 'Report generation error, unable to view, please check log details!',
@@ -1466,6 +1467,8 @@ export default {
       generate_report: "Generate report",
       rerun: "fail and rerun",
       rerun_warning: "The connection is abnormal, please check the environment configuration",
+      csv_warning: "Please add csv file",
+      variable_warning: "Variable name cannot be empty"
     },
     environment: {
       id: 'Environment ID',
@@ -1509,7 +1512,7 @@ export default {
       base_url: "Base URL",
       base_url_description: "Base URL as URL prefix for all requests",
       scenario_step_is_empty: "Scenario: {0} has none step!",
-      base_scenario_step_is_empty:"Scenario step is empty!",
+      base_scenario_step_is_empty: "Scenario step is empty!",
       url_invalid: "Invalid URL",
       variables: "Variables",
       headers: "Headers",
@@ -2192,7 +2195,9 @@ export default {
         export_tip: "Switch to Case List and check Use Case Export"
       },
       case_desc: "Case Desc",
-      passing_rate: 'Case Pass Rate'
+      passing_rate: 'Case Pass Rate',
+      exists_multiple_prerequisite_node: "Exists multiple precondition node",
+      exists_multiple_remark_node: "Exists multiple remark node",
     },
     plan: {
       test_plan: "Plan",

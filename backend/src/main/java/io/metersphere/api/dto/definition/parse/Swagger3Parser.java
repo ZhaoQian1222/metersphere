@@ -17,6 +17,7 @@ import io.metersphere.api.dto.scenario.Body;
 import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.api.dto.scenario.request.RequestType;
 import io.metersphere.base.domain.ApiDefinitionWithBLOBs;
+import io.metersphere.base.domain.Project;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.commons.utils.XMLUtils;
@@ -380,7 +381,12 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             Object propertiesResult = parseSchemaPropertiesToJson(schema, refSet, infoMap);
             return propertiesResult == null ? getDefaultValueByPropertyType(schema) : propertiesResult;
         } else {
-            return getDefaultValueByPropertyType(schema);
+            if (MapUtils.isNotEmpty(schema.getProperties())) {
+                Object propertiesResult = parseSchemaPropertiesToJson(schema, refSet, infoMap);
+                return propertiesResult == null ? getDefaultValueByPropertyType(schema) : propertiesResult;
+            } else {
+                return getDefaultValueByPropertyType(schema);
+            }
         }
     }
 
@@ -390,6 +396,9 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         if (MapUtils.isEmpty(properties)) return null;
         JSONObject jsonObject = new JSONObject(true);
         properties.forEach((key, value) -> {
+            if (StringUtils.isBlank(value.getName())) {
+                value.setName(key);
+            }
             jsonObject.put(key, parseSchemaToJson(value, refSet, infoMap));
         });
         return jsonObject;
@@ -397,9 +406,17 @@ public class Swagger3Parser extends SwaggerAbstractParser {
 
     private void parseKvBody(Schema schema, Body body, Object data, Map<String, Schema> infoMap) {
         if (data instanceof JSONObject) {
-            ((JSONObject) data).forEach((k, v) -> {
-                parseKvBodyItem(schema, body, k, infoMap);
-            });
+            if (MapUtils.isNotEmpty(schema.getProperties())) {
+                schema.getProperties().forEach((key, value) -> {
+                    if (value instanceof Schema) {
+                        parseKvBodyItem(value, body, key.toString(), infoMap);
+                    }
+                });
+            } else {
+                ((JSONObject) data).forEach((k, v) -> {
+                    parseKvBodyItem(schema, body, k, infoMap);
+                });
+            }
         } else {
             if (data instanceof Schema) {
                 Schema dataSchema = (Schema) data;
@@ -518,8 +535,12 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         Map<String, JsonSchemaItem> JsonSchemaProperties = new LinkedHashMap<>();
         properties.forEach((key, value) -> {
             JsonSchemaItem item = new JsonSchemaItem();
-            item.setType(schema.getType());
-            item.setDescription(schema.getDescription());
+            if (StringUtils.isNotBlank(schema.getType())) {
+                item.setType(schema.getType());
+            }
+            if (StringUtils.isNotBlank(schema.getDescription())) {
+                item.setDescription(schema.getDescription());
+            }
             JsonSchemaItem proItem = parseSchema(value, refSet);
             if (proItem != null) JsonSchemaProperties.put(key, proItem);
         });
@@ -532,7 +553,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             return example == null ? 0 : example;
         } else if (value instanceof NumberSchema) {
             return example == null ? 0.0 : example;
-        } else if (value instanceof StringSchema || StringUtils.equals("string", value.getType())) {
+        } else if (value instanceof StringSchema || StringUtils.equals("string", value.getType()) || StringUtils.equals("text", value.getType())) {
             return example == null ? "" : example;
         } else {// todo 其他类型?
             return getDefaultStringValue(value.getDescription());
@@ -581,11 +602,16 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         },
         "components":{}
     }       */
-    public SwaggerApiExportResult swagger3Export(List<ApiDefinitionWithBLOBs> apiDefinitionList) {
+    public SwaggerApiExportResult swagger3Export(List<ApiDefinitionWithBLOBs> apiDefinitionList, Project project) {
         SwaggerApiExportResult result = new SwaggerApiExportResult();
 
         result.setOpenapi("3.0.1");
-        result.setInfo(new SwaggerInfo());
+        SwaggerInfo swaggerInfo = new SwaggerInfo();
+        swaggerInfo.setVersion("1.0.1");
+        swaggerInfo.setTitle("ms-" + project.getName());
+        swaggerInfo.setDescription("");
+        swaggerInfo.setTermsOfService("");
+        result.setInfo(swaggerInfo);
         result.setServers(new ArrayList<>());
         result.setTags(new ArrayList<>());
         result.setComponents(new JSONObject());
@@ -597,7 +623,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             swaggerApiInfo.setSummary(apiDefinition.getName());
             //  设置导入后的模块名 （根据 api 的 moduleID 查库获得所属模块，作为导出的模块名）
             //直接导出完整路径
-            if (apiDefinition.getModulePath() != null) {
+            if (StringUtils.isNotBlank(apiDefinition.getModulePath())) {
                 String[] split = new String[0];
                 String modulePath = apiDefinition.getModulePath();
                 String substring = modulePath.substring(0, 1);
@@ -611,6 +637,8 @@ public class Swagger3Parser extends SwaggerAbstractParser {
                     split = new String[]{modulePath};
                 }
                 swaggerApiInfo.setTags(Arrays.asList(split));
+            } else {
+                swaggerApiInfo.setTags(new ArrayList<>());
             }
 
             //  设置请求体
@@ -656,14 +684,9 @@ public class Swagger3Parser extends SwaggerAbstractParser {
                     swaggerParam.setName((String) param.get("name"));
                     swaggerParam.setRequired((boolean) param.get("required"));
                     swaggerParam.setExample((String) param.get("value"));
-                    //  请求头 value 没有导出
-//                    JSONObject schema = new JSONObject();
-//                    swaggerParam.setSchema(schema);
-//                    if(type.equals("headers")) {
-//                        schema.put("type", "string");
-//                        schema.put("example", param.getString("value"));
-//                        swaggerParam.setSchema(schema);
-//                    }
+                    JSONObject schema = new JSONObject();
+                    schema.put("type", "string");
+                    swaggerParam.setSchema(schema);
                     paramsList.add(JSON.parseObject(JSON.toJSONString(swaggerParam), Feature.DisableSpecialKeyDetect));
                 }
             }
@@ -1009,6 +1032,9 @@ public class Swagger3Parser extends SwaggerAbstractParser {
     }
 
     private String getModulePath(List<String> tagTree, StringBuilder modulePath) {
+        if (CollectionUtils.isEmpty(tagTree)) {
+            return "/未规划接口";
+        }
         for (String s : tagTree) {
             if (s.contains("/")) {
                 String[] split = s.split("/");
