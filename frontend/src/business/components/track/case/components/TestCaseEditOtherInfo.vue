@@ -18,15 +18,15 @@
       <el-col :span="10">
         <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
                       prop="demandId">
-
+          <!--  中金舍弃级联框        -->
           <!--          <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions"-->
           <!--                       clearable filterable :filter-method="filterDemand" :debounce="3000" @change="changeDemandValue(demandValue)">-->
           <!--            <template slot-scope="{ node, data }">-->
           <!--              <span class="demand-span" :title="data.label">{{ data.label }}</span>-->
           <!--            </template>-->
           <!--          </el-cascader>-->
-          <el-select v-model="demandValue" clearable filterable remote :remote-method="remoteMethod"
-                     placeholder="请输入关键词" :loading="loading"  @change="changeDemandValue(demandValue)">
+          <el-select v-model="demandValue" clearable filterable remote :remote-method="remoteMethod" style="width: 500px"
+                     placeholder="请输入需求ID或关键字"  @change="changeDemandValue(demandValue)" @blur="focusSelect" @focus="search(null)">
             <el-option
               v-for="item in demandOptions"
               :key="item.value"
@@ -161,7 +161,6 @@ export default {
   ],
   data() {
     return {
-      loading:false,
       demandLink: '',
       disable: true,
       result: {},
@@ -220,9 +219,7 @@ export default {
   methods: {
     remoteMethod(query) {
       if (query !== '') {
-        this.loading = true;
         setTimeout(() => {
-          this.loading = false;
           // this.options = this.list.filter(item => {
           //   return item.label.toLowerCase()
           //     .indexOf(query.toLowerCase()) > -1;
@@ -232,6 +229,9 @@ export default {
       } else {
         this.options = [];
       }
+    },
+    focusSelect(){
+      this.demandOptions == [];
     },
     changeDemandValue(demandValue) {
       let label = '';
@@ -382,7 +382,6 @@ export default {
     },
     getDemandOptions() {
       if (this.demandOptions.length === 0) {
-        this.result = {loading: true};
         this.search(null);
       }
     },
@@ -400,7 +399,6 @@ export default {
         if (this.form.demandId === 'other') {
           this.demandValue = ['other'];
         }
-        this.result = {loading: false};
       }).catch(() => {
         this.demandOptions.unshift({
           value: 'other',
@@ -410,7 +408,6 @@ export default {
         if (this.form.demandId === 'other') {
           this.demandValue = ['other'];
         }
-        this.result = {loading: false};
       });
     },
     buildDemandCascaderOptions(data, options, pathArray) {
@@ -438,9 +435,7 @@ export default {
                   this.demandLink = it.href;
                 })
               }
-            }).catch(() => {
-              this.result = {loading: false};
-            });
+            })
           }
         }
         /*中金这边不需要子集*/

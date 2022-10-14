@@ -92,8 +92,8 @@ public class YunxiaoPlatform extends AbstractIssuePlatform {
             demandDTO.setId(id.toString());
             demandDTO.setName(subject);
             demandDTO.setPlatform(key);
-            //天玑接口地址http://phecda.cicc.group/req?from=ak&akProjectId=690136#openTaskId=41415
-            demandDTO.setHref(config.getUrl()+"?from=ak&akProjectId="+project.getYunxiaoKey()+"#openTaskId="+id);
+            //天玑接口地址http://phecda.cicc.group/req?from=ak&akProjectId=690136#openTaskId=41415//http://phecda.cicc.group/issue/156358
+            demandDTO.setHref(config.getUrl()+"/issue/"+id);
             demandList.add(demandDTO);
         }
         return demandList;
