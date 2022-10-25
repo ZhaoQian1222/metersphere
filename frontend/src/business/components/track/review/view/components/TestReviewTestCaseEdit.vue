@@ -124,7 +124,6 @@
                                                  :project-id="projectId" :form="testCase" :case-id="testCase.caseId"
                                                  ref="otherInfo"/>
                     </el-form-item>
-
                   </el-form>
                 </div>
 

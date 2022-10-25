@@ -15,39 +15,35 @@
     </el-tab-pane>
 
     <el-tab-pane :label="$t('test_track.related_requirements')" name="demand">
-      <el-col :span="10">
-        <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
-                      prop="demandId">
-          <!--  中金舍弃级联框        -->
-          <!--          <el-cascader v-model="demandValue" :show-all-levels="false" :options="demandOptions"-->
-          <!--                       clearable filterable :filter-method="filterDemand" :debounce="3000" @change="changeDemandValue(demandValue)">-->
-          <!--            <template slot-scope="{ node, data }">-->
-          <!--              <span class="demand-span" :title="data.label">{{ data.label }}</span>-->
-          <!--            </template>-->
-          <!--          </el-cascader>-->
-          <el-select v-model="demandValue" clearable filterable remote :remote-method="remoteMethod" style="width: 500px"
-                     placeholder="请输入需求ID或关键字"  @change="changeDemandValue(demandValue)" @blur="focusSelect" @focus="search(null)">
-            <el-option
-              v-for="item in demandOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value">
-            </el-option>
-          </el-select>
-
-          <!--          <el-button type="primary" size="medium" @click="search" style="margin-left: 15px">-->
-          <!--            {{ $t('test_track.search') }}-->
-          <!--          </el-button>-->
-        </el-form-item>
-      </el-col>
-      <el-col :span="8" :offset="2">
-        <el-form-item :label="$t('test_track.case.demand_name_id')" :label-width="labelWidth" prop="demandName"
-                      v-if="form.demandId=='other'">
-          <el-input :disabled="readOnly" v-model="form.demandName"></el-input>
-        </el-form-item>
-        <a :href="demandLink" style="text-decoration-line: underline;color: #1D8CE0" v-if="form.demandId!=='other'"
-           target="_blank">{{ demandLink }}</a>
-      </el-col>
+      <el-row>
+        <el-col>
+          <el-form-item :label="$t('test_track.related_requirements')" :label-width="labelWidth"
+                        prop="demandId">
+            <el-select v-model="demandValue" :disabled="isTestPlan" clearable filterable remote
+                       :remote-method="remoteMethod"
+                       style="width: 800px"
+                       placeholder="请输入需求ID或关键字" @change="changeDemandValue(demandValue)" @blur="focusSelect"
+                       @focus="search(null)">
+              <el-option
+                v-for="item in demandOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value">
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row>
+        <el-col>
+          <el-form-item :label="$t('test_track.case.demand_name_id')" :label-width="labelWidth" prop="demandName"
+                        v-if="form.demandId=='other'">
+            <el-input :disabled="readOnly" v-model="form.demandName"></el-input>
+          </el-form-item>
+          <a :href="demandLink" style="text-decoration-line: underline;color: #1D8CE0" v-if="form.demandId!=='other'"
+             target="_blank">{{ demandLink }}</a>
+        </el-col>
+      </el-row>
     </el-tab-pane>
 
     <el-tab-pane :label="$t('test_track.case.relate_issue')" name="bug">
@@ -170,7 +166,7 @@ export default {
       tableData: [],
       demandOptions: [],
       relationshipCount: 0,
-      demandValue: [],
+      demandValue: "",
       //sysList:this.sysList,//一级选择框的数据
       props: {
         multiple: true,
@@ -213,6 +209,7 @@ export default {
         this.form.demandId = this.demandValue;
       } else {
         this.form.demandId = null;
+        this.demandLink = null;
       }
     }
   },
@@ -230,11 +227,12 @@ export default {
         this.options = [];
       }
     },
-    focusSelect(){
+    focusSelect() {
       this.demandOptions == [];
     },
     changeDemandValue(demandValue) {
       let label = '';
+      this.$emit('syncTags', label);
       this.demandOptions.forEach(item => {
         if (item.value === demandValue.toString()) {
           this.demandLink = item.link;
@@ -275,21 +273,17 @@ export default {
         /// todo: 显示错误信息
         return false;
       }
-
       if (this.tableData.filter(f => f.name === file.name).length > 0) {
         this.$error(this.$t('load_test.delete_file') + ', name: ' + file.name);
         return false;
       }
-
       let type = file.name.substring(file.name.lastIndexOf(".") + 1);
-
       this.tableData.push({
         name: file.name,
         size: file.size + ' Bytes', /// todo: 按照大小显示Byte、KB、MB等
         type: type.toUpperCase(),
         updateTime: new Date().getTime(),
       });
-
       return true;
     },
     handleUpload(uploadResources) {
@@ -359,7 +353,6 @@ export default {
       if (testCaseId) {
         this.result = this.$get("test/case/file/metadata/" + testCaseId, response => {
           let files = response.data;
-
           if (!files) {
             return;
           }
@@ -385,11 +378,11 @@ export default {
         this.search(null);
       }
     },
-    search(keyWord){
+    search(keyWord) {
       this.$post("/issues/demand/list", {"projectId": this.projectId, "keyWord": keyWord}).then(response => {
         this.demandOptions = [];
         if (response.data.data && response.data.data.length > 0) {
-          this.buildDemandCascaderOptions(response.data.data, this.demandOptions, []);
+          this.buildDemandCascaderOptions(response.data.data, this.demandOptions);
         }
         this.demandOptions.unshift({
           value: 'other',
@@ -410,7 +403,7 @@ export default {
         }
       });
     },
-    buildDemandCascaderOptions(data, options, pathArray) {
+    buildDemandCascaderOptions(data, options) {
       data.forEach(item => {
         let option = {
           label: "[" + item.id + "]" + item.name + "[" + item.platform + "]",
@@ -418,40 +411,41 @@ export default {
           link: item.href
         }
         options.push(option);
-        // pathArray.push(item.id);
-        pathArray.push("[" + item.id + "]" + item.name + "[" + item.platform + "]");
-        if(this.form.demandId!=null){
+        if (this.form.demandId) {
           if (item.id === this.form.demandId) {
-            this.demandValue = [...pathArray]; // 回显级联选项
+            this.demandValue = "[" + item.id + "]" + item.name + "[" + item.platform + "]"; // 回显级联选项
             this.demandLink = item.href;
           }
-          if(this.demandValue.length<=0){
-            this.demandValue = this.form.demandId;
-            this.$post("/issues/demand/list", {"projectId": this.projectId, "keyWord": this.form.demandId}).then(response => {
-              if (response.data.data && response.data.data.length > 0) {
-                response.data.data.forEach(it =>{
-                  pathArray.push("[" + it.id + "]" + it.name + "[" + it.platform + "]");
-                  this.demandValue = [...pathArray]; // 回显级联选项
-                  this.demandLink = it.href;
-                })
-              }
-            })
-          }
         }
-        /*中金这边不需要子集*/
-        // if (item.children && item.children.length > 0) {
-        //   option.children = [];
-        //   this.buildDemandCascaderOptions(item.children, option.children, pathArray);
-        // }
-        pathArray.pop();
       });
+      if (this.form.demandId) {
+        if (this.demandValue.length <= 0) {
+          // this.demandValue = this.form.demandId;
+          this.$post("/issues/demand/list", {
+            "projectId": this.projectId,
+            "keyWord": this.form.demandId
+          }).then(response => {
+            if (response.data.data && response.data.data.length > 0) {
+              response.data.data.forEach(it => {
+                if (it.id === this.form.demandId) {
+                  this.demandValue = "[" + it.id + "]" + it.name + "[" + it.platform + "]"; // 回显级联选项
+                  this.demandLink = it.href;
+                }
+              })
+            }
+          })
+        }
+      }
+      if (!this.form.demandId) {
+        this.demandValue = "";
+        this.demandLink = "";
+      }
     },
   }
 };
 </script>
 
 <style scoped>
-
 .other-info-tabs >>> .el-tabs__content {
   padding: 20px 0px;
 }
