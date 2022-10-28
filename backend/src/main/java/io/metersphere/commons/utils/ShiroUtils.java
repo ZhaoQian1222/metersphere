@@ -43,9 +43,9 @@ public class ShiroUtils {
         filterChainDefinitionMap.put("/api/jmeter/download/jar", "anon");
         filterChainDefinitionMap.put("/api/jmeter/download/plug/jar", "anon");
 
-        // for swagger
-        filterChainDefinitionMap.put("/swagger-ui.html", "anon");
-        filterChainDefinitionMap.put("/swagger-ui/**", "anon");
+        // for swagger  中金 swagger 接口禁止未授权访问
+//        filterChainDefinitionMap.put("/swagger-ui.html", "anon");
+//        filterChainDefinitionMap.put("/swagger-ui/**", "anon");
         filterChainDefinitionMap.put("/v3/api-docs/**", "anon");
 
         filterChainDefinitionMap.put("/403", "anon");

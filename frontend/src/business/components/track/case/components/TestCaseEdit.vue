@@ -462,17 +462,19 @@ export default {
   },
   methods: {
     alert: alert,
-    syncTags(label) {
-      if(this.form.tags){
-        this.form.tags.forEach(function (item, index, arr) {
-          if (item.indexOf("Yunxiao") != -1) {
-            arr.splice(index, 1);
+    syncTags: function (label) {
+      if (this.form.tags) {
+        if (this.form.tags instanceof Array) {
+          this.form.tags.forEach(function (item, index, arr) {
+            if (item.indexOf("Yunxiao") != -1) {
+              arr.splice(index, 1);
+            }
+          });
+          if (label != '') {
+            if (label.indexOf("Other") <= -1) {
+              this.form.tags.push(label);
+            }
           }
-        });
-      }
-      if (label != '') {
-        if (label.indexOf("Other") <= -1) {
-          this.form.tags.push(label);
         }
       }
     },

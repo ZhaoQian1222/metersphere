@@ -4,6 +4,7 @@ import io.metersphere.base.domain.CustomField;
 import io.metersphere.base.domain.CustomFieldTemplate;
 import io.metersphere.dto.CustomFieldTemplateDao;
 import io.metersphere.service.CustomFieldTemplateService;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -17,6 +18,7 @@ public class CustomFieldTemplateController {
     CustomFieldTemplateService customFieldTemplateService;
 
     @PostMapping("/list")
+    @RequiresPermissions("PROJECT_APP_MANAGER:READ+EDIT")
     public List<CustomFieldTemplateDao> list(@RequestBody CustomFieldTemplate request) {
         return customFieldTemplateService.list(request);
     }
