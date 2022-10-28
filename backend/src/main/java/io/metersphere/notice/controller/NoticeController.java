@@ -6,6 +6,7 @@ import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.log.annotation.MsAuditLog;
 import io.metersphere.notice.domain.MessageDetail;
 import io.metersphere.notice.service.NoticeService;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -24,6 +25,7 @@ public class NoticeController {
     }
 
     @GetMapping("/search/message/type/{type}")
+    @RequiresPermissions("PROJECT_APP_MANAGER:READ+EDIT")
     public List<MessageDetail> searchMessage(@PathVariable String type) {
         String projectId = SessionUtils.getCurrentProjectId();
         return noticeService.searchMessageByTypeAndProjectId(type, projectId);

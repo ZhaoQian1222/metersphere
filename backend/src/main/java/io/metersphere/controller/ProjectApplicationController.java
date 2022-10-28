@@ -7,6 +7,7 @@ import io.metersphere.controller.request.ProjectApplicationRequest;
 import io.metersphere.dto.ProjectConfig;
 import io.metersphere.log.annotation.MsAuditLog;
 import io.metersphere.service.ProjectApplicationService;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -35,6 +36,7 @@ public class ProjectApplicationController {
     }
 
     @GetMapping("/get/config/{projectId}")
+    @RequiresPermissions("PROJECT_APP_MANAGER:READ+EDIT")
     public ProjectConfig getProjectConfig(@PathVariable String projectId) {
         return projectApplicationService.getProjectConfig(projectId);
     }

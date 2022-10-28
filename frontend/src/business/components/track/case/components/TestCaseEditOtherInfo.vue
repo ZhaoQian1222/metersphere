@@ -22,8 +22,8 @@
             <el-select v-model="demandValue" :disabled="isTestPlan" clearable filterable remote
                        :remote-method="remoteMethod"
                        style="width: 800px"
-                       placeholder="请输入需求ID或关键字" @change="changeDemandValue(demandValue)" @blur="focusSelect"
-                       @focus="search(null)">
+                       placeholder="请输入需求ID或关键字" @change="changeDemandValue(demandValue)"
+                       @focus="search(null)" @blur="focusSelect">
               <el-option
                 v-for="item in demandOptions"
                 :key="item.value"
@@ -158,7 +158,6 @@ export default {
   data() {
     return {
       demandLink: '',
-      disable: true,
       result: {},
       tabActiveName: "remark",
       uploadList: [],
@@ -167,7 +166,6 @@ export default {
       demandOptions: [],
       relationshipCount: 0,
       demandValue: "",
-      //sysList:this.sysList,//一级选择框的数据
       props: {
         multiple: true,
         //lazy: true,
@@ -206,7 +204,13 @@ export default {
     demandValue() {
       if (this.demandValue.length > 0) {
         // this.form.demandId = this.demandValue[this.demandValue.length - 1];
-        this.form.demandId = this.demandValue;
+        // this.form.demandId = this.demandValue;
+        if(this.demandValue.includes("]")||this.demandValue.includes("[")){
+          let aa =  this.demandValue.split(']')[0];
+          this.form.demandId = aa.split('[')[1];
+        }else{
+          this.form.demandId = this.demandValue;
+        }
       } else {
         this.form.demandId = null;
         this.demandLink = null;
@@ -232,7 +236,7 @@ export default {
     },
     changeDemandValue(demandValue) {
       let label = '';
-      this.$emit('syncTags', label);
+      // let disable = false;
       this.demandOptions.forEach(item => {
         if (item.value === demandValue.toString()) {
           this.demandLink = item.link;
@@ -374,15 +378,21 @@ export default {
       }
     },
     getDemandOptions() {
-      if (this.demandOptions.length === 0) {
-        this.search(null);
-      }
+      // if (this.demandOptions.length === 0) {
+        this.search(this.form.demandId);
+      // }
     },
     search(keyWord) {
+      if(!this.form.demandId){
+        this.demandValue = "";
+        this.demandLink = "";
+      }
       this.$post("/issues/demand/list", {"projectId": this.projectId, "keyWord": keyWord}).then(response => {
         this.demandOptions = [];
         if (response.data.data && response.data.data.length > 0) {
           this.buildDemandCascaderOptions(response.data.data, this.demandOptions);
+        }else{
+          this.search(null);
         }
         this.demandOptions.unshift({
           value: 'other',
@@ -418,28 +428,6 @@ export default {
           }
         }
       });
-      if (this.form.demandId) {
-        if (this.demandValue.length <= 0) {
-          // this.demandValue = this.form.demandId;
-          this.$post("/issues/demand/list", {
-            "projectId": this.projectId,
-            "keyWord": this.form.demandId
-          }).then(response => {
-            if (response.data.data && response.data.data.length > 0) {
-              response.data.data.forEach(it => {
-                if (it.id === this.form.demandId) {
-                  this.demandValue = "[" + it.id + "]" + it.name + "[" + it.platform + "]"; // 回显级联选项
-                  this.demandLink = it.href;
-                }
-              })
-            }
-          })
-        }
-      }
-      if (!this.form.demandId) {
-        this.demandValue = "";
-        this.demandLink = "";
-      }
     },
   }
 };
