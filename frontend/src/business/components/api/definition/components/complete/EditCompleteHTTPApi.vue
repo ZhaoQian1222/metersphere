@@ -501,9 +501,9 @@ export default {
                   this.httpForm.versionId = this.$refs.versionHistory.currentVersion.id;
                 }
               }
-              this.$emit('saveApi', this.httpForm);
-              this.count = 0;
-              this.$store.state.apiMap.delete(this.httpForm.id);
+              // this.$emit('saveApi', this.httpForm);
+              // this.count = 0;
+              // this.$store.state.apiMap.delete(this.httpForm.id);
             }
           });
 

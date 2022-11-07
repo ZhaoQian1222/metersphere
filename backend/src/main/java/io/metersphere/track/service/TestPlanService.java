@@ -1760,7 +1760,11 @@ public class TestPlanService {
     }
 
     public TestPlanSimpleReportDTO buildPlanReport(TestPlanReport testPlanReport, TestPlanReportContentWithBLOBs testPlanReportContentWithBLOBs) {
+        long buildPlanReportStart = System.currentTimeMillis();
+        LoggerUtil.info("构建测试计划开始时间："+buildPlanReportStart);
         TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(testPlanReport.getTestPlanId());
+        long selectTestPlan = System.currentTimeMillis();
+        LoggerUtil.info("testPlan查询时间："+(selectTestPlan-buildPlanReportStart));
         if (testPlan != null) {
             String reportConfig = testPlan.getReportConfig();
             JSONObject config = null;
@@ -1768,10 +1772,18 @@ public class TestPlanService {
                 config = JSONObject.parseObject(reportConfig);
             }
             TestPlanExecuteReportDTO testPlanExecuteReportDTO = testPlanReportService.genTestPlanExecuteReportDTOByTestPlanReportContent(testPlanReportContentWithBLOBs);
+            long testPlanExecute = System.currentTimeMillis();
+            LoggerUtil.info("获取测试报告内容时间："+(testPlanExecute-selectTestPlan));
             TestPlanSimpleReportDTO report = getReport(testPlanReport.getTestPlanId(), testPlanExecuteReportDTO);
             buildFunctionalReport(report, config, testPlanReport.getTestPlanId());
+            long functionalReport = System.currentTimeMillis();
+            LoggerUtil.info("构建功能报告时间："+(functionalReport-testPlanExecute));
             buildApiReport(report, config, testPlanExecuteReportDTO);
+            long ApiReport = System.currentTimeMillis();
+            LoggerUtil.info("构建api报告时间："+(ApiReport-functionalReport));
             buildLoadReport(report, config, testPlanExecuteReportDTO.getTestPlanLoadCaseIdAndReportIdMap(), false);
+            long loadReport = System.currentTimeMillis();
+            LoggerUtil.info("构建加载报告时间："+(loadReport-ApiReport));
             return report;
         } else {
             return null;
