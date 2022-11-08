@@ -245,7 +245,7 @@ export function appendCase(parent, item, isDisable, setParamCallback) {
   let caseData = {
     id: item.id,
     text: item.name,
-    priority: Number.parseInt(item.priority.substring(item.priority.length - 1 )) + 1,
+    priority: item.priority ? Number.parseInt(item.priority.substring(item.priority.length - 1 )) + 1 : null,
     resource: [i18n.t('api_test.definition.request.case')],
     type: 'case',
     method: item.method,
@@ -571,7 +571,7 @@ export function addIssueHotBox(vueObj) {
   let main = hotbox.state('main');
   main.button({
     position: 'ring',
-    label: '关联缺陷',
+    label: i18n.t('test_track.case.relate_issue'),
     key: 'N',
     action: function () {
       if (getSelectedNodeData().id.length < 15) {
@@ -589,7 +589,7 @@ export function addIssueHotBox(vueObj) {
 
   main.button({
     position: 'ring',
-    label: '添加缺陷',
+    label: i18n.t('test_track.issue.add_issue'),
     key: 'M',
     action: function () {
       if (getSelectedNodeData().id.length < 15) {

@@ -27,6 +27,7 @@ import io.metersphere.track.request.testcase.IssuesUpdateRequest;
 import io.metersphere.track.service.IssuesService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
@@ -228,12 +229,11 @@ public class JiraPlatform extends AbstractIssuePlatform {
 
         setUserConfig();
         Project project = getProject();
-        List<File> imageFiles = getImageFiles(issuesRequest);
         JSONObject addJiraIssueParam = buildUpdateParam(issuesRequest, getIssueType(project.getIssueConfig()), project.getJiraKey());
-
         JiraAddIssueResponse result = jiraClientV2.addIssue(JSONObject.toJSONString(addJiraIssueParam));
         JiraIssue issues = jiraClientV2.getIssues(result.getId());
 
+        List<File> imageFiles = getImageFiles(issuesRequest);
         // 上传附件
         imageFiles.forEach(img -> jiraClientV2.uploadAttachment(result.getKey(), img));
 
@@ -346,17 +346,31 @@ public class JiraPlatform extends AbstractIssuePlatform {
         JSONObject addJiraIssueParam = new JSONObject();
         addJiraIssueParam.put("fields", fields);
 
+        List<CustomFieldItemDTO> customFields = CustomFieldService.getCustomFields(issuesRequest.getCustomFields());
+
         if (issuesRequest.isThirdPartPlatform()) {
-            parseCustomFiled(issuesRequest, fields);
+            parseCustomFiled(issuesRequest, customFields, fields);
             issuesRequest.setTitle(fields.getString("summary"));
         } else {
             fields.put("summary", issuesRequest.getTitle());
             fields.put("description", desc);
-            parseCustomFiled(issuesRequest, fields);
+            // 添加后，解析图片会用到
+            customFields.add(getRichTextCustomField("description", desc));
+            issuesRequest.setCustomFields(JSONObject.toJSONString(customFields));
+            parseCustomFiled(issuesRequest, customFields, fields);
         }
         setSpecialParam(fields);
 
         return addJiraIssueParam;
+    }
+
+    private CustomFieldItemDTO getRichTextCustomField(String name, String value) {
+        CustomFieldItemDTO customField = new CustomFieldItemDTO();
+        customField.setId(name);
+        customField.setType(CustomFieldType.RICH_TEXT.getValue());
+        customField.setCustomData(name);
+        customField.setValue(value);
+        return customField;
     }
 
     private String dealWithImage(String description) {
@@ -395,13 +409,12 @@ public class JiraPlatform extends AbstractIssuePlatform {
         return result;
     }
 
-    private void parseCustomFiled(IssuesUpdateRequest issuesRequest, JSONObject fields) {
-        List<CustomFieldItemDTO> customFields = CustomFieldService.getCustomFields(issuesRequest.getCustomFields());
-
+    private void parseCustomFiled(IssuesUpdateRequest issuesRequest, List<CustomFieldItemDTO> customFields, JSONObject fields) {
         customFields.forEach(item -> {
             String fieldName = item.getCustomData();
+            String name = item.getName();
             if (StringUtils.isNotBlank(fieldName)) {
-                if (item.getValue() != null) {
+                if (ObjectUtils.isNotEmpty(item.getValue())) {
                     if (StringUtils.isNotBlank(item.getType())) {
                         if (StringUtils.equalsAny(item.getType(), "select", "radio", "member")) {
                             JSONObject param = new JSONObject();
@@ -409,7 +422,7 @@ public class JiraPlatform extends AbstractIssuePlatform {
                                 if (issuesRequest.isThirdPartPlatform()) {
                                     param.put("id", item.getValue());
                                 } else {
-                                    param.put("name", item.getValue());
+                                    param.put("accountId", item.getValue());
                                 }
                             } else {
                                 param.put("id", item.getValue());
@@ -446,8 +459,8 @@ public class JiraPlatform extends AbstractIssuePlatform {
                                 }
                                 fields.put(fieldName, attr);
                             }
-                        } else if (StringUtils.equalsAny(item.getType(),  "richText")) {
-                            fields.put(fieldName, removeImage(item.getValue().toString()));
+                        } else if (StringUtils.equalsAny(item.getType(), "richText")) {
+                            fields.put(fieldName, parseRichTextImageUrlToJira(item.getValue().toString()));
                             if (fieldName.equals("description")) {
                                 issuesRequest.setDescription(item.getValue().toString());
                             }
@@ -465,11 +478,11 @@ public class JiraPlatform extends AbstractIssuePlatform {
     public void updateIssue(IssuesUpdateRequest request) {
         setUserConfig();
         Project project = getProject();
-        List<File> imageFiles = getImageFiles(request);
 
         JSONObject param = buildUpdateParam(request, getIssueType(project.getIssueConfig()), project.getJiraKey());
         jiraClientV2.updateIssue(request.getPlatformId(), JSONObject.toJSONString(param));
 
+        List<File> imageFiles = getImageFiles(request);
         Set<String> attachmentNames = new HashSet<>();
         // 更新附件
         JiraIssue jiraIssue = jiraClientV2.getIssues(request.getPlatformId());
@@ -735,6 +748,11 @@ public class JiraPlatform extends AbstractIssuePlatform {
                 value = CustomFieldType.MULTIPLE_SELECT.getValue();
             } else if (customType.contains("version")) {
                 value = CustomFieldType.SELECT.getValue();
+            } else if (StringUtils.isNotBlank(schema.getType()) &&
+                    (schema.getType().contains("option") || schema.getType().contains("array"))) {
+                value = CustomFieldType.SELECT.getValue();
+            } else if (customType.contains("customfieldtypes") && StringUtils.equals(schema.getType(), "project")) {
+                value = CustomFieldType.SELECT.getValue();
             }
         } else {
             // 系统字段
@@ -846,5 +864,26 @@ public class JiraPlatform extends AbstractIssuePlatform {
 
     public ResponseEntity proxyForGet(String url, Class responseEntityClazz) {
         return jiraClientV2.proxyForGet(url, responseEntityClazz);
+    }
+
+    private String parseRichTextImageUrlToJira(String parseRichText) {
+        String regex = "(\\!\\[.*?\\]\\((.*?)\\))";
+        if (StringUtils.isBlank(parseRichText)) {
+            return "";
+        }
+        Matcher matcher = Pattern.compile(regex).matcher(parseRichText);
+        while (matcher.find()) {
+            String msRichAttachmentUrl = matcher.group();
+            String filename = "";
+            if (msRichAttachmentUrl.contains("fileName")) {
+                // 本地上传的图片URL
+                filename = msRichAttachmentUrl.substring(msRichAttachmentUrl.indexOf("=") + 1, msRichAttachmentUrl.lastIndexOf(")"));
+            } else if (msRichAttachmentUrl.contains("platform=Jira")) {
+                // Jira同步的图片URL
+                filename = msRichAttachmentUrl.substring(msRichAttachmentUrl.indexOf("[") + 1, msRichAttachmentUrl.indexOf("]"));
+            }
+            parseRichText = parseRichText.replace(msRichAttachmentUrl, "\n!" + filename + "|width=1360,height=876!\n");
+        }
+        return parseRichText;
     }
 }

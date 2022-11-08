@@ -24,6 +24,7 @@
       :row-order-group-id="projectId"
       :row-order-func="editTestCaseOrder"
       @handlePageChange="initTableData"
+      @order="initTableData"
       :fields.sync="fields"
       :field-key="tableHeaderKey"
       @filter="search"
@@ -89,7 +90,6 @@
 
         <ms-table-column
           v-if="item.id === 'num' && customNum"
-          :field="item"
           :fields-width="fieldsWidth"
           prop="customNum"
           sortable
@@ -97,7 +97,7 @@
           min-width="80">
           <template v-slot:default="scope">
             <el-tooltip :content="$t('commons.edit')">
-              <a style="cursor:pointer" @click="handleEdit(scope.row)"> {{ scope.row.num }} </a>
+              <a style="cursor:pointer" @click="handleEdit(scope.row)"> {{ scope.row.customNum }} </a>
             </el-tooltip>
           </template>
         </ms-table-column>
@@ -196,7 +196,7 @@
         </ms-table-column>
 
         <ms-table-column v-for="field in testCaseTemplate.customFields" :key="field.id"
-                         :filters="getCustomFieldFilter(field)"
+                         :filters="!trashEnable ? getCustomFieldFilter(field) : ''"
                          :field="item"
                          :fields-width="fieldsWidth"
                          :label="field.system ? $t(systemFiledMap[field.name]) :field.name"

@@ -10,17 +10,21 @@
 
     <template v-slot:default="scope">
       <el-row>
-          <el-col :span="17">
+          <el-col :span="fold ? 24 : 17">
             <div class="container">
               <el-card>
                 <el-scrollbar>
                   <el-header>
                     <el-row type="flex" class="head-bar">
 
-                      <el-col :span="4">
+                      <el-col :span="6">
                         <el-button plain size="mini"
                                    icon="el-icon-back"
                                    @click="cancel">{{ $t('test_track.return') }}
+                        </el-button>
+                        <el-button type="primary" size="mini"
+                                   @click="handleRightCollapse">
+                          {{fold ? $t('test_track.expand_right_collapse') : $t('test_track.fold_right_collapse')}}
                         </el-button>
                       </el-col>
 
@@ -45,9 +49,12 @@
 
                     <el-row class="head-bar">
                       <el-col>
-                        <el-divider content-position="left">
+                        <el-divider content-position="left" class="title-divider">
                           <el-button class="test-case-name" type="text" @click="openTestTestCase(testCase)">
-                            <span class="title-link" :title="testCase.name">
+                            <span
+                              class="title-link"
+                              :title="testCase.name"
+                              :style="{'max-width': titleWith + 'px'}">
                               {{ testCase.customNum }}-{{ testCase.name }}
                             </span>
                           </el-button>
@@ -111,7 +118,7 @@
 
                       <el-form-item :label="$t('test_track.case.other_info')" :label-width="formLabelWidth">
                         <test-case-edit-other-info :plan-id="testCase.planId" v-if="otherInfoActive" @openTest="openTest"
-                                                   :is-test-plan-edit="true"
+                                                   :is-test-plan-edit="true" @syncRelationGraphOpen="syncRelationGraphOpen"
                                                    :read-only="true" :is-test-plan="true" :project-id="testCase.projectId"
                                                    :form="testCase" :case-id="testCase.caseId" ref="otherInfo"/>
                       </el-form-item >
@@ -122,7 +129,7 @@
               </el-card>
             </div>
           </el-col>
-          <el-col :span="7">
+          <el-col :span="7" v-if="!fold || !relationGraphOpen">
             <div class="comment-card">
             <el-card>
               <template slot="header">
@@ -208,6 +215,7 @@ export default {
       otherInfoActive: true,
       isReadOnly: false,
       testCases: [],
+      titleWith: 0,
       originalStatus: ""
     };
   },
@@ -224,7 +232,11 @@ export default {
       default: 1
     },
     nextPageData: Object,
-    prePageData: Object
+    prePageData: Object,
+    fold: {
+      type: Boolean,
+      default: false
+    }
   },
   computed: {
     projectId() {
@@ -261,6 +273,9 @@ export default {
     cancel() {
       this.handleClose();
       this.$emit('refreshTable');
+    },
+    handleRightCollapse() {
+      this.fold = !this.fold;
     },
     statusChange(status) {
       this.originalStatus = this.testCase.status;
@@ -446,6 +461,7 @@ export default {
       this.hasTapdId = false;
       this.hasZentaoId = false;
       this.isReadOnly = !hasPermission('PROJECT_TRACK_PLAN:READ+RELEVANCE_OR_CANCEL');
+      this.setTitleWith();
 
       if (tableData) {
         this.testCases = tableData;
@@ -508,6 +524,18 @@ export default {
           break;
         }
       }
+    },
+    syncRelationGraphOpen(val) {
+      this.relationGraphOpen = val;
+    },
+    setTitleWith() {
+      this.$nextTick(() => {
+        this.titleWith = 0;
+        let titleDivider = document.getElementsByClassName("title-divider");
+        if (titleDivider && titleDivider.length > 0) {
+          this.titleWith = 0.9 * titleDivider[0].clientWidth;
+        }
+      });
     },
     openTestTestCase(item) {
       let TestCaseData = this.$router.resolve(
@@ -617,7 +645,6 @@ p {
 
 .title-link {
   display: inline-block;
-  max-width: 300px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -631,6 +658,11 @@ p {
 
 /deep/ .el-form-item__content {
   z-index: 1;
+}
+
+/deep/ .el-scrollbar__bar.is-vertical {
+  z-index: 0;
+  width: 0;
 }
 
 .head-bar {

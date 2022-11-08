@@ -256,15 +256,11 @@ export default {
             scenarioJmxs.jmxs.forEach(item => {
               if (item.scenarioId) {
                 this.$refs.basicConfig.importScenario(item.scenarioId);
-                this.$refs.basicConfig.handleUpload();
                 relateApiList.push({
                   apiId: item.scenarioId,
                   apiVersion: item.version,
                   type: 'SCENARIO'
                 });
-              }
-              if (item.caseId) {
-                this.$refs.basicConfig.importCase(item);
               }
               if (JSON.stringify(item.attachFiles) !== "{}") {
                 let attachFiles = [];
@@ -277,6 +273,7 @@ export default {
               }
               this.$set(this.test, "apiList", relateApiList);
             });
+            this.$refs.basicConfig.handleUpload();
             this.active = '1';
             this.$store.commit("clearScenarioJmxs");
           }
@@ -440,7 +437,6 @@ export default {
       });
     },
     saveCronExpression(cronExpression) {
-      this.test.schedule.enable = true;
       this.test.schedule.value = cronExpression;
       this.saveSchedule();
     },
@@ -459,6 +455,9 @@ export default {
       let url = '/performance/schedule/create';
       if (param.id) {
         url = '/performance/schedule/update';
+      } else {
+        // 创建定时任务，初始化是开启状态
+        this.test.schedule.enable = true;
       }
       this.$post(url, param, response => {
         this.$success(this.$t('commons.save_success'));

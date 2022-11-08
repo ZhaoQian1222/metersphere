@@ -392,9 +392,9 @@ import {
   handleCtrlREvent,
   handleCtrlSEvent,
   hasLicense,
+  hasPermission,
   objToStrMap,
-  strMapToObj,
-  hasPermission
+  strMapToObj
 } from "@/common/js/utils";
 import "@/common/css/material-icons.css";
 import OutsideClick from "@/common/js/outside-click";
@@ -901,7 +901,8 @@ export default {
     },
     resultEvaluationChild(arr, resourceId, status) {
       arr.forEach(item => {
-        if (item.data.id + "_" + item.data.parentIndex === resourceId) {
+        let id = item.data.id || item.data.resourceId;
+        if (id + "_" + item.data.parentIndex === resourceId) {
           item.data.testing = false;
           this.evaluationParent(item.parent, status);
         }
@@ -1392,7 +1393,7 @@ export default {
     },
     resetResourceId(hashTree) {
       hashTree.forEach(item => {
-        item.resourceId = getUUID();
+        item.resourceId = item.resourceId || getUUID();
         if (item.hashTree && item.hashTree.length > 0) {
           this.resetResourceId(item.hashTree);
         }
@@ -2126,7 +2127,11 @@ export default {
               this.recursionDelete(item, this.scenarioDefinition);
             });
             this.sort();
-            this.forceRerender();
+            if (this.scenarioDefinition.length <= 1) {
+              this.cancelBatchProcessing();
+            } else {
+              this.forceRerender();
+            }
           }
         }
       });

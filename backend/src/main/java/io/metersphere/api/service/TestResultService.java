@@ -58,7 +58,7 @@ public class TestResultService {
     @Resource
     private ApiEnvironmentRunningParamService apiEnvironmentRunningParamService;
     @Resource
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplateService redisTemplateService;
 
     // 场景
     private static final List<String> scenarioRunModes = new ArrayList<>() {{
@@ -161,7 +161,8 @@ public class TestResultService {
     public void testEnded(ResultDTO dto) {
         // 删除串行资源锁
         if (StringUtils.equals(dto.getRunType(), RunModeConstants.SERIAL.toString())) {
-            redisTemplate.delete(RunModeConstants.SERIAL.name() + "_" + dto.getReportId());
+            String key = StringUtils.join(RunModeConstants.SERIAL.name(), "_", dto.getReportId());
+            redisTemplateService.delete(key);
         }
         if (dto.getRequestResults() == null) {
             dto.setRequestResults(new LinkedList<>());
@@ -276,10 +277,10 @@ public class TestResultService {
         String failedContext = "${operator}执行接口自动化失败: ${name}" + ", 报告: ${reportUrl}";
 
         if (StringUtils.equals(ReportTriggerMode.API.name(), report.getTriggerMode())) {
-            subject = Translator.get("task_notification_jenkins");
+            subject = "Jenkins任务通知";
         }
         if (StringUtils.equals(ReportTriggerMode.SCHEDULE.name(), report.getTriggerMode())) {
-            subject = Translator.get("task_notification");
+            subject = "任务通知";
         }
         if (StringUtils.equals("Success", report.getStatus())) {
             event = NoticeConstants.Event.EXECUTE_SUCCESSFUL;

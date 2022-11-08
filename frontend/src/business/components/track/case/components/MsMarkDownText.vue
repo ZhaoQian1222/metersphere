@@ -1,7 +1,7 @@
 <template>
   <mavon-editor :id="id" :editable="!disabled" @imgAdd="imgAdd" :default-open="defaultOpenValue"
-                :xss-options="xssOptions" :style="{'min-height': customMinHeight + 'px'}"
-                @change="$emit('change')"
+                :xss-options="xssOptions" :style="{'min-height': customMinHeight + 'px', 'min-width': '100px'}"
+                @change="change"
                 :subfield="false" :toolbars="toolbars" :language="language" :toolbarsFlag="!disabled"
                 @imgDel="imgDel" v-model="data[prop]" ref="md"/>
 </template>
@@ -202,6 +202,11 @@ export default {
     },
     toolbar_left_click(param) {
       this.$refs.md.toolbar_left_click(param);
+    },
+    change() {
+      this.$nextTick(() => {
+        this.$emit('change');
+      });
     }
   }
 }
@@ -209,8 +214,8 @@ export default {
 
 <style scoped>
 
-/deep/ .v-note-wrapper {
-  position: initial;
+.v-note-wrapper {
+  display: block !important;
 }
 
 /deep/ .dropdown-item.dropdown-images {

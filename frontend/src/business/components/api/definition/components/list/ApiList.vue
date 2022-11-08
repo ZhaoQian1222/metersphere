@@ -67,8 +67,8 @@
 
         <ms-table-column
           prop="status"
-          sortable="custom"
-          :filters="!trashEnable ? statusFilters : statusFiltersTrash"
+          :filters="!trashEnable ? statusFilters : null"
+          :sortable="trashEnable ? false : true"
           :field="item"
           :fields-width="fieldsWidth"
           min-width="120px"
@@ -173,7 +173,6 @@
           :field="item"
           :fields-width="fieldsWidth"
           min-width="100px"
-          sortable
           :label="$t('api_test.definition.api_case_number')"/>
 
         <ms-table-column
@@ -187,7 +186,6 @@
           prop="casePassingRate"
           :field="item"
           min-width="120px"
-          sortable
           :fields-width="fieldsWidth"
           :label="$t('api_test.definition.api_case_passing_rate')"/>
 
@@ -195,7 +193,6 @@
             prop="description"
             :field="item"
             min-width="120px"
-            sortable
             :fields-width="fieldsWidth"
             :label="$t('commons.description')"/>
         </span>
@@ -398,10 +395,6 @@ export default {
         {text: this.$t('test_track.plan.plan_status_prepare'), value: 'Prepare'},
         {text: this.$t('test_track.plan.plan_status_running'), value: 'Underway'},
         {text: this.$t('test_track.plan.plan_status_completed'), value: 'Completed'},
-      ],
-
-      statusFiltersTrash: [
-        {text: this.$t('test_track.plan.plan_status_trash'), value: 'Trash'},
       ],
 
       caseStatusFilters: [
@@ -671,9 +664,20 @@ export default {
                 if (!item.request.body) {
                   item.request.body = new Body();
                 }
+                if (!item.request.body.type) {
+                  this.$set(item.request.body, "type", null);
+                }
                 if (!item.request.headers) {
                   item.request.headers = [];
                 }
+                if (!item.request.body.kvs) {
+                  item.request.body.kvs = [];
+                }
+                item.request.body.kvs.forEach(i => {
+                  if (!i.files) {
+                    i.files = []
+                  }
+                })
                 if (!item.request.rest) {
                   item.request.rest = [];
                 }

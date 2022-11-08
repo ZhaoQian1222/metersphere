@@ -7,6 +7,7 @@ import com.alibaba.fastjson.JSONValidator;
 import io.metersphere.api.dto.mock.ApiDefinitionResponseDTO;
 import io.metersphere.api.dto.mock.MockConfigRequestParams;
 import io.metersphere.api.dto.mock.RequestMockParams;
+import io.metersphere.api.dto.shell.filter.ScriptFilter;
 import io.metersphere.api.mock.dto.MockParamConditionEnum;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.json.JSONSchemaGenerator;
@@ -44,7 +45,8 @@ public class MockApiUtils {
         Map<String, String> mockExpectHeaders = new HashMap<>();
         for (int i = 0; i < mockExpectHeaderArray.size(); i++) {
             JSONObject obj = mockExpectHeaderArray.getJSONObject(i);
-            if (obj.containsKey("name") && obj.containsKey("value")) {
+            if (obj.containsKey("name")  && StringUtils.isNotBlank(obj.getString("name"))
+                    && obj.containsKey("value") && StringUtils.isNotBlank(obj.getString("value"))) {
                 mockExpectHeaders.put(obj.getString("name"), obj.getString("value"));
             }
         }
@@ -281,6 +283,7 @@ public class MockApiUtils {
                     LogUtil.error(e);
                 }
             }
+            ScriptFilter.verify(scriptLanguage, "Mock后置脚本", script);
             scriptEngine = scriptEngineUtils.getBaseScriptEngine(projectId, scriptLanguage, url, headerMap, requestMockParams);
             if (StringUtils.isNotEmpty(script) && scriptEngine != null) {
                 scriptEngineUtils.runScript(scriptEngine, script);
@@ -390,7 +393,9 @@ public class MockApiUtils {
 
         if (isPostRequest) {
             JSONArray jsonArray = new JSONArray();
-            jsonArray.add(queryParamsObject);
+            if(!queryParamsObject.isEmpty()){
+                jsonArray.add(queryParamsObject);
+            }
             requestMockParams.setBodyParams(jsonArray);
         }
         return requestMockParams;

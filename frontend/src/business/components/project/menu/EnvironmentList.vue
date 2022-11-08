@@ -32,7 +32,9 @@
             <el-table-column :label="$t('api_test.environment.socket')" show-overflow-tooltip>
               <template v-slot="scope">
                 <span v-if="parseDomainName(scope.row)!='SHOW_INFO'">{{ parseDomainName(scope.row) }}</span>
-                <el-button size="mini" icon="el-icon-s-data" @click="showInfo(scope.row)" v-else>{{ $t('workspace.env_group.view_details') }}</el-button>
+                <el-button v-else icon="el-icon-s-data" size="mini" @click="showInfo(scope.row)">
+                  {{ $t('workspace.env_group.view_details') }}
+                </el-button>
               </template>
             </el-table-column>
             <el-table-column :label="$t('commons.operating')">
@@ -94,12 +96,14 @@
                 {{ row.conditionType ? "-" : getDetails(row) }}
               </template>
             </el-table-column>
-            <el-table-column prop="description" show-overflow-tooltip min-width="120px" :label="$t('commons.description')">
+            <el-table-column :label="$t('commons.description')" min-width="120px" prop="description"
+                             show-overflow-tooltip>
               <template v-slot:default="{row}">
                 <span>{{ row.description ? row.description : "-" }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="createTime" show-overflow-tooltip min-width="120px" :label="$t('commons.create_time')">
+            <el-table-column :label="$t('commons.create_time')" min-width="120px" prop="createTime"
+                             show-overflow-tooltip>
               <template v-slot:default="{row}">
                 <span v-if="!row.conditionType">{{ row.time | timestampFormatDate }}</span>
                 <span v-else>-</span>
@@ -128,7 +132,7 @@ import EnvironmentEdit from "@/business/components/api/test/components/environme
 import MsAsideItem from "@/business/components/common/components/MsAsideItem";
 import MsAsideContainer from "@/business/components/common/components/MsAsideContainer";
 import ProjectSwitch from "@/business/components/common/head/ProjectSwitch";
-import {downloadFile, getCurrentProjectID} from "@/common/js/utils";
+import {downloadFile, getCurrentProjectID, getUUID} from "@/common/js/utils";
 import EnvironmentImport from "@/business/components/project/menu/EnvironmentImport";
 import MsMainContainer from "@/business/components/common/components/MsMainContainer";
 import MsContainer from "@/business/components/common/components/MsContainer";
@@ -193,7 +197,7 @@ export default {
       }
       this.domainVisible = true;
     },
-    save(){
+    save() {
       this.$refs.environmentEdit.save();
     },
     getName(row) {
@@ -281,6 +285,7 @@ export default {
     },
 
     copyEnv(environment) {
+      this.ifCreate = true;
       this.currentProjectId = environment.projectId;  //复制时默认选择所要复制环境对应的项目
       this.dialogTitle = this.$t('api_test.environment.copy_environment');
       const temEnv = {};
@@ -288,6 +293,11 @@ export default {
       parseEnvironment(temEnv);   //parseEnvironment会改变环境对象的内部结构，从而影响前端列表的显示，所以复制一个环境对象作为代替
       let newEnvironment = new Environment(temEnv);
       newEnvironment.id = null;
+      newEnvironment.config.databaseConfigs.forEach(dataSource => {
+        if (dataSource.id) {
+          dataSource.id = getUUID();
+        }
+      })
       newEnvironment.name = this.getNoRepeatName(newEnvironment.name);
       this.dialogVisible = true;
       this.currentEnvironment = newEnvironment;

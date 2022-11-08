@@ -38,7 +38,9 @@
         <el-table-column :label="$t('api_test.environment.socket')" show-overflow-tooltip>
           <template v-slot="scope">
             <span v-if="parseDomainName(scope.row)!='SHOW_INFO'">{{ parseDomainName(scope.row) }}</span>
-            <el-button size="mini" icon="el-icon-s-data" @click="showInfo(scope.row)" v-else>{{ $t('workspace.env_group.view_details') }}</el-button>
+            <el-button v-else icon="el-icon-s-data" size="mini" @click="showInfo(scope.row)">
+              {{ $t('workspace.env_group.view_details') }}
+            </el-button>
           </template>
         </el-table-column>
         <el-table-column :label="$t('commons.operating')">
@@ -72,7 +74,7 @@
         <el-col :span="20">
           <el-form label-width="80px" :rules="rules" style="display: flow-root">
             <el-form-item class="project-item" prop="currentProjectId" :label="$t('project.select')">
-              <el-select @change="handleProjectChange" v-model="currentProjectId" filterable clearable>
+              <el-select v-model="currentProjectId" filterable clearable :disabled="!ifCreate">
                 <el-option v-for="item in projectList" :key="item.id" :label="item.name" :value="item.id"></el-option>
               </el-select>
             </el-form-item>
@@ -143,7 +145,7 @@ import EnvironmentEdit from "@/business/components/api/test/components/environme
 import MsAsideItem from "@/business/components/common/components/MsAsideItem";
 import MsAsideContainer from "@/business/components/common/components/MsAsideContainer";
 import ProjectSwitch from "@/business/components/common/head/ProjectSwitch";
-import {downloadFile, strMapToObj} from "@/common/js/utils";
+import {downloadFile, getUUID, strMapToObj} from "@/common/js/utils";
 import EnvironmentImport from "@/business/components/project/menu/EnvironmentImport";
 import ShowMoreBtn from "@/business/components/track/case/components/ShowMoreBtn";
 import {_handleSelect, _handleSelectAll, getSelectDataCounts, setUnSelectIds} from "@/common/js/tableUtils";
@@ -323,7 +325,7 @@ export default {
       this.dialogVisible = true;
       this.ifCreate = false;
     },
-    save(){
+    save() {
       this.$refs.environmentEdit.save();
     },
     copyEnv(environment) {
@@ -334,6 +336,11 @@ export default {
       parseEnvironment(temEnv);   //parseEnvironment会改变环境对象的内部结构，从而影响前端列表的显示，所以复制一个环境对象作为代替
       let newEnvironment = new Environment(temEnv);
       newEnvironment.id = null;
+      newEnvironment.config.databaseConfigs.forEach(dataSource => {
+        if (dataSource.id) {
+          dataSource.id = getUUID();
+        }
+      })
       newEnvironment.name = this.getNoRepeatName(newEnvironment.name);
       this.dialogVisible = true;
       this.currentEnvironment = newEnvironment;
@@ -408,9 +415,6 @@ export default {
       downloadFile('MS_' + envs.length + '_Environments.json', JSON.stringify(envs));
     },
 
-    handleProjectChange() {   //项目选择下拉框选择其他项目后清空“启用条件”,因为项目变了模块也就变了。
-      this.currentEnvironment.config.httpConfig.conditions = [];
-    },
     parseDomainName(environment) {   //解析出环境域名用于前端展示
       if (environment.config) {
         const config = JSON.parse(environment.config);
@@ -464,7 +468,7 @@ export default {
       this.selectRow.forEach(row => {
         map.set(row.projectId, row.id);
       })
-      this.$post("/environment/group/batch/add", {map: strMapToObj(map), groupIds:value}, () => {
+      this.$post("/environment/group/batch/add", {map: strMapToObj(map), groupIds: value}, () => {
         this.$success(this.$t('commons.save_success'));
         this.getEnvironments();
       })

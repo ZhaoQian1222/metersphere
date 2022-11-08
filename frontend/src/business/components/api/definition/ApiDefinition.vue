@@ -382,6 +382,7 @@ export default {
         this.activeDom = 'middle';
       }
     }
+    this.selectNodeIds = [];
 
     if (this.$route.params.dataSelectRange) {
       let item = JSON.parse(JSON.stringify(this.$route.params.dataSelectRange)).param;
@@ -974,5 +975,11 @@ export default {
   vertical-align: middle;
   white-space: nowrap;
   max-width: 200px;
+}
+
+/deep/ .fulls-screen-btn {
+  position: fixed;
+  right: 0px;
+  top: 0px;
 }
 </style>

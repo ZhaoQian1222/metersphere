@@ -3,7 +3,6 @@ package io.metersphere.api.parse;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.metersphere.api.dto.definition.parse.har.model.*;
-import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.api.dto.definition.request.processors.pre.MsJSR223PreProcessor;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
 import io.metersphere.api.dto.parse.postman.PostmanEvent;
@@ -15,6 +14,7 @@ import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.commons.constants.MsRequestBodyType;
 import io.metersphere.commons.constants.PostmanRequestBodyMode;
 import io.metersphere.commons.utils.XMLUtils;
+import io.metersphere.plugin.core.MsTestElement;
 import io.swagger.v3.oas.models.media.Schema;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -38,6 +38,7 @@ public abstract class HarScenarioAbstractParser<T> extends ApiImportAbstractPars
         } else {
             request.setPath("/");
         }
+        request.setUrl(harRequest.url);
         parseParameters(harRequest, request);
         parseRequestBody(harRequest, request.getBody());
         addBodyHeader(request);
@@ -82,11 +83,34 @@ public abstract class HarScenarioAbstractParser<T> extends ApiImportAbstractPars
                     body.getKvs().add(kv);
                 }
             } else if (contentType.startsWith(org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)) {
-                contentType = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
-                List<HarPostParam> postParams = content.params;
-                for (HarPostParam postParam : postParams) {
-                    KeyValue kv = new KeyValue(postParam.name,postParam.value);
-                    body.getKvs().add(kv);
+                if (contentType.contains("boundary=") && StringUtils.contains(content.text, this.getBoundaryFromContentType(contentType))) {
+                    contentType = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
+                    String[] textArr = StringUtils.split(content.text, "\r\n");
+                    String paramData = this.parseMultipartByTextArr(textArr);
+                    JSONObject obj = null;
+                    try {
+                        obj = JSONObject.parseObject(paramData);
+                        if (obj != null) {
+                            for (String key : obj.keySet()) {
+                                KeyValue kv = new KeyValue(key, obj.getString(key));
+                                body.getKvs().add(kv);
+                            }
+                        }
+                    } catch (Exception e) {
+                        obj = null;
+                    }
+                    if (obj == null) {
+                        body.setRaw(paramData);
+                    }
+                } else {
+                    contentType = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
+                    List<HarPostParam> postParams = content.params;
+                    if (CollectionUtils.isNotEmpty(postParams)) {
+                        for (HarPostParam postParam : postParams) {
+                            KeyValue kv = new KeyValue(postParam.name, postParam.value);
+                            body.getKvs().add(kv);
+                        }
+                    }
                 }
             } else if (contentType.startsWith(org.springframework.http.MediaType.APPLICATION_JSON_VALUE)) {
                 contentType = org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -106,6 +130,22 @@ public abstract class HarScenarioAbstractParser<T> extends ApiImportAbstractPars
             }
         }
         body.setType(getBodyType(contentType));
+    }
+
+    private String getBoundaryFromContentType(String contentType) {
+        if (StringUtils.contains(contentType, "boundary=")) {
+            String[] strArr = StringUtils.split(contentType, "boundary=");
+            return strArr[strArr.length - 1];
+        }
+        return null;
+    }
+
+    private String parseMultipartByTextArr(String[] textArr) {
+        String data = null;
+        if (textArr != null && textArr.length > 2) {
+            data = textArr[textArr.length - 2];
+        }
+        return data;
     }
 
 

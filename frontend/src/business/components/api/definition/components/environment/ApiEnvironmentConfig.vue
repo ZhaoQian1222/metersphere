@@ -22,7 +22,7 @@ import MsAsideContainer from "../../../../common/components/MsAsideContainer";
 import MsMainContainer from "../../../../common/components/MsMainContainer";
 import MsAsideItem from "../../../../common/components/MsAsideItem";
 import EnvironmentEdit from "./EnvironmentEdit";
-import {hasPermission, listenGoBack, removeGoBackListener} from "@/common/js/utils";
+import {getUUID, hasPermission, listenGoBack, removeGoBackListener} from "@/common/js/utils";
 import {Environment, parseEnvironment} from "../../model/EnvironmentModel";
 
 export default {
@@ -91,6 +91,11 @@ export default {
       let newEnvironment = {};
       newEnvironment = new Environment(environment);
       newEnvironment.id = null;
+      newEnvironment.config.databaseConfigs.forEach(dataSource => {
+        if (dataSource.id) {
+          dataSource.id = getUUID();
+        }
+      })
       newEnvironment.name = this.getNoRepeatName(newEnvironment.name);
       if (!this.validateEnvironment(newEnvironment)) {
         return;

@@ -14,6 +14,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +31,7 @@ public abstract class JiraAbstractClient extends BaseClient {
     public JiraIssue getIssues(String issuesId) {
         LogUtil.info("getIssues: " + issuesId);
         ResponseEntity<String> responseEntity;
-        responseEntity = restTemplate.exchange(getBaseUrl() + "/issue/" + issuesId + "?fields=status,assignee,summary,created,updated,attachment,description", HttpMethod.GET, getAuthHttpEntity(), String.class);
+        responseEntity = restTemplate.exchange(getBaseUrl() + "/issue/" + issuesId, HttpMethod.GET, getAuthHttpEntity(), String.class);
         return  (JiraIssue) getResultForObject(JiraIssue.class, responseEntity);
     }
 
@@ -87,7 +88,19 @@ public abstract class JiraAbstractClient extends BaseClient {
     }
 
     public List<JiraUser> getAssignableUser(String projectKey) {
-        String url = getBaseUrl() + "/user/assignable/search?project={1}&maxResults=" + 1000 + "&startAt=" + 0;
+        List<JiraUser> res = new ArrayList<>();
+        int maxResults = 1000, startAt = 0;
+        List<JiraUser> list;
+        do {
+            list = this.getAssignableUser(startAt, maxResults, projectKey);
+            res.addAll(list);
+            startAt += maxResults;
+        } while (list.size() >= maxResults);
+        return res;
+    }
+
+    private List<JiraUser> getAssignableUser(int startAt, int maxResult, String projectKey) {
+        String url = getBaseUrl() + "/user/assignable/search?project={1}&maxResults=" + maxResult + "&startAt=" + startAt;
         ResponseEntity<String> response = null;
         try {
             response = restTemplate.exchange(url, HttpMethod.GET, getAuthHttpEntity(), String.class, projectKey);

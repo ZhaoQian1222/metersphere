@@ -456,14 +456,14 @@ public class ApiAutomationService {
         return scenario;
     }
 
-    private void checkReferenceCase(ApiScenarioWithBLOBs scenario, ApiTestCaseMapper apiTestCaseMapper, ApiDefinitionMapper apiDefinitionMapper) {
+    private void checkReferenceCase(ApiScenarioWithBLOBs scenario, ApiScenarioParamDto apiScenarioParamDto) {
         if (scenario == null || StringUtils.isEmpty(scenario.getScenarioDefinition())) {
             return;
         }
         JSONObject element = JSON.parseObject(scenario.getScenarioDefinition(), Feature.DisableSpecialKeyDetect);
         JSONArray hashTree = element.getJSONArray("hashTree");
         ApiScenarioImportUtil.formatHashTree(hashTree);
-        setReferenced(hashTree, scenario.getVersionId(), scenario.getProjectId(), apiTestCaseMapper, apiDefinitionMapper, true);
+        setReferenced(hashTree,  scenario.getProjectId(),scenario.getVersionId(), apiScenarioParamDto);
         scenario.setScenarioDefinition(JSONObject.toJSONString(element));
 
     }
@@ -759,19 +759,6 @@ public class ApiAutomationService {
         criteria.andVersionIdEqualTo(request.getVersionId());
         if (apiScenarioMapper.countByExample(example) > 0) {
             MSException.throwException(Translator.get("automation_name_already_exists") + " :" + Translator.get("api_definition_module") + request.getModulePath() + " ," + Translator.get("automation_name") + " :" + request.getName());
-        }
-        if (StringUtils.isNotBlank(request.getId())) {
-            ApiScenarioWithBLOBs scenario = apiScenarioMapper.selectByPrimaryKey(request.getId());
-            if (scenario != null) {
-                example = new ApiScenarioExample();
-                example.createCriteria().andRefIdEqualTo(scenario.getRefId()).andStatusNotEqualTo("Trash");
-                List<ApiScenario> apiScenarios = apiScenarioMapper.selectByExample(example);
-                if (apiScenarios != null && apiScenarios.size() > 1) {
-                    if (!StringUtils.equals(scenario.getName(), request.getName())) {
-                        MSException.throwException(Translator.get("automation_versions_update"));
-                    }
-                }
-            }
         }
     }
 
@@ -1294,8 +1281,10 @@ public class ApiAutomationService {
         return apiScenarioMapper.selectByExampleWithBLOBs(example);
     }
 
-    private void _importCreate(List<ApiScenarioWithBLOBs> sameRequest, ApiScenarioMapper batchMapper, ExtApiScenarioMapper extApiScenarioMapper,
-                               ApiScenarioWithBLOBs scenarioWithBLOBs, ApiTestImportRequest apiTestImportRequest, ApiTestCaseMapper apiTestCaseMapper, ApiDefinitionMapper apiDefinitionMapper) {
+    private void _importCreate(List<ApiScenarioWithBLOBs> sameRequest, ApiScenarioWithBLOBs scenarioWithBLOBs,
+                               ApiTestImportRequest apiTestImportRequest, ApiScenarioParamDto apiScenarioParamDto) {
+        ApiScenarioMapper batchMapper = apiScenarioParamDto.getBatchMapper();
+        ExtApiScenarioMapper extApiScenarioMapper = apiScenarioParamDto.getExtApiScenarioMapper();
         if (CollectionUtils.isEmpty(sameRequest)) {
             // 没有这个场景 新增
             scenarioWithBLOBs.setId(UUID.randomUUID().toString());
@@ -1318,7 +1307,7 @@ public class ApiAutomationService {
                 }
             }
 
-            checkReferenceCase(scenarioWithBLOBs, apiTestCaseMapper, apiDefinitionMapper);
+            checkReferenceCase(scenarioWithBLOBs, apiScenarioParamDto);
             batchMapper.insert(scenarioWithBLOBs);
             apiScenarioReferenceIdService.saveApiAndScenarioRelation(scenarioWithBLOBs);
             extApiScenarioMapper.clearLatestVersion(scenarioWithBLOBs.getRefId());
@@ -1341,6 +1330,7 @@ public class ApiAutomationService {
                 scenarioWithBLOBs.setRefId(sameRequest.get(0).getRefId() == null ? sameRequest.get(0).getId() : sameRequest.get(0).getRefId());
                 scenarioWithBLOBs.setNum(sameRequest.get(0).getNum()); // 使用第一个num当作本次的num
                 scenarioWithBLOBs.setOrder(sameRequest.get(0).getOrder());
+                checkReferenceCase(scenarioWithBLOBs, apiScenarioParamDto);
                 batchMapper.insert(scenarioWithBLOBs);
             } else {
                 ApiScenarioWithBLOBs existScenario = scenarioOp.get();
@@ -1349,18 +1339,19 @@ public class ApiAutomationService {
                 scenarioWithBLOBs.setVersionId(apiTestImportRequest.getUpdateVersionId());
                 scenarioWithBLOBs.setOrder(existScenario.getOrder());
                 scenarioWithBLOBs.setNum(existScenario.getNum());
+                checkReferenceCase(scenarioWithBLOBs, apiScenarioParamDto);
                 batchMapper.updateByPrimaryKeyWithBLOBs(scenarioWithBLOBs);
             }
-            checkReferenceCase(scenarioWithBLOBs, apiTestCaseMapper, apiDefinitionMapper);
             apiScenarioReferenceIdService.saveApiAndScenarioRelation(scenarioWithBLOBs);
             extApiScenarioMapper.clearLatestVersion(scenarioWithBLOBs.getRefId());
             extApiScenarioMapper.addLatestVersion(scenarioWithBLOBs.getRefId());
         }
     }
 
-    private ApiScenarioWithBLOBs importCreate(ApiScenarioWithBLOBs request, ApiScenarioMapper batchMapper, ExtApiScenarioMapper extApiScenarioMapper,
-                                              ApiTestImportRequest apiTestImportRequest, List<ApiScenarioWithBLOBs> sameList, ApiTestCaseMapper apiTestCaseMapper, ApiDefinitionMapper apiDefinitionMapper) {
+    private ApiScenarioWithBLOBs importCreate(ApiScenarioWithBLOBs request, ApiTestImportRequest apiTestImportRequest, List<ApiScenarioWithBLOBs> sameList, ApiScenarioParamDto apiScenarioParamDto) {
         final ApiScenarioWithBLOBs scenarioWithBLOBs = new ApiScenarioWithBLOBs();
+        ApiScenarioMapper batchMapper = apiScenarioParamDto.getBatchMapper();
+        ExtApiScenarioMapper extApiScenarioMapper = apiScenarioParamDto.getExtApiScenarioMapper();
         BeanUtils.copyBean(scenarioWithBLOBs, request);
         scenarioWithBLOBs.setUpdateTime(System.currentTimeMillis());
         if (StringUtils.isEmpty(scenarioWithBLOBs.getStatus())) {
@@ -1405,7 +1396,7 @@ public class ApiAutomationService {
         }
 
         if (StringUtils.equals("fullCoverage", apiTestImportRequest.getModeId())) {
-            _importCreate(sameList, batchMapper, extApiScenarioMapper, scenarioWithBLOBs, apiTestImportRequest, apiTestCaseMapper, apiDefinitionMapper);
+            _importCreate(sameList, scenarioWithBLOBs, apiTestImportRequest, apiScenarioParamDto);
         } else if (StringUtils.equals("incrementalMerge", apiTestImportRequest.getModeId())) {
             scenarioWithBLOBs.setId(UUID.randomUUID().toString());
             scenarioWithBLOBs.setCreateTime(System.currentTimeMillis());
@@ -1422,7 +1413,6 @@ public class ApiAutomationService {
                 } else {
                     scenarioWithBLOBs.setVersionId(apiTestImportRequest.getDefaultVersion());
                 }
-                checkReferenceCase(scenarioWithBLOBs, apiTestCaseMapper, apiDefinitionMapper);
                 if (scenarioWithBLOBs.getOrder() == null) {
                     scenarioWithBLOBs.setOrder(getImportNextOrder(request.getProjectId()));
                 }
@@ -1432,6 +1422,7 @@ public class ApiAutomationService {
                 if (scenarioWithBLOBs.getRefId() == null) {
                     scenarioWithBLOBs.setRefId(scenarioWithBLOBs.getId());
                 }
+                checkReferenceCase(scenarioWithBLOBs, apiScenarioParamDto);
                 batchMapper.insert(scenarioWithBLOBs);
                 // 存储依赖关系
                 ApiAutomationRelationshipEdgeService relationshipEdgeService = CommonBeanFactory.getBean(ApiAutomationRelationshipEdgeService.class);
@@ -1444,7 +1435,7 @@ public class ApiAutomationService {
             }
 
         } else {
-            _importCreate(sameList, batchMapper, extApiScenarioMapper, scenarioWithBLOBs, apiTestImportRequest, apiTestCaseMapper, apiDefinitionMapper);
+            _importCreate(sameList, scenarioWithBLOBs, apiTestImportRequest, apiScenarioParamDto);
         }
         return scenarioWithBLOBs;
     }
@@ -1485,7 +1476,8 @@ public class ApiAutomationService {
             num = getNextNum(data.get(0).getProjectId());
             request.setOpenCustomNum(config.getScenarioCustomNum());
         }
-
+        Map<String, ApiDefinition> definitionMap = new HashMap<>();
+        Map<String, Set<String>> apiIdCaseNameMap = new HashMap<>();
         for (int i = 0; i < data.size(); i++) {
             ApiScenarioWithBLOBs item = data.get(i);
             List<ApiScenarioWithBLOBs> sameList = needUpdateList.stream().filter(t -> t.getId().equals(item.getId())).collect(toList());
@@ -1517,7 +1509,8 @@ public class ApiAutomationService {
             item.setUserId(SessionUtils.getUserId());
             item.setPrincipal(SessionUtils.getUserId());
             // 导入之后刷新latest
-            importCreate(item, batchMapper, extApiScenarioMapper, request, sameList, apiTestCaseMapper, apiDefinitionMapper);
+            ApiScenarioParamDto apiScenarioParamDto = buildParamDto(batchMapper, extApiScenarioMapper, apiTestCaseMapper, apiDefinitionMapper, definitionMap, apiIdCaseNameMap);
+            importCreate(item, request, sameList, apiScenarioParamDto);
             if (i % 300 == 0) {
                 sqlSession.flushStatements();
             }
@@ -1707,6 +1700,7 @@ public class ApiAutomationService {
         StringBuilder builder = new StringBuilder();
         for (ApiScenarioWithBLOBs apiScenarioWithBLOBs : scenarios) {
             try {
+                apiScenarioEnvService.setScenarioEnv(apiScenarioWithBLOBs, null);
                 boolean haveEnv = apiScenarioEnvService.checkScenarioEnv(apiScenarioWithBLOBs, null);
                 if (!haveEnv) {
                     builder.append(apiScenarioWithBLOBs.getName()).append("; ");
@@ -2213,47 +2207,50 @@ public class ApiAutomationService {
         return strings;
     }
 
-    private void setReferenced(JSONArray hashTree, String versionId, String projectId, ApiTestCaseMapper apiTestCaseMapper, ApiDefinitionMapper apiDefinitionMapper, boolean isAdd) {
-        // 将引用转成复制
-        if (CollectionUtils.isNotEmpty(hashTree)) {
-            Map<String, ApiDefinition> definitionMap = new HashMap<>();
-            for (int i = 0; i < hashTree.size(); i++) {
-                JSONObject object = (JSONObject) hashTree.get(i);
-                String referenced = object.getString("referenced");
-                if (StringUtils.isNotBlank(referenced) && StringUtils.equals(referenced, "REF")) {
-                    // 检测引用对象是否存在，若果不存在则改成复制对象
-                    String refType = object.getString("refType");
-                    if (StringUtils.isNotEmpty(refType)) {
-                        if (refType.equals("CASE") && isAdd) {
-                            ApiScenarioImportUtil.checkCase(i, object, versionId, projectId, apiTestCaseMapper, apiDefinitionMapper, definitionMap);
-                        } else {
-                            checkAutomation(object);
-                            object.put("projectId", projectId);
-                        }
-                    } else {
-                        object.put("referenced", "Copy");
-                    }
-                } else {
-                    object.put("projectId", projectId);
-                    if (StringUtils.isEmpty(object.getString("url"))) {
-                        object.put("isRefEnvironment", true);
-                    }
-                }
-                JSONObject environmentMap = object.getJSONObject("environmentMap");
-                if (environmentMap != null) {
-                    object.put("environmentMap", new HashMap<>());
-                }
-                if (StringUtils.isNotEmpty(object.getString("refType")) && object.getString("refType").equals("CASE")) {
-                    if (CollectionUtils.isNotEmpty(object.getJSONArray("hashTree"))) {
-                        setReferenced(object.getJSONArray("hashTree"), versionId, projectId, apiTestCaseMapper, apiDefinitionMapper, true);
-                    }
-                } else {
-                    if (CollectionUtils.isNotEmpty(object.getJSONArray("hashTree"))) {
-                        setReferenced(object.getJSONArray("hashTree"), versionId, projectId, apiTestCaseMapper, apiDefinitionMapper, false);
-                    }
-                }
+    private static ApiScenarioParamDto buildParamDto(ApiScenarioMapper batchMapper, ExtApiScenarioMapper extApiScenarioMapper, ApiTestCaseMapper apiTestCaseMapper, ApiDefinitionMapper apiDefinitionMapper, Map<String, ApiDefinition> definitionMap, Map<String, Set<String>> apiIdCaseNameMap) {
+        ApiScenarioParamDto apiScenarioParamDto = new ApiScenarioParamDto();
+        apiScenarioParamDto.setBatchMapper(batchMapper);
+        apiScenarioParamDto.setExtApiScenarioMapper(extApiScenarioMapper);
+        apiScenarioParamDto.setApiTestCaseMapper(apiTestCaseMapper);
+        apiScenarioParamDto.setApiDefinitionMapper(apiDefinitionMapper);
+        apiScenarioParamDto.setDefinitionMap(definitionMap);
+        apiScenarioParamDto.setApiIdCaseNameMap(apiIdCaseNameMap);
+        return apiScenarioParamDto;
+    }
 
+    private void setReferenced(JSONArray hashTree, String projectId, String versionId, ApiScenarioParamDto apiScenarioParamDto) {
+        // 将引用转成复制
+        if (hashTree == null) {
+            return;
+        }
+        for (int i = 0; i < hashTree.size(); i++) {
+            JSONObject object = (JSONObject) hashTree.get(i);
+            String referenced = object.getString("referenced");
+            if (StringUtils.isNotBlank(referenced) && StringUtils.equals(referenced, "REF")) {
+                // 检测引用对象是否存在，若果不存在则改成复制对象
+                String refType = object.getString("refType");
+                if (StringUtils.isNotEmpty(refType)) {
+                    if (refType.equals("CASE")) {
+                        ApiScenarioImportUtil.checkCase(object, versionId, projectId, apiScenarioParamDto);
+                    } else {
+                        checkAutomation(object);
+                        object.put("projectId", projectId);
+                    }
+                } else {
+                    object.put("referenced", "Copy");
+                }
+            } else {
+                object.put("projectId", projectId);
+                if (StringUtils.isEmpty(object.getString("url"))) {
+                    object.put("isRefEnvironment", true);
+                }
             }
+
+            JSONObject environmentMap = object.getJSONObject("environmentMap");
+            if (environmentMap != null) {
+                object.put("environmentMap", new HashMap<>());
+            }
+            setReferenced(object.getJSONArray("hashTree"), projectId, versionId, apiScenarioParamDto);
         }
     }
 

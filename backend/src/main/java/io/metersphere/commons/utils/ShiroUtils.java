@@ -18,6 +18,7 @@ public class ShiroUtils {
         filterChainDefinitionMap.put("/resource/md/get/**", "anon");
         filterChainDefinitionMap.put("/resource/ui/get/**", "anon");
         filterChainDefinitionMap.put("/*.worker.js", "anon");
+        filterChainDefinitionMap.put("/*.html", "anon");
         filterChainDefinitionMap.put("/login", "anon");
         filterChainDefinitionMap.put("/signin", "anon");
         filterChainDefinitionMap.put("/ldap/signin", "anon");
@@ -43,9 +44,8 @@ public class ShiroUtils {
         filterChainDefinitionMap.put("/api/jmeter/download/jar", "anon");
         filterChainDefinitionMap.put("/api/jmeter/download/plug/jar", "anon");
 
-        // for swagger  中金 swagger 接口禁止未授权访问
-//        filterChainDefinitionMap.put("/swagger-ui.html", "anon");
-//        filterChainDefinitionMap.put("/swagger-ui/**", "anon");
+        filterChainDefinitionMap.put("/swagger-ui.html", "anon");
+        filterChainDefinitionMap.put("/swagger-ui/**", "anon");
         filterChainDefinitionMap.put("/v3/api-docs/**", "anon");
 
         filterChainDefinitionMap.put("/403", "anon");
@@ -63,6 +63,7 @@ public class ShiroUtils {
         filterChainDefinitionMap.put("/sharePlanReport", "anon");
         filterChainDefinitionMap.put("/sharePerformanceReport", "anon");
         filterChainDefinitionMap.put("/shareApiReport", "anon");
+        filterChainDefinitionMap.put("/shareUiReport", "anon");
 
         filterChainDefinitionMap.put("/system/theme", "anon");
         filterChainDefinitionMap.put("/system/save/baseurl/**", "anon");

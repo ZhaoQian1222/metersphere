@@ -121,10 +121,12 @@
 </template>
 
 <script>
-  import MsCsvFileUpload from "./CsvFileUpload";
-  import {getCurrentWorkspaceId, hasLicense} from "@/common/js/utils";
+import MsCsvFileUpload from "./CsvFileUpload";
+import axios from "axios";
+import {getCurrentWorkspaceId, hasLicense} from "@/common/js/utils";
 
-  export default {
+
+export default {
     name: "MsEditCsv",
     components: {
       MsCsvFileUpload
@@ -198,20 +200,15 @@
         };
         this.allData = [];
         // 本地文件
-        if (this.editData.files &&  this.editData.files.length > 0 && this.editData.files[0].file) {
+        if (this.editData.files && this.editData.files.length > 0 && this.editData.files[0].file) {
           this.loading = true;
           this.$papa.parse(this.editData.files[0].file, config);
         }
         // 远程下载文件
         if (this.editData.files && this.editData.files.length > 0 && !this.editData.files[0].file) {
           let file = this.editData.files[0];
-          let conf = {
-            url: "/api/automation/file/download",
-            method: 'post',
-            data: file,
-            responseType: 'blob',
-          };
-          this.result = this.$request(conf).then(response => {
+          let url = '/api/automation/file/download';
+          this.result = axios.post(url, file , {responseType: 'blob'}).then(response => {
             const content = response.data;
             const blob = new Blob([content]);
             this.loading = true;
