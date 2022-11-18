@@ -422,13 +422,13 @@ public class TestPlanReportService {
         TestPlanService testPlanService = CommonBeanFactory.getBean(TestPlanService.class);
         TestPlanReportBuildResultDTO reportBuildResult = testPlanService.buildPlanReport(testPlanReport, reportContent);
         TestPlanSimpleReportDTO reportDTO = reportBuildResult.getTestPlanSimpleReportDTO();
-        Timestamp timeStamp32 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3: TestPlanReportId--" +  " , time:" + timeStamp32);
+//        Timestamp timeStamp32 = new Timestamp(System.currentTimeMillis());
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.3: TestPlanReportId--" +  " , time:" + timeStamp32);
         reportDTO.setStartTime(testPlanReport.getStartTime());
         reportContent = parseReportDaoToReportContent(testPlanReport.getStatus(), reportDTO, reportContent);
         this.updatePassRateAndApiBaseInfoFromReportContent(testPlanReport.getStatus(), reportDTO, reportContent, reportBuildResult.isApiBaseInfoChanged());
-        Timestamp timeStamp34 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.4: TestPlanReportId--" +  " , time:" + timeStamp34);
+//        Timestamp timeStamp34 = new Timestamp(System.currentTimeMillis());
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.4: TestPlanReportId--" +  " , time:" + timeStamp34);
         return reportContent;
     }
 
@@ -845,7 +845,7 @@ public class TestPlanReportService {
         example.createCriteria().andTestPlanReportIdEqualTo(reportId);
         List<TestPlanReportContentWithBLOBs> testPlanReportContents = testPlanReportContentMapper.selectByExampleWithBLOBs(example);
         Timestamp timeStamp2 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp2: " + reportId + " , time:" + timeStamp2);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp2: " + reportId + " , time:" + timeStamp2);
         if (CollectionUtils.isEmpty(testPlanReportContents)) {
             return null;
         }
@@ -854,81 +854,81 @@ public class TestPlanReportService {
             return null;
         }
         Timestamp timeStamp3 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3: " + reportId + " , time:" + timeStamp3);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3: " + reportId + " , time:" + timeStamp3);
         if (this.isDynamicallyGenerateReports(testPlanReportContent)) {
-            LogUtil.info("----> GenerateReports: " + JSONObject.toJSONString(testPlanReportContent));
+//            LogUtil.info("----> GenerateReports: " + JSONObject.toJSONString(testPlanReportContent));
             testPlanReportContent = this.dynamicallyGenerateReports(testPlanReportContent);
-            LogUtil.info("----> GenerateReports OVER: " + JSONObject.toJSONString(testPlanReportContent));
+//            LogUtil.info("----> GenerateReports OVER: " + JSONObject.toJSONString(testPlanReportContent));
         }
         TestPlanSimpleReportDTO testPlanReportDTO = new TestPlanSimpleReportDTO();
         BeanUtils.copyBean(testPlanReportDTO, testPlanReportContent);
         Timestamp timeStamp5 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp5: " + reportId + " , time:" + timeStamp5);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp5: " + reportId + " , time:" + timeStamp5);
         if (StringUtils.isNotBlank(testPlanReportContent.getFunctionResult())) {
             testPlanReportDTO.setFunctionResult(JSONObject.parseObject(testPlanReportContent.getFunctionResult(), TestPlanFunctionResultReportDTO.class));
         }
         Timestamp timeStamp6 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp6: " + reportId + " , time:" + timeStamp6);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp6: " + reportId + " , time:" + timeStamp6);
         if (StringUtils.isNotBlank(testPlanReportContent.getApiResult())) {
             testPlanReportDTO.setApiResult(JSONObject.parseObject(testPlanReportContent.getApiResult(), TestPlanApiResultReportDTO.class));
         }
         Timestamp timeStamp7 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp7: " + reportId + " , time:" + timeStamp7);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp7: " + reportId + " , time:" + timeStamp7);
         if (StringUtils.isNotBlank(testPlanReportContent.getLoadResult())) {
             testPlanReportDTO.setLoadResult(JSONObject.parseObject(testPlanReportContent.getLoadResult(), TestPlanLoadResultReportDTO.class));
         }
         Timestamp timeStamp8 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp8: " + reportId + " , time:" + timeStamp8);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp8: " + reportId + " , time:" + timeStamp8);
         if (StringUtils.isNotBlank(testPlanReportContent.getFunctionAllCases())) {
             testPlanReportDTO.setFunctionAllCases(JSONObject.parseArray(testPlanReportContent.getFunctionAllCases(), TestPlanCaseDTO.class));
         }
         Timestamp timeStamp9 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp9: " + reportId + " , time:" + timeStamp9);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp9: " + reportId + " , time:" + timeStamp9);
         if (StringUtils.isNotBlank(testPlanReportContent.getFunctionFailureCases())) {
             testPlanReportDTO.setFunctionFailureCases(JSONObject.parseArray(testPlanReportContent.getFunctionFailureCases(), TestPlanCaseDTO.class));
         }
         Timestamp timeStamp10 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp10: " + reportId + " , time:" + timeStamp10);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp10: " + reportId + " , time:" + timeStamp10);
         if (StringUtils.isNotBlank(testPlanReportContent.getIssueList())) {
             testPlanReportDTO.setIssueList(JSONObject.parseArray(testPlanReportContent.getIssueList(), IssuesDao.class));
         }
         Timestamp timeStamp11 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp11: " + reportId + " , time:" + timeStamp11);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp11: " + reportId + " , time:" + timeStamp11);
         if (StringUtils.isNotBlank(testPlanReportContent.getApiAllCases())) {
             testPlanReportDTO.setApiAllCases(JSONObject.parseArray(testPlanReportContent.getApiAllCases(), TestPlanFailureApiDTO.class));
         }
         Timestamp timeStamp12 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp12: " + reportId + " , time:" + timeStamp12);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp12: " + reportId + " , time:" + timeStamp12);
         if (StringUtils.isNotBlank(testPlanReportContent.getApiFailureCases())) {
             testPlanReportDTO.setApiFailureCases(JSONObject.parseArray(testPlanReportContent.getApiFailureCases(), TestPlanFailureApiDTO.class));
         }
         Timestamp timeStamp13 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp13: " + reportId + " , time:" + timeStamp13);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp13: " + reportId + " , time:" + timeStamp13);
         if (StringUtils.isNotBlank(testPlanReportContent.getScenarioAllCases())) {
             testPlanReportDTO.setScenarioAllCases(JSONObject.parseArray(testPlanReportContent.getScenarioAllCases(), TestPlanFailureScenarioDTO.class));
         }
         Timestamp timeStamp14 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp14: " + reportId + " , time:" + timeStamp14);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp14: " + reportId + " , time:" + timeStamp14);
         if (StringUtils.isNotBlank(testPlanReportContent.getScenarioFailureCases())) {
             testPlanReportDTO.setScenarioFailureCases(JSONObject.parseArray(testPlanReportContent.getScenarioFailureCases(), TestPlanFailureScenarioDTO.class));
         }
         Timestamp timeStamp15 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp15: " + reportId + " , time:" + timeStamp15);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp15: " + reportId + " , time:" + timeStamp15);
         if (StringUtils.isNotBlank(testPlanReportContent.getLoadAllCases())) {
             testPlanReportDTO.setLoadAllCases(JSONObject.parseArray(testPlanReportContent.getLoadAllCases(), TestPlanLoadCaseDTO.class));
         }
         Timestamp timeStamp16 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp16: " + reportId + " , time:" + timeStamp16);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp16: " + reportId + " , time:" + timeStamp16);
         if (StringUtils.isNotBlank(testPlanReportContent.getLoadFailureCases())) {
             testPlanReportDTO.setLoadFailureCases(JSONObject.parseArray(testPlanReportContent.getLoadFailureCases(), TestPlanLoadCaseDTO.class));
         }
         Timestamp timeStamp17 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp17: " + reportId + " , time:" + timeStamp17);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp17: " + reportId + " , time:" + timeStamp17);
         if (StringUtils.isNotBlank(testPlanReportContent.getErrorReportCases())) {
             testPlanReportDTO.setErrorReportCases(JSONObject.parseArray(testPlanReportContent.getErrorReportCases(), TestPlanFailureApiDTO.class));
         }
         Timestamp timeStamp18 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp18: " + reportId + " , time:" + timeStamp18);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp18: " + reportId + " , time:" + timeStamp18);
         if (StringUtils.isNotBlank(testPlanReportContent.getErrorReportScenarios())) {
             testPlanReportDTO.setErrorReportScenarios(JSONObject.parseArray(testPlanReportContent.getErrorReportScenarios(), TestPlanFailureScenarioDTO.class));
         }
@@ -941,7 +941,7 @@ public class TestPlanReportService {
         testPlanReportDTO.setId(reportId);
         TestPlanReport testPlanReport = testPlanReportMapper.selectByPrimaryKey(testPlanReportContent.getTestPlanReportId());
         Timestamp timeStamp20 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp20: " + reportId + " , time:" + timeStamp20);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp20: " + reportId + " , time:" + timeStamp20);
         testPlanReportDTO.setName(testPlanReport.getName());
         if(testPlanReportDTO.getCaseCount()==null){
             testPlanReportDTO.setCaseCount(0L);
@@ -956,10 +956,10 @@ public class TestPlanReportService {
 
     private TestPlanReportContentWithBLOBs dynamicallyGenerateReports(TestPlanReportContentWithBLOBs testPlanReportContent) {
         Timestamp timeStamp31 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.1: TestPlanReportId--" + testPlanReportContent.getTestPlanReportId() + " , time:" + timeStamp31);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.1: TestPlanReportId--" + testPlanReportContent.getTestPlanReportId() + " , time:" + timeStamp31);
         TestPlanReport report = testPlanReportMapper.selectByPrimaryKey(testPlanReportContent.getTestPlanReportId());
         Timestamp timeStamp32 = new Timestamp(System.currentTimeMillis());
-        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.2: TestPlanReportId--" + testPlanReportContent.getTestPlanReportId() + " , time:" + timeStamp32);
+//        LogUtil.info("================>>>>>>>>>>>>>>>>>>查询报告 timeStamp3.1.2: TestPlanReportId--" + testPlanReportContent.getTestPlanReportId() + " , time:" + timeStamp32);
         testPlanReportContent = this.updateReport(report, testPlanReportContent);
         return testPlanReportContent;
     }

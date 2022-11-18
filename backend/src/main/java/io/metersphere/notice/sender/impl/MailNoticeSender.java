@@ -53,7 +53,7 @@ public class MailNoticeSender extends AbstractNoticeSender {
         example.createCriteria().andParamKeyLike(ParamConstants.Classify.MAIL.getValue() + "%");
         List<SystemParameter> paramList = systemParameterMapper.selectByExample(example);
         Map<String, String> paramMap = paramList.stream().collect(Collectors.toMap(SystemParameter::getParamKey, p -> {
-            if (StringUtils.equals(p.getParamKey(), ParamConstants.MAIL.PASSWORD.getValue())) {
+            if (StringUtils.equals(p.getParamKey(), ParamConstants.MAIL.PASSWORD.getValue()) && StringUtils.isNotEmpty(p.getParamValue())) {
                 return EncryptUtils.aesDecrypt(p.getParamValue()).toString();
             }
             if (StringUtils.isEmpty(p.getParamValue())) {
@@ -166,7 +166,11 @@ public class MailNoticeSender extends AbstractNoticeSender {
         javaMailSender.setHost(paramMap.get(ParamConstants.MAIL.SERVER.getValue()));
         javaMailSender.setPort(Integer.parseInt(paramMap.get(ParamConstants.MAIL.PORT.getValue())));
         javaMailSender.setUsername(paramMap.get(ParamConstants.MAIL.ACCOUNT.getValue()));
-        javaMailSender.setPassword(paramMap.get(ParamConstants.MAIL.PASSWORD.getValue()));
+        String password = paramMap.get(ParamConstants.MAIL.PASSWORD.getValue());
+        if(StringUtils.isEmpty(password)){
+            password = null;
+        }
+        javaMailSender.setPassword(password);
 
         if (BooleanUtils.toBoolean(paramMap.get(ParamConstants.MAIL.SSL.getValue()))) {
             javaMailSender.setProtocol("smtps");

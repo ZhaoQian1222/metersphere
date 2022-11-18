@@ -143,7 +143,7 @@ public class SystemParameterService {
                     mailInfo.setAccount(param.getParamValue());
                 } else if (StringUtils.equals(param.getParamKey(), ParamConstants.MAIL.FROM.getValue())) {
                     mailInfo.setFrom(param.getParamValue());
-                } else if (StringUtils.equals(param.getParamKey(), ParamConstants.MAIL.PASSWORD.getValue())) {
+                } else if (StringUtils.equals(param.getParamKey(), ParamConstants.MAIL.PASSWORD.getValue()) && StringUtils.isNotEmpty(ParamConstants.MAIL.PASSWORD.getValue())) {
                     String password = EncryptUtils.aesDecrypt(param.getParamValue()).toString();
                     mailInfo.setPassword(password);
                 } else if (StringUtils.equals(param.getParamKey(), ParamConstants.MAIL.SSL.getValue())) {
