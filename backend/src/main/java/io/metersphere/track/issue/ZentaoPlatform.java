@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.metersphere.base.domain.*;
 import io.metersphere.commons.constants.IssuesManagePlatform;
 import io.metersphere.commons.constants.IssuesStatus;
@@ -35,6 +37,8 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -123,6 +127,35 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
                         demandDTO.setPlatform(key);
                         list.add(demandDTO);
                     }
+                }
+                // {"5": {"children": {"51": {}}}, "6": {}}
+                else if (data.startsWith("{\"")) {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    Map<String, Map<String, String>> dataMap = objectMapper.readValue(data, Map.class);
+                    Collection<Map<String, String>> values = dataMap.values();
+                    values.forEach(v -> {
+                        try {
+                            Map jsonObject = objectMapper.readValue(JSON.toJSONString(v), Map.class);
+                            DemandDTO demandDTO = new DemandDTO();
+                            demandDTO.setId(jsonObject.get("id").toString());
+                            demandDTO.setName(jsonObject.get("title").toString());
+                            demandDTO.setPlatform(key);
+                            list.add(demandDTO);
+                            if (jsonObject.get("children") != null) {
+                                LinkedHashMap<String, Map<String, String>> children = (LinkedHashMap<String, Map<String, String>>) jsonObject.get("children");
+                                Collection<Map<String, String>> childrenMap = children.values();
+                                childrenMap.forEach(ch -> {
+                                    DemandDTO dto = new DemandDTO();
+                                    dto.setId(ch.get("id"));
+                                    dto.setName(ch.get("title"));
+                                    dto.setPlatform(key);
+                                    list.add(dto);
+                                });
+                            }
+                        } catch (JsonProcessingException e) {
+                            LogUtil.error(e);
+                        }
+                    });
                 }
                 // 处理格式 {{"id": {obj}},{"id",{obj}}}
                 else if (data.charAt(0) == '{') {
@@ -490,29 +523,36 @@ public class ZentaoPlatform extends AbstractIssuePlatform {
         String result = "";
 
         if (StringUtils.isNotEmpty(path)) {
-            if (path.startsWith("{") && path.endsWith("}")) {
-                String srcContent = path.substring(1, path.length() - 1);
-                if (StringUtils.isEmpty(name)) {
-                    name = srcContent;
-                }
+            if (!path.startsWith("http")) {
+                if (path.startsWith("{") && path.endsWith("}")) {
+                    String srcContent = path.substring(1, path.length() - 1);
+                    if (StringUtils.isEmpty(name)) {
+                        name = srcContent;
+                    }
 
-                if (Arrays.stream(imgArray).anyMatch(imgType -> StringUtils.equals(imgType, srcContent.substring(srcContent.indexOf('.') + 1)))) {
-                    if (zentaoClient instanceof ZentaoGetClient) {
-                        path = zentaoClient.getBaseUrl() + "/index.php?m=file&f=read&fileID=" + srcContent;
+                    if (Arrays.stream(imgArray).anyMatch(imgType -> StringUtils.equals(imgType, srcContent.substring(srcContent.indexOf('.') + 1)))) {
+                        if (zentaoClient instanceof ZentaoGetClient) {
+                            path = zentaoClient.getBaseUrl() + "/index.php?m=file&f=read&fileID=" + srcContent;
+                        } else {
+                            // 禅道开源版
+                            path = zentaoClient.getBaseUrl() + "/file-read-" + srcContent;
+                        }
                     } else {
-                        // 禅道开源版
-                        path = zentaoClient.getBaseUrl() + "/file-read-" + srcContent;
+                        return result;
                     }
                 } else {
-                    return result;
+                    name = name.replaceAll("&amp;", "&");
+                    try {
+                        URI uri = new URI(zentaoClient.getBaseUrl());
+                        path = uri.getScheme() + "://" + uri.getHost() + path.replaceAll("&amp;", "&");
+                    } catch (URISyntaxException e) {
+                        path = zentaoClient.getBaseUrl() + path.replaceAll("&amp;", "&");
+                        LogUtil.error(e);
+                    }
                 }
-            } else {
-                name = name.replaceAll("&amp;", "&");
-                path = zentaoClient.getBaseUrl() + path.replaceAll("&amp;", "&");
+                path = "/resource/md/get/url?url=" + URLEncoder.encode(path, StandardCharsets.UTF_8);
             }
-            // 专业版格式有差异，解析完会出现两个 /pro，去掉一个
-            path.replace("/pro/pro", "/pro");
-            path = "/resource/md/get/url?url=" + URLEncoder.encode(path, StandardCharsets.UTF_8);
+
             // 图片与描述信息之间需换行，否则无法预览图片
             result = "\n\n![" + name + "](" + path + ")";
         }

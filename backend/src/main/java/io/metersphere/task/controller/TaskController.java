@@ -1,11 +1,10 @@
 package io.metersphere.task.controller;
 
-import com.github.pagehelper.Page;
-import com.github.pagehelper.PageHelper;
-import io.metersphere.commons.utils.PageUtils;
+import io.metersphere.commons.utils.DateUtils;
 import io.metersphere.commons.utils.Pager;
 import io.metersphere.task.dto.TaskCenterDTO;
 import io.metersphere.task.dto.TaskCenterRequest;
+import io.metersphere.task.dto.TaskStatisticsDTO;
 import io.metersphere.task.service.TaskService;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,10 +20,11 @@ public class TaskController {
     @PostMapping("/list/{goPage}/{pageSize}")
     public Pager<List<TaskCenterDTO>> getTasks(@PathVariable int goPage, @PathVariable int pageSize, @RequestBody TaskCenterRequest request) {
         request.setProjects(taskService.getOwnerProjectIds(request.getUserId()));
+        request.setStartTime(DateUtils.getDailyStartTime());
+        request.setEndTime(DateUtils.getDailyEndTime());
         request.setGoPage(goPage);
         request.setPageSize(pageSize);
-        Page<Object> page = PageHelper.startPage(goPage, pageSize, true);
-        return PageUtils.setPageInfo(page, taskService.getTasks(request));
+        return taskService.getTasks(request);
     }
 
     @GetMapping("/case/{id}")
@@ -38,7 +38,7 @@ public class TaskController {
     }
 
     @PostMapping("/count/running")
-    public int getRunningTasks(@RequestBody TaskCenterRequest request) {
+    public TaskStatisticsDTO getRunningTasks(@RequestBody TaskCenterRequest request) {
         return taskService.getRunningTasks(request);
     }
 

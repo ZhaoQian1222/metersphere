@@ -12,6 +12,7 @@ import io.metersphere.api.dto.definition.ApiTestCaseRequest;
 import io.metersphere.api.dto.definition.BatchRunDefinitionRequest;
 import io.metersphere.api.dto.definition.ParamsDTO;
 import io.metersphere.api.dto.definition.TestPlanApiCaseDTO;
+import io.metersphere.api.jmeter.JMeterService;
 import io.metersphere.api.service.*;
 import io.metersphere.base.domain.*;
 import io.metersphere.base.mapper.*;
@@ -50,6 +51,7 @@ import io.metersphere.utils.LoggerUtil;
 import org.apache.commons.beanutils.BeanMap;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
@@ -187,6 +189,8 @@ public class TestPlanService {
     private ExtApiDefinitionExecResultMapper extApiDefinitionExecResultMapper;
     @Resource
     private ExtTestPlanApiScenarioMapper extTestPlanApiScenarioMapper;
+    @Resource
+    private JMeterService jMeterService;
 
     public synchronized TestPlan addTestPlan(AddTestPlanRequest testPlan) {
         if (getTestPlanByName(testPlan.getName()).size() > 0) {
@@ -996,35 +1000,35 @@ public class TestPlanService {
         if (planReportId == null) {
             planReportId = UUID.randomUUID().toString();
         }
-
+        jMeterService.verifyPool(projectID, runModeConfig);
         //创建测试报告，然后返回的ID重新赋值为resourceID，作为后续的参数
         TestPlanScheduleReportInfoDTO reportInfoDTO = this.genTestPlanReport(planReportId, testPlanID, userId, triggerMode);
         //测试计划准备执行，取消测试计划的实际结束时间
         extTestPlanMapper.updateActualEndTimeIsNullById(testPlanID);
 
-//        LoggerUtil.info("预生成测试计划报告【" + reportInfoDTO.getTestPlanReport() != null ? reportInfoDTO.getTestPlanReport().getName() : "" + "】计划报告ID[" + planReportId + "]");
+        LoggerUtil.info("预生成测试计划报告【" + reportInfoDTO.getTestPlanReport() != null ? reportInfoDTO.getTestPlanReport().getName() : "" + "】计划报告ID[" + planReportId + "]");
 
         Map<String, String> apiCaseReportMap = null;
         Map<String, String> scenarioReportMap = null;
         Map<String, String> loadCaseReportMap = null;
         if (reportInfoDTO.getApiTestCaseDataMap() != null) {
             //执行接口案例任务
-//            LoggerUtil.info("开始执行测试计划接口用例 " + planReportId);
+            LoggerUtil.info("开始执行测试计划接口用例 " + planReportId);
             apiCaseReportMap = this.executeApiTestCase(triggerMode, planReportId, userId, new ArrayList<>(reportInfoDTO.getApiTestCaseDataMap().keySet()), runModeConfig);
         }
         if (reportInfoDTO.getPlanScenarioIdMap() != null) {
             //执行场景执行任务
-//            LoggerUtil.info("开始执行测试计划场景用例 " + planReportId);
+            LoggerUtil.info("开始执行测试计划场景用例 " + planReportId);
             scenarioReportMap = this.executeScenarioCase(planReportId, testPlanID, projectID, runModeConfig, triggerMode, userId, reportInfoDTO.getPlanScenarioIdMap());
         }
 
         if (reportInfoDTO.getPerformanceIdMap() != null) {
             //执行性能测试任务
-//            LoggerUtil.info("开始执行测试计划性能用例 " + planReportId);
+            LoggerUtil.info("开始执行测试计划性能用例 " + planReportId);
             loadCaseReportMap = this.executeLoadCaseTask(planReportId, runModeConfig, triggerMode, reportInfoDTO.getPerformanceIdMap());
         }
         if (apiCaseReportMap != null && scenarioReportMap != null && loadCaseReportMap != null) {
-//            LoggerUtil.info("开始生成测试计划报告内容 " + planReportId);
+            LoggerUtil.info("开始生成测试计划报告内容 " + planReportId);
             testPlanReportService.createTestPlanReportContentReportIds(planReportId, apiCaseReportMap, scenarioReportMap, loadCaseReportMap);
         }
 
@@ -1766,12 +1770,8 @@ public class TestPlanService {
      * @return
      */
     public TestPlanReportBuildResultDTO buildPlanReport(TestPlanReport testPlanReport, TestPlanReportContentWithBLOBs testPlanReportContentWithBLOBs) {
-        long buildPlanReportStart = System.currentTimeMillis();
-//        LoggerUtil.info("构建测试计划开始时间："+buildPlanReportStart);
         TestPlanReportBuildResultDTO returnDTO = new TestPlanReportBuildResultDTO();
         TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(testPlanReport.getTestPlanId());
-        long selectTestPlan = System.currentTimeMillis();
-//        LoggerUtil.info("testPlan查询时间："+(selectTestPlan-buildPlanReportStart));
         if (testPlan != null) {
             String reportConfig = testPlan.getReportConfig();
             JSONObject config = null;
@@ -1779,8 +1779,6 @@ public class TestPlanService {
                 config = JSONObject.parseObject(reportConfig);
             }
             TestPlanExecuteReportDTO testPlanExecuteReportDTO = testPlanReportService.genTestPlanExecuteReportDTOByTestPlanReportContent(testPlanReportContentWithBLOBs);
-            long testPlanExecute = System.currentTimeMillis();
-//            LoggerUtil.info("获取测试报告内容时间："+(testPlanExecute-selectTestPlan));
             TestPlanSimpleReportDTO report = null;
             boolean apiBaseInfoChanged = false;
             if (StringUtils.isEmpty(testPlanReportContentWithBLOBs.getApiBaseCount())) {
@@ -1790,34 +1788,28 @@ public class TestPlanService {
                 try {
                     report = JSONObject.parseObject(testPlanReportContentWithBLOBs.getApiBaseCount(), TestPlanSimpleReportDTO.class);
                 } catch (Exception e) {
-//                    LogUtil.info("解析接口统计数据出错！数据：" + testPlanReportContentWithBLOBs.getApiBaseCount(), e);
+                    LogUtil.info("解析接口统计数据出错！数据：" + testPlanReportContentWithBLOBs.getApiBaseCount(), e);
                 }
                 if (report == null) {
                     report = getReport(testPlanReport.getTestPlanId(), testPlanExecuteReportDTO);
                     apiBaseInfoChanged = true;
                 }
             }
-            if(report.getFunctionAllCases() == null || report.getIssueList() == null){
+            if (report.getFunctionAllCases() == null || report.getIssueList() == null) {
                 buildFunctionalReport(report, config, testPlanReport.getTestPlanId());
                 apiBaseInfoChanged = true;
             }
-            long functionalReport = System.currentTimeMillis();
-//            LoggerUtil.info("构建功能报告时间："+(functionalReport-testPlanExecute));
-            if(report.getApiAllCases() == null && report.getScenarioAllCases() == null){
+            if (report.getApiAllCases() == null && report.getScenarioAllCases() == null) {
                 buildApiReport(report, config, testPlanExecuteReportDTO);
                 apiBaseInfoChanged = true;
             }
-            long ApiReport = System.currentTimeMillis();
-//            LoggerUtil.info("构建api报告时间："+(ApiReport-functionalReport));
-            if(report.getLoadAllCases()  == null){
+            if (report.getLoadAllCases() == null) {
                 buildLoadReport(report, config, testPlanExecuteReportDTO.getTestPlanLoadCaseIdAndReportIdMap(), false);
                 apiBaseInfoChanged = true;
             }
-            long loadReport = System.currentTimeMillis();
-//            LoggerUtil.info("构建加载报告时间："+(loadReport-ApiReport));
             returnDTO.setTestPlanSimpleReportDTO(report);
 
-            if(apiBaseInfoChanged){
+            if (apiBaseInfoChanged) {
                 testPlanReportContentWithBLOBs.setApiBaseCount(JSONObject.toJSONString(report));
                 returnDTO.setApiBaseInfoChanged(true);
             }
@@ -1828,6 +1820,16 @@ public class TestPlanService {
         }
     }
 
+    public boolean checkAllReportFinished(TestPlanSimpleReportDTO testPlanSimpleReportDTO) {
+        if(CollectionUtils.isNotEmpty(testPlanSimpleReportDTO.getScenarioAllCases())){
+            for (TestPlanFailureScenarioDTO dto: testPlanSimpleReportDTO.getScenarioAllCases()) {
+                if(StringUtils.equalsAnyIgnoreCase(dto.getLastResult(),"Waiting","Running")){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     public TestPlanSimpleReportDTO buildPlanReport(String planId, boolean saveResponse) {
         TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(planId);
 
@@ -2275,6 +2277,10 @@ public class TestPlanService {
 
         for (String id : ids) {
             TestPlanWithBLOBs testPlan = testPlanMap.get(id);
+            RunModeConfigDTO runModeConfigDTO = JSON.parseObject(testPlan.getRunModeConfig(), RunModeConfigDTO.class);
+            runModeConfigDTO = ObjectUtils.isEmpty(runModeConfigDTO) ? new RunModeConfigDTO() : runModeConfigDTO;
+            jMeterService.verifyPool(testPlan.getProjectId(), runModeConfigDTO);
+
             String planReportId = UUID.randomUUID().toString();
             //创建测试报告
             this.genTestPlanReport(planReportId, testPlan.getId(), request.getUserId(), request.getTriggerMode());

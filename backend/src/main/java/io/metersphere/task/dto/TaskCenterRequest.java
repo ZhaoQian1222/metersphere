@@ -29,4 +29,11 @@ public class TaskCenterRequest {
     private int pageSize;
 
     List<String> projects;
+
+    private String activeName;
+
+    private long startTime;
+
+    private long endTime;
+
 }

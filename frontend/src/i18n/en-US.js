@@ -51,11 +51,15 @@ export default {
     current_workspace: "Current Workspace",
     organization: 'Organization',
     setting: 'Setting',
+    api_run_pool_title: 'Interface execution resource pool',
+    api_default_run: 'The interface is executed locally by default',
+    api_default_run_message: 'In order not to affect the normal execution of the interface, please configure the resource pool for interface execution in [Project Settings - Application Management - Interface Test]',
     project: 'Project',
     about_us: 'About Us',
     current_project: 'Current Project',
     not_exist: "Not exist",
     name: 'Name',
+    template_name: 'Template Name',
     repositoryFilePath: 'Git File Path',
     repositoryBranch: 'Git Bracnh',
     description: 'Description',
@@ -239,7 +243,8 @@ export default {
     debug_history: "Debug history",
     testing: "Testing",
     enable_scene: "Original scene environment",
-    variable_scene: "Original scene variable",
+    variable_scene: "The original scene variable is used first, and the current scene variable is used if there is no",
+    mix_enable: "The current scene variable is used first, and the original scene variable is used if there is no",
     reference_settings: "Reference settings",
     enable_scene_info: "Enable scene environment: the current step uses the original environment configuration of the scene to run",
     edit_info: "Edit details",
@@ -972,7 +977,8 @@ export default {
     test_monitor_details: 'Test Monitor Details',
     test_config: 'Test Configuration',
     test_details: 'Test Details',
-    test_duration: 'Execution Time：{0} minutes {1} seconds',
+    test_duration: 'Execution Time：{0} hours {1} minutes {2} seconds',
+    test_duration_tip: '{0} hours {1} minutes {2} seconds',
     test_execute_time: 'Execution Time',
     test_start_time: 'Start Time',
     test_end_time: 'End Time',
@@ -1125,6 +1131,7 @@ export default {
     stoptest: 'Stop test',
     stoptestnow: 'Stop the test immediately',
     batch_delete_confirm: "Confirm batch delete performance test",
+    max_current_threads_tips: 'Exceeded the maximum concurrent number of this node {0}',
     report: {
       diff: "Compare",
       set_default: 'Set to Default',
@@ -1267,7 +1274,7 @@ export default {
         case: "Case",
         responsible: "Executor",
         title: "Create api",
-        path_info: "Please enter the URL of the interface, such as /api/demo/#{id}, where id is the path parameter",
+        path_info: "Please enter the URL of the interface, such as /api/demo/${id}, where id is the path parameter",
         path_all_info: "Please enter the complete test address",
         fast_debug: "Fast debug",
         close_all_label: "close all label",
@@ -1462,6 +1469,7 @@ export default {
       loop_input_val: "Variable prefix",
       loop_message: "There is more than one request in the current cycle and cannot be closed",
       env_message: "Please select the operating environment for the project to which this step belongs in the environment configuration",
+      project_no_permission: "The current person does not have the operation permission for this step",
       debug_message: "The current step is disabled and cannot be debugged",
       request_total: "request",
       request_success: "success",
@@ -1469,6 +1477,7 @@ export default {
       generate_report: "Generate report",
       rerun: "fail and rerun",
       rerun_warning: "The connection is abnormal, please check the environment configuration",
+      debug_pool_warning: "Execution exception, please check the resource pool",
       csv_warning: "Please add csv file",
       variable_warning: "Variable name cannot be empty"
     },
@@ -3514,5 +3523,20 @@ export default {
     store_xpath_count: "Number of elements matching xpath (storeXpathCount)",
     store_wigndow_handle: "Window Handle(storeWindowHandle)",
     store_title: "Web page title (storeTitle)",
+    smart_variable_enable: "Use the current scene variables first",
+    use_origin_variable_scene: "Use original scene variables",
+    use_origin_env_run: "Use original scene environment to execute"
+  },
+  system: {
+    test_resource_pool: {
+      edit_job_template: "Edit Job Template",
+      edit_job_template_tip: "The Kubernetes Job template is a text in YAML format that defines the running parameters of the Job. You can edit the Job template here.",
+    }
+  },
+  task: {
+    api_title: "Api testing tasks",
+    scenario_title: "Scenario testing tasks",
+    ui_title: "UI testing tasks",
+    perf_title: "Perf testing tasks"
   }
 };

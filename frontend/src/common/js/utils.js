@@ -101,6 +101,10 @@ export function getCurrentProjectID() {
   return sessionStorage.getItem(PROJECT_ID);
 }
 
+export function setCurrentProjectID(projectId) {
+  sessionStorage.setItem(PROJECT_ID, projectId);
+}
+
 export function getCurrentUser() {
   return JSON.parse(localStorage.getItem(TokenKey));
 }
@@ -278,7 +282,7 @@ export function exportPdf(name, canvasList) {
       let blankHeight = a4Height - currentHeight;
 
       if (leftHeight > blankHeight) {
-        if (blankHeight < 200) {
+        if (blankHeight < 300) {
           pdf.addPage();
           currentHeight = 0;
         }
@@ -292,10 +296,10 @@ export function exportPdf(name, canvasList) {
           leftHeight -= occupation;
           position -= occupation;
           //避免添加空白页
-          // if (leftHeight > 0) {
-          // pdf.addPage();
-          // currentHeight = 0;
-          // }
+          if (leftHeight > 0) {
+            pdf.addPage();
+            currentHeight = 0;
+          }
         }
       } else {
         pdf.addImage(pageData, 'JPEG', 0, currentHeight, imgWidth, imgHeight);

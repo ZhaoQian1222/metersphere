@@ -10,6 +10,8 @@ import io.metersphere.api.exec.queue.DBTestQueue;
 import io.metersphere.api.exec.scenario.ApiScenarioSerialService;
 import io.metersphere.api.exec.utils.ApiDefinitionExecResultUtil;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
+import io.metersphere.api.exec.utils.PerformInspectionUtil;
+import io.metersphere.api.jmeter.JMeterService;
 import io.metersphere.api.service.ApiCaseResultService;
 import io.metersphere.api.service.ApiExecutionQueueService;
 import io.metersphere.api.service.ApiScenarioReportStructureService;
@@ -63,6 +65,8 @@ public class ApiCaseExecuteService {
     private ApiCaseResultService apiCaseResultService;
     @Resource
     private ApiScenarioReportStructureService apiScenarioReportStructureService;
+    @Resource
+    private JMeterService jMeterService;
 
     /**
      * 测试计划case执行
@@ -119,6 +123,7 @@ public class ApiCaseExecuteService {
                     report.setProjectId(plan.getProjectId());
                 }
             }
+            jMeterService.verifyPool(planProjects.get(testPlanApiCase.getTestPlanId()),request.getConfig());
             executeQueue.put(testPlanApiCase.getId(), report);
             responseDTOS.add(new MsExecResponseDTO(testPlanApiCase.getId(), report.getId(), request.getTriggerMode()));
             LoggerUtil.debug("预生成测试用例结果报告：" + report.getName() + ", ID " + report.getId());
@@ -208,6 +213,7 @@ public class ApiCaseExecuteService {
         if (request.getConfig() == null) {
             request.setConfig(new RunModeConfigDTO());
         }
+        jMeterService.verifyPool(request.getProjectId(), request.getConfig());
 
         if (StringUtils.equals("GROUP", request.getConfig().getEnvironmentType()) && StringUtils.isNotEmpty(request.getConfig().getEnvironmentGroupId())) {
             request.getConfig().setEnvMap(environmentGroupProjectService.getEnvMap(request.getConfig().getEnvironmentGroupId()));
@@ -222,6 +228,8 @@ public class ApiCaseExecuteService {
         example.createCriteria().andIdIn(request.getIds());
         List<ApiTestCaseWithBLOBs> caseList = apiTestCaseMapper.selectByExampleWithBLOBs(example);
         LoggerUtil.debug("查询到执行数据：" + caseList.size());
+        // 检查执行内容合规性
+        PerformInspectionUtil.caseInspection(caseList);
         // 环境检查
         if (MapUtils.isEmpty(request.getConfig().getEnvMap())) {
             this.checkEnv(caseList);

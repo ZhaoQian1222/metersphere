@@ -23,6 +23,7 @@ import io.metersphere.api.dto.scenario.request.BodyFile;
 import io.metersphere.api.exec.scenario.ApiScenarioEnvService;
 import io.metersphere.api.exec.scenario.ApiScenarioExecuteService;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
+import io.metersphere.api.jmeter.JMeterService;
 import io.metersphere.api.mock.utils.MockApiUtils;
 import io.metersphere.api.parse.ApiImportParser;
 import io.metersphere.base.domain.*;
@@ -36,6 +37,7 @@ import io.metersphere.controller.request.ScheduleRequest;
 import io.metersphere.dto.ApiReportCountDTO;
 import io.metersphere.dto.MsExecResponseDTO;
 import io.metersphere.dto.ProjectConfig;
+import io.metersphere.dto.RunModeConfigDTO;
 import io.metersphere.i18n.Translator;
 import io.metersphere.job.sechedule.ApiScenarioTestJob;
 import io.metersphere.job.sechedule.SwaggerUrlImportJob;
@@ -162,6 +164,8 @@ public class ApiAutomationService {
     @Resource
     private ExtApiTestCaseMapper extApiTestCaseMapper;
 
+    @Resource
+    private JMeterService jMeterService;
     private ThreadLocal<Long> currentScenarioOrder = new ThreadLocal<>();
 
     public ApiScenarioDTO getDto(String id) {
@@ -954,6 +958,8 @@ public class ApiAutomationService {
      * @return
      */
     public String debugRun(RunDefinitionRequest request, List<MultipartFile> bodyFiles, List<MultipartFile> scenarioFiles) {
+        request.setConfig(new RunModeConfigDTO());
+        jMeterService.verifyPool(request.getProjectId(), request.getConfig());
         return apiScenarioExecuteService.debug(request, bodyFiles, scenarioFiles);
     }
 
@@ -2147,6 +2153,7 @@ public class ApiAutomationService {
     }
 
     public List<MsExecResponseDTO> run(RunScenarioRequest request) {
+        jMeterService.verifyPool(request.getProjectId(), request.getConfig());
         return apiScenarioExecuteService.run(request);
     }
 

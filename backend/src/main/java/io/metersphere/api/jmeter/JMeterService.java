@@ -1,12 +1,15 @@
 package io.metersphere.api.jmeter;
 
 import com.alibaba.fastjson.JSON;
+import io.metersphere.api.dto.definition.request.MsTestPlan;
+import io.metersphere.api.exec.ApiPoolDebugService;
 import io.metersphere.api.exec.queue.ExecThreadPoolExecutor;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
 import io.metersphere.api.jmeter.utils.ServerConfig;
 import io.metersphere.api.jmeter.utils.SmoothWeighted;
 import io.metersphere.api.service.RemakeReportService;
 import io.metersphere.commons.constants.ApiRunMode;
+import io.metersphere.commons.constants.ExtendedParameter;
 import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.config.JmeterProperties;
 import io.metersphere.config.KafkaConfig;
@@ -15,6 +18,7 @@ import io.metersphere.constants.RunModeConstants;
 import io.metersphere.dto.JmeterRunRequestDTO;
 import io.metersphere.dto.JvmInfoDTO;
 import io.metersphere.dto.NodeDTO;
+import io.metersphere.dto.RunModeConfigDTO;
 import io.metersphere.jmeter.JMeterBase;
 import io.metersphere.jmeter.LocalRunner;
 import io.metersphere.performance.engine.Engine;
@@ -43,12 +47,17 @@ import java.util.List;
 @Service
 public class JMeterService {
     public static final String BASE_URL = "http://%s:%d";
+
     @Resource
     private JmeterProperties jmeterProperties;
     @Resource
     private RestTemplate restTemplate;
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+    @Resource
+    private ExecThreadPoolExecutor execThreadPoolExecutor;
+    @Resource
+    private RemakeReportService remakeReportService;
 
     @PostConstruct
     private void init() {
@@ -113,8 +122,8 @@ public class JMeterService {
         }
 
         if (MapUtils.isNotEmpty(request.getExtendedParameters())
-                && request.getExtendedParameters().containsKey("SYN_RES")
-                && (Boolean) request.getExtendedParameters().get("SYN_RES")) {
+                && request.getExtendedParameters().containsKey(ExtendedParameter.SYNC_STATUS)
+                && (Boolean) request.getExtendedParameters().get(ExtendedParameter.SYNC_STATUS)) {
             LoggerUtil.debug("为请求 [ " + request.getReportId() + " ] 添加Debug Listener");
             addDebugListener(request.getReportId(), request.getHashTree());
         }
@@ -137,14 +146,23 @@ public class JMeterService {
         // 如果是K8S调用
         if (request.getPool().isK8s()) {
             try {
+                // 缓存调试脚本
+                if (request.getHashTree() != null) {
+                    String key = StringUtils.join(request.getReportId(), "-", request.getTestId());
+                    redisTemplate.opsForValue().set(key, new MsTestPlan().getJmx(request.getHashTree()));
+                }
                 LoggerUtil.info("开始发送请求[ " + request.getTestId() + " ] 到K8S节点执行", request.getReportId());
                 final Engine engine = EngineFactory.createApiEngine(request);
                 engine.start();
             } catch (Exception e) {
-                RemakeReportService apiScenarioReportService = CommonBeanFactory.getBean(RemakeReportService.class);
-                apiScenarioReportService.testEnded(request, e.getMessage());
+                remakeReportService.testEnded(request, e.getMessage());
                 LoggerUtil.error("调用K8S执行请求[ " + request.getTestId() + " ]失败：", request.getReportId(), e);
             }
+        } else if ((MapUtils.isNotEmpty(request.getExtendedParameters())
+                && request.getExtendedParameters().containsKey(ExtendedParameter.SYNC_STATUS)
+                && (Boolean) request.getExtendedParameters().get(ExtendedParameter.SYNC_STATUS))
+                || request.isDebug()) {
+            this.nodeDebug(request);
         } else {
             this.send(request);
         }
@@ -162,7 +180,6 @@ public class JMeterService {
             }
             if (config == null) {
                 LoggerUtil.info("未获取到资源池，请检查配置【系统设置-系统-测试资源池】", request.getReportId());
-                RemakeReportService remakeReportService = CommonBeanFactory.getBean(RemakeReportService.class);
                 remakeReportService.remake(request);
                 return;
             }
@@ -171,24 +188,28 @@ public class JMeterService {
             LoggerUtil.info("开始发送请求【 " + request.getTestId() + " 】到 " + config.getUrl() + " 节点执行", request.getReportId());
             ResponseEntity<String> result = restTemplate.postForEntity(config.getUrl(), request, String.class);
             if (result == null || !StringUtils.equals("SUCCESS", result.getBody())) {
-                RemakeReportService remakeReportService = CommonBeanFactory.getBean(RemakeReportService.class);
                 remakeReportService.remake(request);
                 LoggerUtil.error("发送请求[ " + request.getTestId() + " ] 到" + config.getUrl() + " 节点执行失败", request.getReportId());
                 LoggerUtil.info(result.getBody());
             }
         } catch (Exception e) {
-            RemakeReportService remakeReportService = CommonBeanFactory.getBean(RemakeReportService.class);
             remakeReportService.remake(request);
             LoggerUtil.error("发送请求[ " + request.getTestId() + " ] 执行失败,进行数据回滚：", request.getReportId(), e);
         }
     }
 
+    private synchronized void nodeDebug(JmeterRunRequestDTO request) {
+        ApiPoolDebugService apiPoolDebugService = CommonBeanFactory.getBean(ApiPoolDebugService.class);
+        if (apiPoolDebugService != null) {
+            apiPoolDebugService.run(request);
+        }
+    }
 
     public void run(JmeterRunRequestDTO request) {
         if (request.getPool().isPool()) {
             this.runNode(request);
         } else {
-            CommonBeanFactory.getBean(ExecThreadPoolExecutor.class).addTask(request);
+            execThreadPoolExecutor.addTask(request);
         }
     }
 
@@ -220,4 +241,18 @@ public class JMeterService {
             return false;
         }
     }
+
+    public void verifyPool(String projectId, RunModeConfigDTO runModeConfigDTO) {
+        ApiPoolDebugService debugService = CommonBeanFactory.getBean(ApiPoolDebugService.class);
+        if (debugService != null) {
+            debugService.verifyPool(projectId, runModeConfigDTO);
+        }
+    }
 }
+
+
+
+
+
+
+

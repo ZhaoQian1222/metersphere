@@ -11,12 +11,15 @@ import io.metersphere.api.dto.definition.request.MsTestPlan;
 import io.metersphere.api.dto.definition.request.ParameterConfig;
 import io.metersphere.api.exec.queue.DBTestQueue;
 import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
+import io.metersphere.api.exec.utils.PerformInspectionUtil;
 import io.metersphere.api.jmeter.JMeterService;
 import io.metersphere.api.service.ApiExecutionQueueService;
 import io.metersphere.api.service.ApiScenarioReportService;
 import io.metersphere.api.service.ApiScenarioReportStructureService;
 import io.metersphere.api.service.TcpApiParamService;
-import io.metersphere.base.domain.*;
+import io.metersphere.base.domain.ApiScenarioExample;
+import io.metersphere.base.domain.ApiScenarioWithBLOBs;
+import io.metersphere.base.domain.TestPlanApiScenario;
 import io.metersphere.base.mapper.ApiScenarioMapper;
 import io.metersphere.base.mapper.ApiScenarioReportMapper;
 import io.metersphere.base.mapper.TestPlanApiScenarioMapper;
@@ -26,14 +29,19 @@ import io.metersphere.commons.constants.ApiRunMode;
 import io.metersphere.commons.constants.ReportTriggerMode;
 import io.metersphere.commons.constants.ReportTypeConstants;
 import io.metersphere.commons.exception.MSException;
-import io.metersphere.commons.utils.*;
+import io.metersphere.commons.utils.CommonBeanFactory;
+import io.metersphere.commons.utils.FileUtils;
+import io.metersphere.commons.utils.ServiceUtils;
+import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.constants.RunModeConstants;
+import io.metersphere.dto.BaseSystemConfigDTO;
 import io.metersphere.dto.JmeterRunRequestDTO;
 import io.metersphere.dto.MsExecResponseDTO;
 import io.metersphere.dto.RunModeConfigDTO;
 import io.metersphere.i18n.Translator;
 import io.metersphere.plugin.core.MsTestElement;
 import io.metersphere.service.EnvironmentGroupProjectService;
+import io.metersphere.service.SystemParameterService;
 import io.metersphere.track.service.TestPlanScenarioCaseService;
 import io.metersphere.utils.LoggerUtil;
 import org.apache.commons.beanutils.BeanComparator;
@@ -85,6 +93,8 @@ public class ApiScenarioExecuteService {
     private TcpApiParamService tcpApiParamService;
     @Resource
     protected JMeterService jMeterService;
+    @Resource
+    private SystemParameterService systemParameterService;
 
     public List<MsExecResponseDTO> run(RunScenarioRequest request) {
         if (LoggerUtil.getLogger().isDebugEnabled()) {
@@ -109,6 +119,8 @@ public class ApiScenarioExecuteService {
         if (apiScenarios != null && apiScenarios.size() == 1 && (apiScenarios.get(0).getStepTotal() == null || apiScenarios.get(0).getStepTotal() == 0)) {
             MSException.throwException((apiScenarios.get(0).getName() + "，" + Translator.get("automation_exec_info")));
         }
+        // 检查执行内容合规性
+        PerformInspectionUtil.scenarioInspection(apiScenarios);
         // 环境检查
         LoggerUtil.info("Scenario run-执行脚本装载-开始针对所有执行场景进行环境检查");
         apiScenarioEnvService.checkEnv(request, apiScenarios);
@@ -368,8 +380,11 @@ public class ApiScenarioExecuteService {
         try {
             uploadBodyFiles(request.getBodyFileRequestIds(), bodyFiles);
             FileUtils.createBodyFiles(request.getScenarioFileIds(), scenarioFiles);
+            this.testElement(request);
             hashTree = request.getTestElement().generateHashTree(config);
-            LogUtil.info(request.getTestElement().getJmx(hashTree));
+            String jmx = request.getTestElement().getJmx(hashTree);
+            LoggerUtil.info(jmx);
+            PerformInspectionUtil.inspection(jmx, request.getScenarioId(), 0);
         } catch (Exception e) {
             LoggerUtil.error("调试失败", request.getReportId(), e);
             MSException.throwException(e.getMessage());
@@ -409,6 +424,12 @@ public class ApiScenarioExecuteService {
         JmeterRunRequestDTO runRequest = new JmeterRunRequestDTO(request.getId(), request.getId(), runMode, hashTree);
         LoggerUtil.info(new MsTestPlan().getJmx(hashTree));
         runRequest.setDebug(true);
+        if (request.getConfig() != null && StringUtils.isNotEmpty(request.getConfig().getResourcePoolId())) {
+            runRequest.setPool(GenerateHashTreeUtil.isResourcePool(request.getConfig().getResourcePoolId()));
+            runRequest.setPoolId(request.getConfig().getResourcePoolId());
+            BaseSystemConfigDTO baseInfo = systemParameterService.getBaseInfo();
+            runRequest.setPlatformUrl(GenerateHashTreeUtil.getPlatformUrl(baseInfo, runRequest, null));
+        }
         jMeterService.run(runRequest);
         return request.getId();
     }

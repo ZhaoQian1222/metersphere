@@ -164,7 +164,7 @@
         <dependency>
             <groupId>io.metersphere</groupId>
             <artifactId>ms-jmeter-core</artifactId>
-            <version>1.2.1</version>
+            <version>1.2.2</version>
             <exclusions>
                 <exclusion>
                     <artifactId>netty</artifactId>
@@ -532,7 +532,7 @@
                         <artifactItem>
                             <groupId>io.metersphere</groupId>
                             <artifactId>metersphere-jmeter-functions</artifactId>
-                            <version>1.4</version>
+                            <version>1.5</version>
                             <type>jar</type>
                             <overWrite>true</overWrite>
                             <outputDirectory>src/main/resources/jmeter/lib/ext</outputDirectory>
@@ -541,7 +541,7 @@
                         <artifactItem>
                             <groupId>org.python</groupId>
                             <artifactId>jython-standalone</artifactId>
-                            <version>2.7.2</version>
+                            <version>2.7.0</version>
                             <type>jar</type>
                             <overWrite>true</overWrite>
                             <outputDirectory>src/main/resources/jmeter/lib/ext</outputDirectory>

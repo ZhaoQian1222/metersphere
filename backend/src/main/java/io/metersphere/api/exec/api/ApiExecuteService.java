@@ -15,6 +15,8 @@ import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
 import io.metersphere.api.dto.scenario.Body;
 import io.metersphere.api.dto.scenario.environment.EnvironmentConfig;
 import io.metersphere.api.exec.utils.ApiDefinitionExecResultUtil;
+import io.metersphere.api.exec.utils.PerformInspectionUtil;
+import io.metersphere.api.exec.utils.GenerateHashTreeUtil;
 import io.metersphere.api.jmeter.JMeterService;
 import io.metersphere.api.service.ApiTestEnvironmentService;
 import io.metersphere.api.service.TcpApiParamService;
@@ -29,9 +31,12 @@ import io.metersphere.commons.utils.CommonBeanFactory;
 import io.metersphere.commons.utils.FileUtils;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.commons.utils.SessionUtils;
+import io.metersphere.dto.BaseSystemConfigDTO;
 import io.metersphere.dto.JmeterRunRequestDTO;
 import io.metersphere.dto.MsExecResponseDTO;
+import io.metersphere.dto.RunModeConfigDTO;
 import io.metersphere.plugin.core.MsTestElement;
+import io.metersphere.service.SystemParameterService;
 import io.metersphere.utils.LoggerUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -63,6 +68,8 @@ public class ApiExecuteService {
     private ExtApiTestCaseMapper extApiTestCaseMapper;
     @Resource
     private ObjectMapper mapper;
+    @Resource
+    private SystemParameterService systemParameterService;
 
     public MsExecResponseDTO jenkinsRun(RunCaseRequest request) {
         ApiTestCaseWithBLOBs caseWithBLOBs = null;
@@ -81,6 +88,8 @@ public class ApiExecuteService {
         if (StringUtils.isBlank(request.getEnvironmentId())) {
             request.setEnvironmentId(extApiTestCaseMapper.getApiCaseEnvironment(request.getCaseId()));
         }
+        jMeterService.verifyPool(caseWithBLOBs.getProjectId(), new RunModeConfigDTO());
+
         //提前生成报告
         ApiDefinitionExecResult report = ApiDefinitionExecResultUtil.add(caseWithBLOBs.getId(), APITestStatus.Running.name(), request.getReportId(), Objects.requireNonNull(SessionUtils.getUser()).getId());
         report.setName(caseWithBLOBs.getName());
@@ -103,6 +112,8 @@ public class ApiExecuteService {
 
     public MsExecResponseDTO exec(RunCaseRequest request) {
         ApiTestCaseWithBLOBs testCaseWithBLOBs = request.getBloBs();
+        PerformInspectionUtil.countMatches(testCaseWithBLOBs.getRequest(), testCaseWithBLOBs.getId());
+
         if (StringUtils.equals(request.getRunMode(), ApiRunMode.JENKINS_API_PLAN.name())) {
             testCaseWithBLOBs = apiTestCaseMapper.selectByPrimaryKey(request.getReportId());
             request.setCaseId(request.getReportId());
@@ -179,10 +190,10 @@ public class ApiExecuteService {
         }
 
         HashTree hashTree = request.getTestElement().generateHashTree(config);
-        if (LoggerUtil.getLogger().isDebugEnabled()) {
-            LoggerUtil.debug("生成执行JMX内容【 " + request.getTestElement().getJmx(hashTree) + " 】");
-        }
-
+        String jmx = request.getTestElement().getJmx(hashTree);
+        LoggerUtil.info("生成执行JMX内容【 " + jmx + " 】");
+        // 检查执行内容合规性
+        PerformInspectionUtil.inspection(jmx, testId, 4);
         JmeterRunRequestDTO runRequest = new JmeterRunRequestDTO(testId, request.getId(), runMode, hashTree);
         runRequest.setDebug(request.isDebug());
 
@@ -192,14 +203,21 @@ public class ApiExecuteService {
             this.put("userName", SessionUtils.getUser().getName());
         }});
         // 开始执行
+        if (StringUtils.isNotEmpty(request.getConfig().getResourcePoolId())) {
+            runRequest.setPool(GenerateHashTreeUtil.isResourcePool(request.getConfig().getResourcePoolId()));
+            runRequest.setPoolId(request.getConfig().getResourcePoolId());
+            BaseSystemConfigDTO baseInfo = systemParameterService.getBaseInfo();
+            runRequest.setPlatformUrl(GenerateHashTreeUtil.getPlatformUrl(baseInfo, runRequest, null));
+        }
         jMeterService.run(runRequest);
         return new MsExecResponseDTO(runRequest.getTestId(), runRequest.getReportId(), runMode);
     }
 
     public HashTree generateHashTree(RunCaseRequest request, ApiTestCaseWithBLOBs testCaseWithBLOBs) throws Exception {
+        PerformInspectionUtil.countMatches(testCaseWithBLOBs.getRequest(), testCaseWithBLOBs.getId());
+
         JSONObject elementObj = JSON.parseObject(testCaseWithBLOBs.getRequest(), Feature.DisableSpecialKeyDetect);
         ElementUtil.dataFormatting(elementObj);
-
         MsTestElement element = mapper.readValue(elementObj.toJSONString(), new TypeReference<MsTestElement>() {
         });
         element.setProjectId(testCaseWithBLOBs.getProjectId());

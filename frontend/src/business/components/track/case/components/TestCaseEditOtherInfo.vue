@@ -281,17 +281,21 @@ export default {
         /// todo: 显示错误信息
         return false;
       }
+
       if (this.tableData.filter(f => f.name === file.name).length > 0) {
         this.$error(this.$t('load_test.delete_file') + ', name: ' + file.name);
         return false;
       }
+
       let type = file.name.substring(file.name.lastIndexOf(".") + 1);
+
       this.tableData.push({
         name: file.name,
         size: file.size + ' Bytes', /// todo: 按照大小显示Byte、KB、MB等
         type: type.toUpperCase(),
         updateTime: new Date().getTime(),
       });
+
       return true;
     },
     handleUpload(uploadResources) {
@@ -361,6 +365,7 @@ export default {
       if (testCaseId) {
         this.result = this.$get("test/case/file/metadata/" + testCaseId, response => {
           let files = response.data;
+
           if (!files) {
             return;
           }
@@ -438,6 +443,7 @@ export default {
 </script>
 
 <style scoped>
+
 .other-info-tabs >>> .el-tabs__content {
   padding: 20px 0px;
 }

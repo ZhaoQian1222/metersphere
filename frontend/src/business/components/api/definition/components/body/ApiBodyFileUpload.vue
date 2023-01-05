@@ -7,6 +7,7 @@
          :http-request="upload"
          :beforeUpload="uploadValidate"
          :file-list="parameter.files"
+         :disabled = "isReadOnly"
          ref="upload">
 
          <div class="upload-default">
@@ -18,7 +19,7 @@
               <!--<span v-if="!disabled" class="el-upload-list__item-delete" @click="handleDownload(file)">-->
                <!--<i class="el-icon-download"/>-->
                <!--</span>-->
-              <span v-if="!disabled" class="el-upload-list__item-delete" @click="handleRemove(file)">
+              <span v-if="!disabled && !isReadOnly" class="el-upload-list__item-delete" @click="handleRemove(file)">
                 <i class="el-icon-delete"/>
               </span>
              </span>
@@ -40,7 +41,11 @@
       parameter: Object,
       default() {
         return {}
-      }
+      },
+      isReadOnly: {
+        type: Boolean,
+        default: false
+      },
     },
     methods: {
       handleRemove(file) {

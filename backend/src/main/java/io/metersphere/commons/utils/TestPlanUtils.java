@@ -52,6 +52,7 @@ public class TestPlanUtils {
         addToReportStatusResultList(resultMap, statusResult, "Success");
         addToReportStatusResultList(resultMap, statusResult, "SUCCESS");
         addToReportStatusResultList(resultMap, statusResult, "STOP");
+        addToReportStatusResultList(resultMap, statusResult, "unexecute");
         addToReportStatusResultList(resultMap, statusResult, TestPlanTestCaseStatus.Prepare.name());
         addToReportStatusResultList(resultMap, statusResult, ExecuteResult.ERROR_REPORT_RESULT.toString());
     }
@@ -67,7 +68,7 @@ public class TestPlanUtils {
             String status = item.getStatus();
             if (StringUtils.isNotBlank(status)
                     && !StringUtils.equalsAnyIgnoreCase(status, TestPlanTestCaseStatus.Underway.name(), TestPlanTestCaseStatus.Prepare.name(),
-                    ExecuteResult.UN_EXECUTE.toString(), ExecuteResult.STOP.toString())) {
+                    ExecuteResult.UN_EXECUTE.toString(), ExecuteResult.STOP.toString(), ExecuteResult.WAITING.toString())) {
                 // 计算执行过的数量
                 report.setExecuteCount(report.getExecuteCount() + 1);
                 if (StringUtils.equals(successStatus, status)) {

@@ -50,11 +50,15 @@ export default {
     current_workspace: "当前工作空间",
     organization: '组织',
     setting: '设置',
+    api_run_pool_title: '接口执行资源池',
+    api_default_run: '接口默认本地执行',
+    api_default_run_message: '为了不影响接口正常执行，请在【 项目设置-应用管理-接口测试 】中配置接口执行的资源池',
     project: '项目',
     about_us: '关于',
     current_project: '当前项目',
     not_exist: "不存在",
     name: '名称',
+    template_name: '模板名称',
     repositoryFilePath: 'git文件路径',
     repositoryBranch: 'git分支',
     description: '描述',
@@ -241,7 +245,8 @@ export default {
     testing: "测试中",
     edit_info: "编辑详情",
     enable_scene: "原场景环境",
-    variable_scene: "原场景变量",
+    variable_scene: "优先使用原场景变量，没有则使用当前场景变量",
+    mix_enable: "优先使用当前场景变量，没有则使用原场景变量",
     reference_settings: "场景设置",
     enable_scene_info: "启用场景环境：当前步骤使用场景原始环境配置运行",
     environment: "运行环境",
@@ -984,7 +989,8 @@ export default {
     test_monitor_details: '监控详情',
     test_config: '测试配置',
     test_details: '测试详情',
-    test_duration: '执行时长：{0} 分钟 {1} 秒',
+    test_duration: '执行时长：{0}时{1}分{2}秒',
+    test_duration_tip: '{0}时{1}分{2}秒',
     test_execute_time: '执行时长',
     test_start_time: '开始时间',
     test_end_time: '结束时间',
@@ -1138,6 +1144,7 @@ export default {
     stoptest: '停止测试',
     stoptestnow: '立即停止测试',
     batch_delete_confirm: "确认批量删除性能测试",
+    max_current_threads_tips: '超出此节点{0}最大并发数',
     report: {
       diff: "对比",
       set_default: '恢复默认',
@@ -1281,7 +1288,7 @@ export default {
         case: "用例",
         responsible: "责任人",
         title: "创建接口",
-        path_info: "请输入接口的URL，如/api/demo/#{id}，其中id为路径参数",
+        path_info: "请输入接口的URL，如/api/demo/${id}，其中id为路径参数",
         path_all_info: "请输入完整测试地址",
         fast_debug: "快捷调试",
         close_all_label: "关闭所有标签",
@@ -1475,6 +1482,7 @@ export default {
       loop_input_val: "变量前缀",
       loop_message: "当前循环下超过一个请求，不能关闭状态",
       env_message: "请在环境配置中为该步骤所属项目选择运行环境",
+      project_no_permission: "当前操作人无此步骤的操作权限",
       debug_message: "当前步骤是禁用状态不能调试",
       request_total: "请求",
       request_success: "成功",
@@ -1482,6 +1490,7 @@ export default {
       generate_report: "生成报告",
       rerun: "失败重跑",
       rerun_warning: "连接异常，请检查环境配置",
+      debug_pool_warning: "执行异常，请检查资源池",
       csv_warning: "请添加 csv 文件",
       variable_warning: "变量名不能为空"
     },
@@ -2513,6 +2522,7 @@ export default {
       trigger_mode: {
         manual: "手动触发",
         automation: "自动触发",
+        schedule: "定时任务",
       },
       overview: "概览",
       testing_time: "测试时间",
@@ -3529,5 +3539,19 @@ export default {
     store_xpath_count: "匹配 xpath 的元素数量(storeXpathCount)",
     store_window_handle: "窗口 Handle(storeWindowHandle)",
     store_title: "网页标题(storeTitle)",
+    smart_variable_enable: "优先使用当前场景变量，没有则使用原场景变量",
+    use_origin_variable_scene: "使用原场景变量",
+    use_origin_env_run: "使用原场景环境执行"
+  },
+  system: {
+    test_resource_pool: {
+      edit_job_template: "编辑Job模版",
+      edit_job_template_tip: "Kubernetes Job模版是一个YAML格式的文本，用于定义Job的运行参数，您可以在此处编辑Job模版。",
+    }
+  },
+  task: {
+    api_title: "接口测试任务",
+    scenario_title: "场景测试任务",
+    perf_title: "性能测试任务"
   }
 };

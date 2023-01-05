@@ -1005,6 +1005,13 @@ export default {
       if (e && e.data === "CONN_SUCCEEDED") {
         this.run();
       }
+      if(e && e.data === 'DEBUG_ERROR'){
+        this.$error(this.$t('api_test.automation.debug_pool_warning'));
+        if (this.messageWebSocket) {
+          this.messageWebSocket.close();
+        }
+        this.errorRefresh();
+      }
       if (e.data && e.data.startsWith("result_")) {
         let data = JSON.parse(e.data.substring(7));
         this.reqTotal += 1;
@@ -1019,6 +1026,9 @@ export default {
       this.runningEvaluation(e.data);
       this.message = getUUID();
       if (e.data && e.data.indexOf("MS_TEST_END") !== -1) {
+        if (this.messageWebSocket) {
+          this.messageWebSocket.close();
+        }
         this.runScenario = undefined;
         this.debugLoading = false;
         this.message = "stop";
@@ -1261,7 +1271,7 @@ export default {
           }
           this.resetResourceId(item.hashTree);
           item.enable === undefined ? item.enable = true : item.enable;
-          item.variableEnable = item.variableEnable === undefined ? true : item.variableEnable;
+          item.mixEnable = item.mixEnable === undefined && !item.variableEnable ? true : item.mixEnable;
           if (this.selectedTreeNode !== undefined) {
             if (this.stepFilter.get("SpecialSteps").indexOf(this.selectedTreeNode.type) !== -1) {
               this.scenarioDefinition.splice(this.selectedTreeNode.index, 0, item);

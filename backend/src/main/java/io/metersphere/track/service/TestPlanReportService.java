@@ -535,7 +535,14 @@ public class TestPlanReportService {
     private void initTestPlanReportBaseCount(TestPlanReport testPlanReport, TestPlanReportContentWithBLOBs reportContent) {
         if(testPlanReport != null && reportContent != null){
             TestPlanReportBuildResultDTO reportBuildResultDTO = testPlanService.buildPlanReport(testPlanReport, reportContent);
-            reportContent.setApiBaseCount(JSONObject.toJSONString(reportBuildResultDTO.getTestPlanSimpleReportDTO()));
+            //如果场景报告中出现了 Waiting 或者 Running 则不保存
+            boolean isReportAllFinished = testPlanService.checkAllReportFinished(reportBuildResultDTO.getTestPlanSimpleReportDTO());
+            if(isReportAllFinished){
+                reportContent.setApiBaseCount(JSONObject.toJSONString(reportBuildResultDTO.getTestPlanSimpleReportDTO()));
+                reportContent.setPassRate(reportBuildResultDTO.getTestPlanSimpleReportDTO().getPassRate());
+            }else {
+                reportContent.setApiBaseCount(null);
+            }
         }
     }
 

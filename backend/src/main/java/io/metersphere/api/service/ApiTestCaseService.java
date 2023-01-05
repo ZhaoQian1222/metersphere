@@ -295,7 +295,10 @@ public class ApiTestCaseService {
         apiTestCaseMapper.deleteByPrimaryKey(testId);
         esbApiParamService.deleteByResourceId(testId);
         testPlanApiCaseService.deleteByCaseId(testId);
-        deleteBodyFiles(testId);
+        ApiTestCase apiTestCase = apiTestCaseMapper.selectByPrimaryKey(testId);
+        if (apiTestCase != null) {
+            deleteBodyFiles(apiTestCase.getId());
+        }
         deleteFollows(testId);
     }
 
@@ -334,7 +337,8 @@ public class ApiTestCaseService {
     }
 
     public void deleteBodyFiles(String testId) {
-        File file = new File(BODY_FILE_DIR + "/" + testId);
+        String path = StringUtils.join(BODY_FILE_DIR, "/", testId);
+        File file = new File(path);
         FileUtil.deleteContents(file);
         if (file.exists()) {
             file.delete();
@@ -712,7 +716,7 @@ public class ApiTestCaseService {
     public void editApiBathByParam(ApiTestBatchRequest request) {
         List<String> ids = request.getIds();
         if (request.isSelectAll()) {
-            ids = this.getAllApiCaseIdsByFontedSelect(request.getFilters(), request.getModuleIds(), request.getName(), request.getProjectId(), request.getProtocol(), request.getUnSelectIds(), request.getStatus(), null, request.getCombine());
+            ids = this.getAllApiCaseIdsByFontedSelect(request.getFilters(), request.getModuleIds(), request.getName(), request.getProjectId(), request.getProtocol(), request.getUnSelectIds(), request.getStatus(), request.getApiDefinitionId(), request.getCombine());
         }
         ApiTestCaseExample apiDefinitionExample = new ApiTestCaseExample();
         apiDefinitionExample.createCriteria().andIdIn(ids);

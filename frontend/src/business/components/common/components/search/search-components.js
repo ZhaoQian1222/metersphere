@@ -290,7 +290,7 @@ export const CREATOR = {
     }
   },
   options: { // 异步获取候选项
-    url: "/user/ws/current/member/list",
+    url: "/user/project/member/list",
     labelKey: "name",
     valueKey: "id",
     showLabel: option => {
@@ -406,6 +406,7 @@ export const UI_TRIGGER_MODE = {
   },
   options: [
     {label: 'test_track.report.trigger_mode.manual', value: 'manual'},
+    {label: 'test_track.report.trigger_mode.schedule', value: 'SCHEDULE'},
   ],
   props: {
     multiple: true

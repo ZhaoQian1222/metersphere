@@ -60,6 +60,7 @@ public class FileUtils {
             }
             for (int i = 0; i < bodyUploadIds.size(); i++) {
                 MultipartFile item = bodyFiles.get(i);
+                validateFileName(item.getOriginalFilename());
                 File file = new File(filePath + "/" + bodyUploadIds.get(i) + "_" + item.getOriginalFilename());
                 try (InputStream in = item.getInputStream(); OutputStream out = new FileOutputStream(file)) {
                     file.createNewFile();
@@ -135,6 +136,7 @@ public class FileUtils {
             if (!testDir.exists()) {
                 testDir.mkdirs();
             }
+            validateFileName(item.getOriginalFilename());
             File file = new File(filePath + "/" + id + "_" + item.getOriginalFilename());
             try (InputStream in = item.getInputStream(); OutputStream out = new FileOutputStream(file)) {
                 file.createNewFile();
@@ -160,6 +162,7 @@ public class FileUtils {
                 testDir.mkdirs();
             }
             bodyFiles.forEach(item -> {
+                validateFileName(item.getOriginalFilename());
                 File file = new File(path + "/" + item.getOriginalFilename());
                 try (InputStream in = item.getInputStream(); OutputStream out = new FileOutputStream(file)) {
                     file.createNewFile();
@@ -286,6 +289,7 @@ public class FileUtils {
     }
 
     public static String createFile(MultipartFile bodyFile) {
+        validateFileName(bodyFile.getOriginalFilename());
         String dir = "/opt/metersphere/data/body/tmp/";
         File fileDir = new File(dir);
         if (!fileDir.exists()) {
@@ -310,7 +314,14 @@ public class FileUtils {
         }
     }
 
+    public static void validateFileName(String fileName){
+        if(StringUtils.isNotBlank(fileName) && fileName.contains(File.separator)){
+            MSException.throwException(Translator.get("file_name_error"));
+        }
+    }
+
     public static String uploadFile(MultipartFile uploadFile, String path, String name) {
+        validateFileName(name);
         if (uploadFile == null) {
             return null;
         }
@@ -480,7 +491,7 @@ public class FileUtils {
         return jarFiles;
     }
 
-    public List<Object> getMultipartFiles(HashTree hashTree) {
+    public static List<Object> getMultipartFiles(HashTree hashTree) {
         List<Object> multipartFiles = new LinkedList<>();
         // 获取附件
         List<BodyFile> files = new LinkedList<>();
@@ -490,7 +501,7 @@ public class FileUtils {
                 File file = new File(bodyFile.getName());
                 if (file != null && !file.exists()) {
                     FileSystemResource resource = new FileSystemResource(file);
-                    byte[] fileByte = this.fileToByte(file);
+                    byte[] fileByte = fileToByte(file);
                     if (fileByte != null) {
                         ByteArrayResource byteArrayResource = new ByteArrayResource(fileByte) {
                             @Override
