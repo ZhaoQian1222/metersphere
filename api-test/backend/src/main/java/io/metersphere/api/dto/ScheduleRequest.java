@@ -37,5 +37,6 @@ public class ScheduleRequest extends Schedule {
     private List<KeyValue> arguments;
     private MsAuthManager authManager;
     private Boolean coverModule = false;
-
+    //自定义字段
+    private String customFields;
 }

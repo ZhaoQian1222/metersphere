@@ -1995,6 +1995,7 @@ const message = {
       data_update_version: "同一API更新到",
       data_new_version: "新增API创建到",
       latest_version: "默认最新版本",
+      more_fields: "更多字段",
     },
     scenario_import: {
       data_update_version: "同一场景更新到",

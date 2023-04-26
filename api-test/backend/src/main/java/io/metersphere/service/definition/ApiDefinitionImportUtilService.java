@@ -19,6 +19,7 @@ import io.metersphere.commons.constants.*;
 import io.metersphere.commons.enums.ApiTestDataStatus;
 import io.metersphere.commons.exception.MSException;
 import io.metersphere.commons.utils.*;
+import io.metersphere.dto.CustomFieldResourceDTO;
 import io.metersphere.dto.ProjectConfig;
 import io.metersphere.dto.UserDTO;
 import io.metersphere.i18n.Translator;
@@ -76,6 +77,8 @@ public class ApiDefinitionImportUtilService {
     private ApiTestCaseService apiTestCaseService;
     @Resource
     private BaseUserService baseUserService;
+    @Resource
+    private ApiCustomFieldService customFieldApiService;
 
 
     public void checkUrl(ApiTestImportRequest request, Project project) {
@@ -273,6 +276,10 @@ public class ApiDefinitionImportUtilService {
             ApiImportSendNoticeDTO apiImportSendNoticeDTO = importCreate(batchMapper, apiDefinitionImportParam);
             if (apiImportSendNoticeDTO != null) {
                 apiImportSendNoticeDTOS.add(apiImportSendNoticeDTO);
+                if (StringUtils.isNotEmpty(request.getCustomFields())) {
+                    List<CustomFieldResourceDTO> addFields = com.alibaba.fastjson.JSONArray.parseArray(request.getCustomFields(), CustomFieldResourceDTO.class);
+                    customFieldApiService.addFields(apiImportSendNoticeDTO.getApiDefinitionResult().getId(), addFields);
+                }
             }
             if (i % 300 == 0) {
                 sqlSession.flushStatements();

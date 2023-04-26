@@ -56,11 +56,11 @@ public class ExtApiScheduleService {
         scheduleMapper.insert(schedule);
     }
 
-    public void addSwaggerUrlSchedule(SwaggerUrlProject swaggerUrlProject) {
+    public void addSwaggerUrlSchedule(SwaggerUrlProjectWithBLOBs swaggerUrlProject) {
         swaggerUrlProjectMapper.insert(swaggerUrlProject);
     }
 
-    public void updateSwaggerUrlSchedule(SwaggerUrlProject swaggerUrlProject) {
+    public void updateSwaggerUrlSchedule(SwaggerUrlProjectWithBLOBs swaggerUrlProject) {
         swaggerUrlProjectMapper.updateByPrimaryKeyWithBLOBs(swaggerUrlProject);
     }
 

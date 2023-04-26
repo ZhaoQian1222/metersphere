@@ -22,5 +22,7 @@ public class SwaggerUrlProject implements Serializable {
 
     private String config;
 
+    private String customFields;
+
     private static final long serialVersionUID = 1L;
 }

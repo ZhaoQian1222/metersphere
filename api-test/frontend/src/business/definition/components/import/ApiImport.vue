@@ -79,8 +79,17 @@
             </el-select>
           </el-form-item>
           <el-form-item v-if="isSwagger2">
-            <el-switch v-model="swaggerUrlEnable" :active-text="$t('api_test.api_import.swagger_url_import')">
-            </el-switch>
+            <el-row>
+              <el-col :span="6">
+                <a  @click="openCustomFiles" class="custom-files">
+                  <B>{{$t('api_test.api_import.more_fields')}}</B>
+                </a>
+              </el-col>
+              <el-col :span="18">
+                <el-switch v-model="swaggerUrlEnable" :active-text="$t('api_test.api_import.swagger_url_import')">
+                </el-switch>
+              </el-col>
+            </el-row>
           </el-form-item>
         </el-col>
         <el-col :span="1">
@@ -178,6 +187,9 @@
         </span>
       </div>
     </div>
+
+    <!-- 导入自定义字段 -->
+    <import-custom-field-edit :label-width="'80px'" :project-id="projectId" :api-custom-field-form="apiCustomFieldForm" @saveCustomFields="saveCustomFields" ref="importCustomFieldEdit" />
   </el-dialog>
 </template>
 
@@ -195,6 +207,9 @@ import MsApiAuthConfig from '../auth/ApiAuthConfig';
 import { REQUEST_HEADERS } from 'metersphere-frontend/src/utils/constants';
 import { TYPE_TO_C } from '@/business/automation/scenario/Setting';
 import { KeyValue } from '../../model/ApiTestModel';
+import ImportCustomFieldEdit from "./ImportCustomFieldEdit";
+import { getApiTemplate } from '@/api/api-template';
+import {buildCustomFields, parseCustomField} from "metersphere-frontend/src/utils/custom_field";
 
 export default {
   name: 'ApiImport',
@@ -204,6 +219,7 @@ export default {
     MsApiKeyValue,
     MsApiVariable,
     MsApiAuthConfig,
+    ImportCustomFieldEdit,
   },
   props: {
     saved: {
@@ -308,6 +324,10 @@ export default {
       },
       versionOptions: [],
       projectVersionEnable: false,
+      customFields:'',
+      apiTemplate:'',
+      customFieldRequiredEmpty: false,
+      apiCustomFieldForm: {},
     };
   },
   created() {
@@ -316,9 +336,11 @@ export default {
     this.platforms.push(this.harPlanform);
     this.platforms.push(this.jmeterPlatform);
     this.selectedPlatform = this.platforms[0];
-    //
     this.getVersionOptions();
     this.checkVersionEnable();
+    getApiTemplate(this.projectId).then((template) => {
+      this.apiTemplate = template;
+    });
   },
   watch: {
     moduleOptions() {
@@ -448,6 +470,9 @@ export default {
             url = '/api/automation/import';
           }
           let param = this.buildParam();
+          if (this.customFieldRequiredEmpty){
+            return false;
+          }
           this.result = importScenario(url, param.file, null, this.buildParam()).then((response) => {
             let res = response.data;
             this.$success(this.$t('test_track.case.import.success'));
@@ -511,7 +536,30 @@ export default {
           param.authManager = this.authConfig.authManager;
         }
       }
+      this.checkCustomFields(param);
       return param;
+    },
+    checkCustomFields(param){
+      param.customFields = this.customFields;
+      //设置自定义熟悉默认值
+      let customFieldRules = {};
+      parseCustomField({customFields: ''}, this.apiTemplate, customFieldRules, null);
+
+      if (!param.customFields) {
+        buildCustomFields({customFields: ''}, param, this.apiTemplate);
+      }
+      if (param.customFields) {
+        let customFieldList = JSON.parse(param.customFields);
+        for (let i in customFieldRules) {
+          for (let j = 0; j < customFieldList.length; j++) {
+            if (i === customFieldList[j].name && !customFieldList[j].value) {
+              this.customFieldRequiredEmpty = true;
+              this.$warning("自定义字段[" + i + "]不能为空");
+              break;
+            }
+          }
+        }
+      }
     },
     close() {
       this.saveModule();
@@ -550,6 +598,14 @@ export default {
         });
       }
     },
+    openCustomFiles(){
+      this.$refs.importCustomFieldEdit.open();
+    },
+    saveCustomFields(customFields) {
+      this.apiCustomFieldForm = JSON.parse(customFields);
+      this.customFields = customFields;
+      this.customFieldRequiredEmpty = false;
+    }
   },
 };
 </script>
@@ -630,5 +686,12 @@ export default {
 
 .ms-import {
   color: #ff0000 !important;
+}
+
+.custom-files {
+  margin-left: -30px;
+  color: var(--primary_color);
+  text-decoration: underline;
+  cursor: pointer;
 }
 </style>

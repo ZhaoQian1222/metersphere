@@ -2074,6 +2074,7 @@ const message = {
       data_update_version: "Api update version",
       data_new_version: "Api creation version",
       latest_version: "Default to latest version",
+      more_fields: "More fields",
     },
     scenario_import: {
       data_update_version: "The same Scenario is updated to",

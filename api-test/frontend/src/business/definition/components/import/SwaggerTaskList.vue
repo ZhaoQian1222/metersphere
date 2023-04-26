@@ -68,6 +68,9 @@ export default {
       });
     },
     handleRowClick(row) {
+      if (row.customFields) {
+        row.fields = JSON.parse(row.customFields);
+      }
       this.$emit('rowClick', row);
     },
     closeTaskConfirm(row) {

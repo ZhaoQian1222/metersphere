@@ -1313,9 +1313,10 @@ public class ApiDefinitionService {
      */
     public void createSchedule(ScheduleRequest request) {
         /*保存swaggerUrl*/
-        SwaggerUrlProject swaggerUrlProject = new SwaggerUrlProject();
+        SwaggerUrlProjectWithBLOBs swaggerUrlProject = new SwaggerUrlProjectWithBLOBs();
         BeanUtils.copyBean(swaggerUrlProject, request);
         swaggerUrlProject.setId(UUID.randomUUID().toString());
+        swaggerUrlProject.setCustomFields(request.getCustomFields());
         // 设置鉴权信息
         if (request.getHeaders() != null || request.getArguments() != null || request.getAuthManager() != null) {
             String config = setAuthParams(request);
@@ -1341,7 +1342,7 @@ public class ApiDefinitionService {
     }
 
     public void updateSchedule(ScheduleRequest request) {
-        SwaggerUrlProject swaggerUrlProject = new SwaggerUrlProject();
+        SwaggerUrlProjectWithBLOBs swaggerUrlProject = new SwaggerUrlProjectWithBLOBs();
         BeanUtils.copyBean(swaggerUrlProject, request);
         // 设置鉴权信息
         if (request.getHeaders() != null || request.getArguments() != null || request.getAuthManager() != null) {
@@ -1400,7 +1401,7 @@ public class ApiDefinitionService {
     }
 
     //查询swaggerUrl详情
-    public SwaggerUrlProject getSwaggerInfo(String resourceId) {
+    public SwaggerUrlProjectWithBLOBs getSwaggerInfo(String resourceId) {
         return swaggerUrlProjectMapper.selectByPrimaryKey(resourceId);
     }
 

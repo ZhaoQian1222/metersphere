@@ -4,6 +4,7 @@ import io.metersphere.api.dto.ApiTestImportRequest;
 import io.metersphere.api.dto.definition.request.auth.MsAuthManager;
 import io.metersphere.api.dto.scenario.KeyValue;
 import io.metersphere.base.domain.SwaggerUrlProject;
+import io.metersphere.base.domain.SwaggerUrlProjectWithBLOBs;
 import io.metersphere.commons.constants.ElementConstants;
 import io.metersphere.commons.constants.ScheduleGroup;
 import io.metersphere.commons.utils.CommonBeanFactory;
@@ -30,7 +31,7 @@ public class SwaggerUrlImportJob extends MsScheduleJob {
     protected void businessExecute(JobExecutionContext context) {
         JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
         String resourceId = jobDataMap.getString(ElementConstants.RESOURCE_ID);
-        SwaggerUrlProject swaggerUrlProject = apiDefinitionService.getSwaggerInfo(resourceId);
+        SwaggerUrlProjectWithBLOBs swaggerUrlProject = apiDefinitionService.getSwaggerInfo(resourceId);
         ApiTestImportRequest request = new ApiTestImportRequest();
         // 获取鉴权设置
         String config = swaggerUrlProject.getConfig();
@@ -44,6 +45,7 @@ public class SwaggerUrlImportJob extends MsScheduleJob {
         request.setUserId(jobDataMap.getString("userId"));
         request.setType("schedule");
         request.setResourceId(resourceId);
+        request.setCustomFields(swaggerUrlProject.getCustomFields());
         apiDefinitionService.apiTestImport(null, request);
     }
 

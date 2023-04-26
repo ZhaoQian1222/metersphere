@@ -45,7 +45,17 @@
               </el-checkbox>
             </el-form-item>
           </el-col>
+        </el-row>
 
+        <el-row>
+          <!-- 自定义字段 -->
+          <el-form v-if="isFormAlive" :model="customFieldForm" :rules="customFieldRules" ref="customFieldForm" class="api-form">
+            <custom-filed-form-item :form="customFieldForm" :form-label-width="formLabelWidth" :col-num="2" :col-span="12"
+                                    :issue-template="apiTemplate"/>
+          </el-form>
+        </el-row>
+
+        <el-row>
           <el-col :span="12" style="margin-left: 50px">
             <el-switch v-model="authEnable" :active-text="$t('api_test.api_import.add_request_params')"></el-switch>
           </el-col>
@@ -137,6 +147,9 @@ import MsApiAuthConfig from '../auth/ApiAuthConfig';
 import { REQUEST_HEADERS } from 'metersphere-frontend/src/utils/constants';
 import { KeyValue } from '../../model/ApiTestModel';
 import { TYPE_TO_C } from '@/business/automation/scenario/Setting';
+import {getApiTemplate} from '@/api/api-template';
+import {buildCustomFields, parseCustomField} from "metersphere-frontend/src/utils/custom_field";
+import CustomFiledFormItem from "metersphere-frontend/src/components/form/CustomFiledFormItem";
 
 export default {
   name: 'ApiSchedule',
@@ -150,6 +163,7 @@ export default {
     MsApiKeyValue,
     MsApiVariable,
     MsApiAuthConfig,
+    CustomFiledFormItem
   },
   props: {
     customValidate: {
@@ -242,7 +256,16 @@ export default {
       authConfig: {
         hashTree: [],
       },
+      isFormAlive: true,
+      customFieldForm: null,
+      customFieldRules: {},
+      formLabelWidth: "150px",
+      apiTemplate: {},
     };
+  },
+
+  created() {
+    this.getApiTemplate();
   },
 
   methods: {
@@ -260,6 +283,21 @@ export default {
       }
     },
 
+    reloadForm() {
+      this.isFormAlive = false;
+      this.$nextTick(() => (this.isFormAlive = true));
+    },
+
+    getApiTemplate(){
+      getApiTemplate(getCurrentProjectID()).then((template) => {
+        this.apiTemplate = template;
+        //设置自定义熟悉默认值
+        this.customFieldForm = parseCustomField(this.formData, this.apiTemplate, this.customFieldRules,null);
+        // 重新渲染，显示自定义字段的必填校验
+        this.reloadForm();
+      });
+    },
+
     initUserList() {
       this.result = getMaintainer().then((response) => {
         this.scheduleReceiverOptions = response.data;
@@ -271,6 +309,7 @@ export default {
     clear() {
       this.formData.id = null;
       this.formData.moduleId = null;
+      this.formData.customFields = '';
       this.$refs['form'].resetFields();
       if (!this.formData.rule) {
         this.$refs.crontabResult.resultList = [];
@@ -279,6 +318,7 @@ export default {
       this.$nextTick(() => {
         this.$refs.selectTree.init();
       });
+      this.getApiTemplate();
     },
     crontabFill(value, resultList) {
       //确定后回传的值
@@ -305,40 +345,51 @@ export default {
       });
     },
     saveSchedule() {
-      this.formData.projectId = getCurrentProjectID();
-      this.formData.workspaceId = getCurrentWorkspaceId();
-      this.formData.value = this.formData.rule;
-      if (this.authEnable) {
-        // 设置请求头或 query 参数
-        this.formData.headers = this.headers;
-        this.formData.arguments = this.queryArguments;
-        // 设置 BaseAuth 参数
-        if (this.authConfig.authManager != undefined) {
-          this.authConfig.authManager.clazzName = TYPE_TO_C.get('AuthManager');
-          this.formData.authManager = this.authConfig.authManager;
+      this.$refs['customFieldForm'].validate((valid) => {
+        if (valid) {
+          this.formData.projectId = getCurrentProjectID();
+          this.formData.workspaceId = getCurrentWorkspaceId();
+          this.formData.value = this.formData.rule;
+
+          buildCustomFields({customFields: ''}, this.formData, this.apiTemplate);
+          this.formData.requestFields.forEach(field => {
+            field.fieldId = field.id;
+          });
+          this.formData.customFields = JSON.stringify(this.formData.requestFields);
+
+          if (this.authEnable) {
+            // 设置请求头或 query 参数
+            this.formData.headers = this.headers;
+            this.formData.arguments = this.queryArguments;
+            // 设置 BaseAuth 参数
+            if (this.authConfig.authManager != undefined) {
+              this.authConfig.authManager.clazzName = TYPE_TO_C.get('AuthManager');
+              this.formData.authManager = this.authConfig.authManager;
+            }
+          } else {
+            this.formData.headers = undefined;
+            this.formData.arguments = undefined;
+            this.formData.authManager = undefined;
+          }
+          if (!this.formData.moduleId) {
+            if (this.$refs.selectTree.returnDataKeys.length > 0) {
+              this.formData.moduleId = this.$refs.selectTree.returnDataKeys;
+            }
+          }
+          if (this.formData.id) {
+            updateDefinitionSchedule(this.formData).then(() => {
+              this.$refs.taskList.search();
+              this.clear();
+            });
+          } else {
+            this.formData.enable = true;
+            createDefinitionSchedule(this.formData).then(() => {
+              this.$refs.taskList.search();
+              this.clear();
+            });
+          }
         }
-      } else {
-        this.formData.headers = undefined;
-        this.formData.arguments = undefined;
-        this.formData.authManager = undefined;
-      }
-      if (!this.formData.moduleId) {
-        if (this.$refs.selectTree.returnDataKeys.length > 0) {
-          this.formData.moduleId = this.$refs.selectTree.returnDataKeys;
-        }
-      }
-      if (this.formData.id) {
-        updateDefinitionSchedule(this.formData).then(() => {
-          this.$refs.taskList.search();
-          this.clear();
-        });
-      } else {
-        this.formData.enable = true;
-        createDefinitionSchedule(this.formData).then(() => {
-          this.$refs.taskList.search();
-          this.clear();
-        });
-      }
+      });
     },
     searchTaskList() {
       this.$refs.taskList.search();
@@ -384,6 +435,7 @@ export default {
         this.clearAuthInfo();
       }
       Object.assign(this.formData, row);
+      this.customFieldForm = parseCustomField(this.formData, this.apiTemplate, this.customFieldRules,null);
       this.$nextTick(() => {
         this.$refs.selectTree.init();
       });
@@ -430,5 +482,9 @@ export default {
   font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', Arial, sans-serif;
   font-size: 13px;
   cursor: pointer;
+}
+
+.api-form /deep/.el-input__inner {
+  height: 32px;
 }
 </style>
