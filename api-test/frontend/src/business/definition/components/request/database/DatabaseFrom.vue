@@ -12,12 +12,12 @@
           v-model="currentConfig.name"
           maxlength="300"
           show-word-limit
-          :placeholder="$t('commons.input_content')" />
+          :placeholder="$t('commons.input_content')"/>
       </el-form-item>
 
       <el-form-item :label="$t('api_test.request.sql.database_driver')" prop="driver">
         <el-select v-model="currentConfig.driver" class="select-100" @change="driverChange" clearable>
-          <el-option v-for="p in drivers" :key="p" :label="p" :value="p" />
+          <el-option v-for="p in drivers" :key="p" :label="p" :value="p"/>
         </el-select>
       </el-form-item>
 
@@ -26,7 +26,7 @@
           v-model="currentConfig.dbUrl"
           maxlength="500"
           show-word-limit
-          :placeholder="$t('commons.input_content')" />
+          :placeholder="$t('commons.input_content')"/>
       </el-form-item>
 
       <el-form-item :label="$t('api_test.request.sql.username')" prop="username">
@@ -34,7 +34,7 @@
           v-model="currentConfig.username"
           maxlength="300"
           show-word-limit
-          :placeholder="$t('commons.input_content')" />
+          :placeholder="$t('commons.input_content')"/>
       </el-form-item>
 
       <el-form-item :label="$t('api_test.request.sql.password')" prop="password">
@@ -43,7 +43,7 @@
           type="password"
           autocomplete="new-password"
           maxlength="200"
-          :placeholder="$t('commons.input_content')" />
+          :placeholder="$t('commons.input_content')"/>
       </el-form-item>
 
       <el-form-item :label="$t('api_test.request.sql.pool_max')" prop="poolMax">
@@ -53,7 +53,7 @@
           v-model="currentConfig.poolMax"
           :placeholder="$t('commons.please_select')"
           :max="1000 * 10000000"
-          :min="0" />
+          :min="0"/>
       </el-form-item>
 
       <el-form-item :label="$t('api_test.request.sql.timeout')" prop="timeout">
@@ -63,7 +63,7 @@
           v-model="currentConfig.timeout"
           :placeholder="$t('commons.millisecond')"
           :max="1000 * 10000000"
-          :min="0" />
+          :min="0"/>
       </el-form-item>
 
       <el-form-item>
@@ -82,8 +82,8 @@
 </template>
 
 <script>
-import { databaseValidate } from '@/api/home';
-import { DatabaseConfig } from '../../../model/ApiTestModel';
+import {databaseValidate} from '@/api/home';
+import {DatabaseConfig} from '../../../model/ApiTestModel';
 
 export default {
   name: 'MsDatabaseFrom',
@@ -214,6 +214,8 @@ export default {
         this.currentConfig.dbUrl = 'jdbc:postgresql://127.0.0.1:5432/database';
       } else if (type === 'oracle.jdbc.OracleDriver') {
         this.currentConfig.dbUrl = 'jdbc:oracle:thin:@192.168.2.1:1521:database';
+      } else if (type === "dm.jdbc.driver.DmDriver") {
+        this.currentConfig.dbUrl = "jdbc:dm://127.0.0.1:5236/database";
       }
     },
   },
