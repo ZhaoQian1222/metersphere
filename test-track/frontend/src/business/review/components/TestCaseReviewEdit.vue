@@ -39,7 +39,7 @@
                 <el-option
                   v-for="item in reviewerOptions"
                   :key="item.id"
-                  :label="item.name"
+                  :label="item.name + (item.email ? ' (' + item.email + ')' : '')"
                   :value="item.id">
                 </el-option>
               </el-select>
