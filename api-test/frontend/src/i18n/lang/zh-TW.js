@@ -35,6 +35,14 @@ const message = {
     request: {
       auto_redirects: '自動重定向',
     },
+    document_tooltip: '僅對已顯示的參與數據生成效率',
+  },
+  filters: {
+    schedule: {
+      open: '已開啟',
+      close: '已關閉',
+      unset: '未設置',
+    },
   },
   home: {
     dashboard: {

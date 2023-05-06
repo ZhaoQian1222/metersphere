@@ -21,10 +21,7 @@ import io.metersphere.dto.*;
 import io.metersphere.engine.Engine;
 import io.metersphere.jmeter.JMeterBase;
 import io.metersphere.jmeter.LocalRunner;
-import io.metersphere.service.ApiPoolDebugService;
-import io.metersphere.service.PluginService;
-import io.metersphere.service.RedisTemplateService;
-import io.metersphere.service.RemakeReportService;
+import io.metersphere.service.*;
 import io.metersphere.utils.LoggerUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
@@ -191,24 +188,25 @@ public class JMeterService {
         }
     }
 
-    private synchronized void nodeDebug(JmeterRunRequestDTO request) {
+    private void nodeDebug(JmeterRunRequestDTO request) {
         try {
+            LoggerUtil.info("获取调试资源池", request.getReportId());
             List<TestResource> resources = GenerateHashTreeUtil.setPoolResource(request.getPoolId());
             if (request.getHashTree() != null) {
                 // 过程变量处理
                 this.fileProcessing(request);
                 request.setHashTree(null);
             }
+            LoggerUtil.info("调用资源池开始执行", request.getReportId());
             apiPoolDebugService.run(request, resources);
         } catch (Exception e) {
-            LoggerUtil.error(e);
-            remakeReportService.testEnded(request, e.getMessage());
+            remakeReportService.updateReport(request, e.getMessage());
             LoggerUtil.error("发送请求[ " + request.getTestId() + " ] 执行失败,进行数据回滚：", request.getReportId(), e);
             MSException.throwException("调用资源池执行失败，请检查资源池是否配置正常");
         }
     }
 
-    private synchronized void send(JmeterRunRequestDTO request) {
+    private void send(JmeterRunRequestDTO request) {
         try {
             if (redisTemplate.opsForValue().get(SmoothWeighted.EXEC_INDEX + request.getPoolId()) != null) {
                 long index = Long.parseLong(redisTemplate.opsForValue().get(SmoothWeighted.EXEC_INDEX + request.getPoolId()).toString());
@@ -219,18 +217,15 @@ public class JMeterService {
                 config = SmoothWeighted.getResource(request.getPoolId());
             }
             if (config == null) {
-                LoggerUtil.info("未获取到资源池，请检查配置【系统设置-系统-测试资源池】", request.getReportId());
-                remakeReportService.testEnded(request, "未获取到资源池，请检查配置【系统设置-系统-测试资源池】");
-                return;
+                String errorMsg = "未获取到资源池，请检查配置【系统设置-系统-测试资源池】";
+                MSException.throwException(errorMsg);
             }
             request.setCorePoolSize(config.getCorePoolSize());
             request.setEnable(config.isEnable());
             LoggerUtil.info("开始发送请求【 " + request.getTestId() + " 】到 " + config.getUrl() + " 节点执行", request.getReportId());
             ResponseEntity<String> result = restTemplate.postForEntity(config.getUrl(), request, String.class);
             if (result == null || !StringUtils.equals("SUCCESS", result.getBody())) {
-                remakeReportService.testEnded(request, result.getBody());
                 LoggerUtil.error("发送请求[ " + request.getTestId() + " ] 到" + config.getUrl() + " 节点执行失败", request.getReportId());
-                LoggerUtil.info(result.getBody());
             }
         } catch (Exception e) {
             remakeReportService.testEnded(request, e.getMessage());

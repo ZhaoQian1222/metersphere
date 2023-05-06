@@ -157,11 +157,14 @@ public class UserController {
      */
     @PostMapping("/ws/member/add")
     @MsAuditLog(module = OperLogModule.WORKSPACE_MEMBER, type = OperLogConstants.CREATE, title = "添加工作空间成员")
+    @RequiresPermissions(PermissionConstants.WORKSPACE_USER_READ_CREATE)
     public void addMember(@RequestBody AddMemberRequest request) {
         userService.addWorkspaceMember(request);
     }
 
     @PostMapping("/project/member/add")
+    @RequiresPermissions(value = {PermissionConstants.PROJECT_USER_READ_CREATE, PermissionConstants.WORKSPACE_PROJECT_MANAGER_READ_ADD_USER}, logical = Logical.OR)
+
     public void addProjectMember(@RequestBody AddMemberRequest request) {
         userService.addProjectMember(request);
     }

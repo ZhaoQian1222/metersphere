@@ -2,6 +2,7 @@ package io.metersphere.controller;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import io.metersphere.base.domain.IssueSyncCheckResult;
 import io.metersphere.base.domain.Issues;
 import io.metersphere.base.domain.IssuesWithBLOBs;
 import io.metersphere.base.domain.Project;
@@ -25,6 +26,7 @@ import io.metersphere.request.testcase.AuthUserIssueRequest;
 import io.metersphere.request.testcase.IssuesCountRequest;
 import io.metersphere.service.BaseCheckPermissionService;
 import io.metersphere.service.IssuesService;
+import io.metersphere.service.IssuesSyncService;
 import io.metersphere.service.PlatformPluginService;
 import io.metersphere.xpack.track.dto.*;
 import io.metersphere.xpack.track.dto.request.IssuesRequest;
@@ -45,6 +47,8 @@ public class IssuesController {
 
     @Resource
     private IssuesService issuesService;
+    @Resource
+    private IssuesSyncService issuesSyncService;
     @Resource
     private BaseCheckPermissionService baseCheckPermissionService;
     @Resource
@@ -157,17 +161,17 @@ public class IssuesController {
     }
 
     @GetMapping("/sync/{projectId}")
-    public boolean syncThirdPartyIssues(@PathVariable String projectId) {
-        return issuesService.syncThirdPartyIssues(projectId);
+    public void syncThirdPartyIssues(@PathVariable String projectId) {
+        issuesSyncService.syncIssues(projectId);
     }
 
     @PostMapping("/sync/all")
-    public boolean syncThirdPartyAllIssues(@RequestBody IssueSyncRequest request) {
-        return issuesService.syncThirdPartyAllIssues(request);
+    public void syncThirdPartyAllIssues(@RequestBody IssueSyncRequest request) {
+        issuesSyncService.syncAllIssues(request);
     }
 
     @GetMapping("/sync/check/{projectId}")
-    public boolean checkSync(@PathVariable String projectId) {
+    public IssueSyncCheckResult checkSync(@PathVariable String projectId) {
         return issuesService.checkSync(projectId);
     }
 

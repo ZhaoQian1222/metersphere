@@ -591,7 +591,8 @@ export default {
       editableState: false,
       isNameEdit: false,
       useUserStore: {},
-      priorityOptions: []
+      priorityOptions: [],
+      initLatestVersionId: ""
     };
   },
   props: {
@@ -743,7 +744,7 @@ export default {
           (r) => {
             let latestVersion = r.data.filter(version => version.latest);
             if (latestVersion && latestVersion.length === 1 && this.editable) {
-              this.initLatestVersionId = latestVersion[0].id;
+              this.initLatestVersionId = latestVersion[0].id
             }
           }
         );
@@ -1004,7 +1005,7 @@ export default {
         let user = JSON.parse(localStorage.getItem(TokenKey));
         this.form.maintainer = user.id;
         this.form.tags = [];
-        this.form.versionId = this.initLatestVersionId;
+        this.form.versionId = localStorage.getItem("latest-version") || this.initLatestVersionId;
         this.getSelectOptions();
         this.customFieldForm = parseCustomField(
           this.form,
@@ -1083,7 +1084,7 @@ export default {
           //复制的时候只复制当前版本
           testCase.id = getUUID();
           testCase.refId = null;
-          testCase.versionId = this.initLatestVersionId;
+          testCase.versionId = localStorage.getItem("latest-version") || this.initLatestVersionId;
           this.form.id = null;
           testCase.casePublic = false;
         }
@@ -1243,6 +1244,7 @@ export default {
               this.close();
               if (this.saveType === 2) {
                 // 保存并创建
+                this.this.initLatestVersionId = param.versionId;
                 this.resetForm();
                 this.initEdit();
               } else {
@@ -1801,7 +1803,7 @@ export default {
             color: #646a73;
             align-items: center;
             margin-left: px2rem(8);
-            padding: -1px 0.2rem;
+            padding: 0.1rem 0.4rem;
 
             .version-icon {
               width: 20.17px;
@@ -1896,7 +1898,7 @@ export default {
           .label-row {
           }
           margin-right: px2rem(20.67);
-          padding: 0.2rem 0.5rem 0.2rem 0;
+          padding: 0.1rem 0.4rem 0.1rem 0;
         }
 
         .next-public-row.head-opt {
@@ -1908,7 +1910,7 @@ export default {
           .label-row {
           }
           margin-right: px2rem(20.67);
-          padding: 0.2rem 0 0.2rem 0.5rem;
+          padding: 0.1rem 0 0.1rem 0.4rem;
         }
 
         .follow-row.head-opt {
@@ -1920,7 +1922,7 @@ export default {
           .label-row {
           }
           margin-right: px2rem(10);
-          padding: 0.2rem 0.5rem;
+          padding: 0.1rem 0.4rem;
         }
 
         .edit-public-row.head-opt {
@@ -1932,7 +1934,7 @@ export default {
           .label-row {
           }
           margin-right: px2rem(20.67);
-          padding: 0.2rem 0.5rem;
+          padding: 0.1rem 0.4rem;
         }
 
         .copy-public-row.head-opt {
@@ -1944,10 +1946,10 @@ export default {
           .label-row {
           }
           margin-right: px2rem(20.67);
-          padding: 0.2rem 0.5rem;
+          padding: 0.1rem 0.4rem;
         }
         .close-row.head-opt {
-          padding: 0.2rem;
+          padding: 0.15rem;
         }
         .add-public-row.head-opt {
           .icon-row {
@@ -1970,7 +1972,7 @@ export default {
           .label-row {
           }
           margin-right: px2rem(24);
-          padding: 0.2rem 0.5rem;
+          padding: 0.1rem 0.4rem;
         }
       }
     }
@@ -2011,6 +2013,7 @@ export default {
           font-size: 14px;
           color: #783887;
           cursor: pointer;
+          padding: 0.3rem;
         }
         .diff-latest:hover{
           background: rgba(120, 56, 135, 0.1);
@@ -2026,6 +2029,7 @@ export default {
           font-size: 14px;
           color: #783887;
           cursor: pointer;
+          padding: 0.3rem;
         }
       }
     }
@@ -2231,6 +2235,13 @@ export default {
       }
     }
   }
+}
+
+:deep(.el-button--small span) {
+  font-family: 'PingFang SC';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 14px;
 }
 </style>
 <style>

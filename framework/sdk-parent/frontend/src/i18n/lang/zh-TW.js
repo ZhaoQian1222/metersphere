@@ -4,6 +4,7 @@ import test_track from "./track/zh-TW";
 
 const message = {
   commons: {
+    insert: "插入",
     pre_page: "上一頁",
     next_page: "下一頁",
     already_pre_page: "已經是第一頁",
@@ -510,6 +511,10 @@ const message = {
     },
     template_delete: "模版刪除",
     other: "其他",
+    function_introduction: '功能介紹',
+    page_guidance: '頁面指引',
+    novice_journey: '新手旅程',
+    minder_operation: '腦圖操作'
   },
   login: {
     normal_Login: "普通登錄",
@@ -3401,6 +3406,120 @@ const message = {
     ui_title: "UI測試任務",
     perf_title: "性能測試任務",
   },
+  shepherd: {
+    step1: {
+      title: '工作空間和項目',
+      text: 'MeterSphere 使用 [工作空間] 和 [項目] 來隔離測試數據, 你可以在頂部菜單進行工作空間和項目切換。'
+    },
+    step2: {
+      title: '功能主菜單',
+      text: '主菜單顯示您所在的功能模塊。'
+    },
+    step3: {
+      title: '一個空間可以創建多個項目',
+      text: '「項目」是一組用例和成員的集合。 MeterSphere 上各種類型的測試均通過項目進行分權分域查看和管理。'
+    },
+    step4: {
+      title: '一級功能菜單',
+      text: '頂部一級功能菜單欄，支持在當前功能模塊下切換細分功能。'
+    },
+    step5: {
+      title: "你在哪？",
+      text: "現在，你已加入了一個工作空間並成為當前項目的一員，就從這裡開始你的測試之旅吧。"
+    },
+    exit:'跳過',
+    next:'下一步',
+    know:'知道啦',
+  },
+  guide: {
+    home: {
+      title: '歡迎來到 MeterSphere！',
+      desc: '通過一個快捷指引來了解 MeterSphere 究竟能為你做哪些事。',
+      button: '讓我們開始吧'
+    },
+    test: {
+      title: '測試用例是測試任務的基石',
+      desc: '<span>使用在線編輯/文件導入/URL同步/多人評審的方式維護你的用例，</span><br><span>將它們加入你的測試計劃中，量化管理測試進度，記錄結果，同步缺陷，</span><br><span>留存/分享測試報告，覆蓋整個測試生命週期。</span>',
+      button: '下一個：接口測試'
+    },
+    api: {
+      title: '模擬真實場景 讓接口自動化',
+      desc: '<span>通過手動/定時任務/插件觸發接口測試，支持多種通信協議；</span><br><span> 基於真實業務流程編排場景化用例集，支持添加多類型控制器/自定義腳本/斷言，</span><br><span>滿足各種複雜場景所需。</span>',
+      button: '下一個：UI測試'
+    },
+    ui: {
+      title: '可移植的 UI 元素庫與指令集',
+      desc: '<span>基於可複用的元素庫及指令快速編排場景化用例；</span><br><span>將你常用的測試步驟組合成新的自定義指令，在自動化場景中靈活調用。</span><br><span style="background-color: #ffffff;color:#ffffff">/</span>',
+      button: '下一個：性能測試'
+    },
+    performance: {
+      title: '性能測試 一鍵就可以',
+      desc: '<span>提供分佈式壓測解決方案，支持物理機/虛擬機/k8s容器集群等多類型壓測資源池；</span><br><span>使用接口測試轉性能一鍵發起，實時查看報告；</span><br><span>提供差異配置下的報告對比，掌控性能瓶頸及調優。</span>',
+      button: '完成！去創建你的第 1 條測試用例'
+    },
+    go_prev: '返回上一個'
+  },
+  side_task: {
+    test_tracking: {
+      title: "通關測試跟踪",
+      task_1: "加入一個項目",
+      task_2: "創建一條功能用例",
+      task_3: "發起一個評審計畫",
+      task_4: "在評審中發佈評論",
+      task_5: "發佈一個測試計畫",
+      task_6: "為測試計畫添加用例",
+      task_7: "為測試用例關聯缺陷",
+    },
+    api_test: {
+      title: "通關接口測試",
+      task_1: "創建一條接口定義",
+      task_2: "導入本地接口或接口用例",
+      task_3: "進行一次接口快捷調試",
+      task_4: "基於接口調試創建新用例",
+      task_5: "分享接口文檔",
+      task_6: "創建一條場景自動化用例",
+      task_7: "以定時任務執行接口自動化測試",
+    },
+    performance_test: {
+      title: "通關性能測試",
+      task_1: "將接口場景用例轉為性能測試",
+      task_2: "分享性能測試報告",
+    },
+    project_setting: {
+      title: "通關項目設定",
+      task_1: "創建一個新項目",
+      task_2: "添加一比特項目成員",
+      task_3: "創建項目環境",
+    },
+    ui_test: {
+      title: "通關 UI 測試",
+      task_1: "創建一個元素",
+      task_2: "創建一個 UI 自動化場景",
+      task_3: "執行一個 UI 自動化場景",
+    },
+    next: "下一章",
+    prev: "上一章",
+    skip: "跳過",
+    not_show: "不再顯示",
+    novice_task: "新手旅程",
+    over: {
+      title: "恭喜通關！",
+      subtitle: "您已完成全部新手旅程 能量滿載～",
+      desc: "想繼續了解進階教程，請關注我們的技術博客和直播",
+      blog_url: "博客地址",
+      live_url: "直播間地址"
+    },
+    close: {
+      title: "關閉新手旅程",
+      subtitle: "關閉後，新手任務浮窗將會隱藏",
+      desc: '你可以在頂部" ? "下拉式功能表重新找到我們。',
+      continue_btn: "現在繼續",
+      close_btn: "仍然關閉",
+    },
+    save_success: "關閉成功",
+    to_try: "去完成",
+    view_video: "觀看視頻教程"
+  }
 };
 
 export default {

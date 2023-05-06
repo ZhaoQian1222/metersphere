@@ -3,6 +3,7 @@
     :width="width"
     :title="dialogTitle"
     ref="relevanceDialog"
+    @close="handleCloseEven"
     :full-screen="isFullScreen"
   >
     <!-- todo -->
@@ -19,7 +20,8 @@
         @confirm="save"
         btn-size="mini"
         @fullScreen="isFullScreen = !isFullScreen"
-        :is-full-screen.sync="isFullScreen"
+        :enable-full-screen="false"
+        :is-full-screen.sync="enableFullScreen"
       >
         <template #other>
           <table-select-count-bar
@@ -135,6 +137,12 @@ export default {
       type: Boolean,
       default: true,
     },
+    enableFullScreen: {
+      type: Boolean,
+      default() {
+        return true;
+      },
+    },
   },
   methods: {
     refreshNode() {
@@ -148,7 +156,9 @@ export default {
     close() {
       this.$refs.relevanceDialog.close();
     },
-
+    handleCloseEven() {
+      this.$emit("close");
+    },
     open() {
       this.workspaceId = getCurrentWorkspaceId();
       this.getProject();

@@ -16,6 +16,7 @@ import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.commons.utils.SessionUtils;
 import io.metersphere.dto.AttachmentBodyFile;
 import io.metersphere.dto.FileInfoDTO;
+import io.metersphere.dto.FileMetadataDTO;
 import io.metersphere.i18n.Translator;
 import io.metersphere.log.utils.ReflexObjectUtil;
 import io.metersphere.log.vo.DetailColumn;
@@ -97,17 +98,26 @@ public class FileMetadataService {
         return result;
     }
 
-    private void validateGitFile(FileMetadataCreateRequest fileMetadata) {
-        if (StringUtils.isEmpty(fileMetadata.getModuleId())) {
+    private void validateGitFile(FileMetadataCreateRequest validateModel) {
+        if (StringUtils.isEmpty(validateModel.getModuleId())) {
             MSException.throwException(Translator.get("test_case_module_not_null"));
         } else {
             FileMetadataExample example = new FileMetadataExample();
-            example.createCriteria().andModuleIdEqualTo(fileMetadata.getModuleId())
-                    .andStorageEqualTo(fileMetadata.getStorage())
-                    .andPathEqualTo(fileMetadata.getRepositoryPath())
-                    .andIdNotEqualTo(fileMetadata.getId());
-            if (fileMetadataMapper.countByExample(example) > 0) {
-                MSException.throwException(Translator.get("project_file_already_exists"));
+            example.createCriteria().andModuleIdEqualTo(validateModel.getModuleId())
+                    .andStorageEqualTo(validateModel.getStorage())
+                    .andPathEqualTo(validateModel.getRepositoryPath())
+                    .andIdNotEqualTo(validateModel.getId());
+            List<FileMetadataWithBLOBs> fileMetadataWithBLOBsList = fileMetadataMapper.selectByExampleWithBLOBs(example);
+            for (FileMetadataWithBLOBs fileMetadataWithBlobs : fileMetadataWithBLOBsList) {
+                RemoteFileAttachInfo gitFileInfo = null;
+                try {
+                    gitFileInfo = JSON.parseObject(fileMetadataWithBlobs.getAttachInfo(), RemoteFileAttachInfo.class);
+                } catch (Exception e) {
+                    LogUtil.error("解析git信息失败!", e);
+                }
+                if (StringUtils.equals(gitFileInfo.getBranch(), validateModel.getRepositoryBranch())) {
+                    MSException.throwException(Translator.get("project_file_already_exists"));
+                }
             }
         }
     }
@@ -154,6 +164,18 @@ public class FileMetadataService {
         FileMetadataWithBLOBs fileMetadata = new FileMetadataWithBLOBs();
         fileMetadata.setProjectId(projectId);
         return saveFile(file, fileMetadata);
+    }
+
+    public List<FileMetadataDTO> getFileMetadataByProject(String projectId, QueryProjectFileRequest request) {
+        if (CollectionUtils.isEmpty(request.getOrders())) {
+            OrderRequest req = new OrderRequest();
+            req.setName("update_time");
+            req.setType("desc");
+            request.setOrders(new ArrayList<>() {{
+                this.add(req);
+            }});
+        }
+        return baseFileMetadataMapper.getFileMetadataByProject(projectId, request);
     }
 
     public List<FileMetadataWithBLOBs> getProjectFiles(String projectId, QueryProjectFileRequest request) {
@@ -331,8 +353,8 @@ public class FileMetadataService {
         }
         fileMetadata.setUpdateTime(System.currentTimeMillis());
         fileMetadata.setUpdateUser(SessionUtils.getUserId());
-        // 历史数据的路径不做更新
-        if (StringUtils.isNotEmpty(fileMetadata.getStorage()) && StringUtils.isEmpty(fileMetadata.getResourceType())) {
+        // 历史数据和Git数据的路径不做更新
+        if (!StringUtils.equalsIgnoreCase(StorageConstants.GIT.name(), fileMetadata.getStorage()) && (StringUtils.isNotEmpty(fileMetadata.getStorage()) && StringUtils.isEmpty(fileMetadata.getResourceType()))) {
             fileMetadata.setPath(FileUtils.getFilePath(fileMetadata));
         }
         //latest字段只能在git/pull时更新
@@ -343,6 +365,13 @@ public class FileMetadataService {
     public boolean isFileChanged(FileMetadataWithBLOBs newFile) {
         FileMetadataWithBLOBs oldFile = this.getFileMetadataById(newFile.getId());
         if (oldFile != null) {
+            if (StringUtils.equals("[]", oldFile.getTags())) {
+                oldFile.setTags(null);
+            }
+            if (StringUtils.equals("[]", newFile.getTags())) {
+                newFile.setTags(null);
+            }
+
             return !StringUtils.equals(newFile.getDescription(), oldFile.getDescription())
                     || !StringUtils.equals(newFile.getAttachInfo(), oldFile.getAttachInfo())
                     || !StringUtils.equals(newFile.getName(), oldFile.getName())

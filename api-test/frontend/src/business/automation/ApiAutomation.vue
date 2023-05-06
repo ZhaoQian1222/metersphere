@@ -312,7 +312,7 @@ export default {
     addTab(tab) {
       this.trashEnable = tab.name === 'trash';
       if (tab.name === 'default') {
-        this.$refs.apiScenarioList.search();
+        this.$refs.nodeTree.list(this.projectId, tab);
       } else if (tab.name === 'trash') {
         this.$refs.apiTrashScenarioList.search();
       }
@@ -472,13 +472,16 @@ export default {
           scenarioDefinition: t.currentScenario.scenarioDefinition,
         };
         let v3 = JSON.parse(JSON.stringify(v2));
-        if (v1.scenarioDefinition) {
+        if (v1 && v1.scenarioDefinition) {
           this.deleteResourceIds(v1.scenarioDefinition);
         }
-        if (v3.scenarioDefinition) {
+        if (v3 && v3.scenarioDefinition) {
           this.deleteResourceIds(v3.scenarioDefinition);
         }
-        let delta = jsondiffpatch.diff(JSON.parse(JSON.stringify(v1)), JSON.parse(JSON.stringify(v3)));
+        let delta;
+        if (v1 && v3) {
+          delta = jsondiffpatch.diff(JSON.parse(JSON.stringify(v1)), JSON.parse(JSON.stringify(v3)));
+        }
         if (delta) {
           this.isSave = true;
         }
@@ -615,6 +618,7 @@ export default {
       if (targetName === 'trash') {
         this.selectNodeIds = [];
         this.trashEnable = false;
+        this.$refs.nodeTree.list(this.projectId, targetName);
       } else {
         let message = '';
         this.tabs.forEach((tab) => {

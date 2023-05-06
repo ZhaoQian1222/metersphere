@@ -4,6 +4,7 @@ package io.metersphere.service;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.EasyExcelFactory;
 import com.alibaba.excel.enums.CellExtraTypeEnum;
+import com.alibaba.excel.support.ExcelTypeEnum;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.metersphere.base.domain.*;
@@ -67,14 +68,12 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.jetbrains.annotations.NotNull;
 import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -114,10 +113,6 @@ public class TestCaseService {
 
     @Resource
     TestCaseNodeService testCaseNodeService;
-
-    //    @Resource
-    //    ApiTestCaseMapper apiTestCaseMapper;
-
     @Resource
     TestCaseIssueService testCaseIssueService;
     @Resource
@@ -132,10 +127,8 @@ public class TestCaseService {
     TestCaseTestMapper testCaseTestMapper;
     @Resource
     AttachmentModuleRelationMapper attachmentModuleRelationMapper;
-    //    @Resource
-    //    private LoadTestMapper loadTestMapper;
-    //    @Resource
-    //    private ApiScenarioMapper apiScenarioMapper;
+    @Resource
+    ExtAttachmentModuleRelationMapper extAttachmentModuleRelationMapper;
     @Resource
     private TestCaseIssuesMapper testCaseIssuesMapper;
     @Resource
@@ -148,15 +141,6 @@ public class TestCaseService {
     private RelevanceLoadCaseService relevanceLoadCaseService;
     @Resource
     private RelevanceUiCaseService relevanceUiCaseService;
-    //    @Resource
-    //    @Lazy
-    //    private ApiTestCaseService apiTestCaseService;
-    //    @Resource
-    //    @Lazy
-    //    private ApiAutomationService apiAutomationService;
-    //    @Resource
-    //    @Lazy
-    //    private PerformanceTestService performanceTestService;
     @Resource
     private TestCaseFollowMapper testCaseFollowMapper;
     @Resource
@@ -205,6 +189,11 @@ public class TestCaseService {
 
     private ThreadLocal<Integer> importCreateNum = new ThreadLocal<>();
 
+    // 导出CASE的最大值
+    private static final int EXPORT_CASE_MAX_COUNT = 1000;
+
+    private static final String EXPORT_CASE_TMP_DIR = "tmp";
+
     private void setNode(TestCaseWithBLOBs testCase) {
         if (StringUtils.isEmpty(testCase.getNodeId()) || "default-module".equals(testCase.getNodeId())) {
             TestCaseNodeExample example = new TestCaseNodeExample();
@@ -212,7 +201,6 @@ public class TestCaseService {
             List<TestCaseNode> nodes = testCaseNodeMapper.selectByExample(example);
             if (CollectionUtils.isNotEmpty(nodes)) {
                 testCase.setNodeId(nodes.get(0).getId());
-                testCase.setNodePath("/" + nodes.get(0).getName());
             }
         }
     }
@@ -517,14 +505,6 @@ public class TestCaseService {
         if (StringUtils.equalsIgnoreCase(testCase.getVersionId(), defaultVersion)) {
             checkAndSetLatestVersion(testCase.getRefId());
         }
-        if (StringUtils.isNotBlank(testCase.getNodePath())) {
-            //同步修改所有版本的模块路径
-            updateOtherVersionModule(testCase);
-        }
-    }
-
-    private void updateOtherVersionModule(EditTestCaseRequest testCase) {
-        extTestCaseMapper.updateVersionModule(testCase.getRefId(), testCase.getVersionId(), testCase.getNodeId(), testCase.getNodePath());
     }
 
     /**
@@ -598,28 +578,15 @@ public class TestCaseService {
 
         // 全部字段值相同才判断为用例存在
         if (testCase != null) {
-
-            /*
-            例如对于“/模块5”，用户的输入可能为“模块5”或者“/模块5/”或者“模块5/”。
-            不这样处理的话，下面进行判断时就会用用户输入的错误格式进行判断，而模块名为“/模块5”、
-            “模块5”、“/模块5/”、“模块5/”时，它们应该被认为是同一个模块。
-            数据库存储的node_path都是“/模块5”这种格式的
-             */
-            String nodePath = testCase.getNodePath();
-            if (!nodePath.startsWith("/")) {
-                nodePath = "/" + nodePath;
-            }
-            if (nodePath.endsWith("/")) {
-                nodePath = nodePath.substring(0, nodePath.length() - 1);
-            }
-
             TestCaseExample example = new TestCaseExample();
             TestCaseExample.Criteria criteria = example.createCriteria();
             criteria.andNameEqualTo(testCase.getName())
                     .andProjectIdEqualTo(testCase.getProjectId())
-                    .andNodePathEqualTo(nodePath)
-                    .andTypeEqualTo(testCase.getType())
-                    .andStatusNotEqualTo("Trash");
+                    .andStatusNotEqualTo(CommonConstants.TrashStatus);
+
+            if (StringUtils.isNotBlank(testCase.getNodeId())) {
+                criteria.andNodeIdEqualTo(testCase.getNodeId());
+            }
             if (StringUtils.isNotBlank(testCase.getPriority())) {
                 criteria.andPriorityEqualTo(testCase.getPriority());
             }
@@ -800,6 +767,7 @@ public class TestCaseService {
         if (request.getFilters() != null && !request.getFilters().containsKey("status")) {
             request.getFilters().put("status", new ArrayList<>(0));
         }
+        ServiceUtils.buildCombineTagsToSupportMultiple(request);
         List<TestCaseDTO> list = extTestCaseMapper.list(request);
         if (!isSampleInfo) {
             buildUserInfo(list);
@@ -975,6 +943,7 @@ public class TestCaseService {
     }
 
     public List<TestCaseDTO> getTestCaseByNotInPlan(QueryTestCaseRequest request) {
+        ServiceUtils.buildCombineTagsToSupportMultiple(request);
         ServiceUtils.setBaseQueryRequestCustomMultipleFields(request);
         return extTestCaseMapper.getTestCaseByNotInPlan(request);
     }
@@ -1021,6 +990,7 @@ public class TestCaseService {
 
     public List<TestCaseDTO> getReviewCase(QueryTestCaseRequest request) {
         setDefaultOrder(request);
+        ServiceUtils.buildCombineTagsToSupportMultiple(request);
         request.getOrders().forEach(order -> {
             order.setPrefix("test_case");
         });
@@ -1394,7 +1364,6 @@ public class TestCaseService {
                         testCase.setCustomNum(dbCase.getCustomNum());
                         testCase.setNum(dbCase.getNum());
                         testCase.setLatest(false);
-                        testCase.setType(dbCase.getType());
                         if (StringUtils.isBlank(testCase.getStatus())) {
                             testCase.setStatus(TestCaseReviewStatus.Prepare.name());
                         }
@@ -1497,26 +1466,116 @@ public class TestCaseService {
         return list;
     }
 
-    public void testCaseExport(HttpServletResponse response, TestCaseExportRequest request) {
-        String projectId = request.getProjectId();
+    public void exportTestCaseZip(HttpServletResponse response, TestCaseExportRequest request) {
+        // zip, response stream
+        BufferedInputStream bis = null;
+        OutputStream os = null;
+        File tmpDir = null;
+
+        try {
+            tmpDir = new File(this.getClass().getClassLoader().getResource(StringUtils.EMPTY).getPath() +
+                    EXPORT_CASE_TMP_DIR + File.separatorChar + EXPORT_CASE_TMP_DIR + "_" + UUID.randomUUID().toString());
+            // 生成tmp随机目录
+            FileUtils.deleteDir(tmpDir.getPath());
+            tmpDir.mkdirs();
+            // 生成EXCEL
+            List<File> batchExcels = generateCaseExportExcel(tmpDir.getPath(), request);
+            if (batchExcels.size() > 1) {
+                // EXCEL -> ZIP (EXCEL数目大于1)
+                File zipFile = CompressUtils.zipFilesToPath(tmpDir.getPath() + File.separatorChar + "caseExport.zip", batchExcels);
+                response.setContentType("application/octet-stream");
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + URLEncoder.encode("caseExport.zip", StandardCharsets.UTF_8.name()));
+                bis = new BufferedInputStream(new FileInputStream(zipFile.getPath()));
+                os = response.getOutputStream();
+                int len;
+                byte[] bytes = new byte[1024 * 2];
+                while ((len = bis.read(bytes)) != -1) {
+                    os.write(bytes, 0, len);
+                }
+            } else {
+                // EXCEL (EXCEL数目等于1)
+                File singeFile = batchExcels.get(0);
+                response.setContentType("application/vnd.ms-excel");
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + URLEncoder.encode("caseExport.xlsx", StandardCharsets.UTF_8.name()));
+                bis = new BufferedInputStream(new FileInputStream(singeFile.getPath()));
+                os = response.getOutputStream();
+                int len;
+                byte[] bytes = new byte[1024 * 2];
+                while ((len = bis.read(bytes)) != -1) {
+                    os.write(bytes, 0, len);
+                }
+            }
+        } catch (Exception e) {
+            LogUtil.error(e);
+            MSException.throwException("export case zip error");
+        } finally {
+            try {
+                if (bis != null) {
+                    bis.close();
+                }
+                if (os != null) {
+                    os.close();
+                }
+                FileUtils.deleteDir(tmpDir.getPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private List<File> generateCaseExportExcel(String tmpZipPath, TestCaseExportRequest request) {
+        List<File> tmpExportExcelList = new ArrayList<>();
+        // 初始化ExcelHead
         request.getCondition().setStatusIsNot(CommonConstants.TrashStatus);
-        TestCaseBatchRequest batchRequest = new TestCaseBatchRequest();
-        BeanUtils.copyBean(batchRequest, request);
-        List<TestCaseDTO> testCases = getExportData(batchRequest);
         List<List<String>> headList = getTestcaseExportHeads(request);
+        boolean isUseCustomId = trackProjectService.useCustomNum(request.getProjectId());
+        // 设置导出参数
+        TestCaseBatchRequest initParam = new TestCaseBatchRequest();
+        BeanUtils.copyBean(initParam, request);
+        TestCaseBatchRequest batchRequest = setTestCaseExportParamIds(initParam);
+        // 1000条截取一次, 生成EXCEL
+        AtomicInteger i = new AtomicInteger(0);
 
-        Map<Integer, Integer> rowMergeInfo = new HashMap<>();
-        FunctionCaseMergeWriteHandler writeHandler = new FunctionCaseMergeWriteHandler(rowMergeInfo, headList);
-        boolean isUseCustomId = trackProjectService.useCustomNum(projectId);
+        Map<String, String> nodePathMap = testCaseNodeService.getNodePathMap(request.getProjectId());
 
-        Map<String, List<String>> caseLevelAndStatusValueMap = trackTestCaseTemplateService.getCaseLevelAndStatusMapByProjectId(projectId);
-        FunctionCaseTemplateWriteHandler handler = new FunctionCaseTemplateWriteHandler(true, headList, caseLevelAndStatusValueMap);
+        SubListUtil.dealForSubList(batchRequest.getIds(), EXPORT_CASE_MAX_COUNT, (subIds) -> {
+            i.getAndIncrement();
+            batchRequest.setIds(subIds);
+            // 生成writeHandler
+            Map<Integer, Integer> rowMergeInfo = new HashMap<>();
+            FunctionCaseMergeWriteHandler writeHandler = new FunctionCaseMergeWriteHandler(rowMergeInfo, headList);
+            Map<String, List<String>> caseLevelAndStatusValueMap = trackTestCaseTemplateService.getCaseLevelAndStatusMapByProjectId(request.getProjectId());
+            FunctionCaseTemplateWriteHandler handler = new FunctionCaseTemplateWriteHandler(true, headList, caseLevelAndStatusValueMap);
 
-        List<TestCaseExcelData> excelData = parseCaseData2ExcelData(testCases, rowMergeInfo, isUseCustomId, request.getOtherHeaders());
-        List<List<Object>> data = parseExcelData2List(headList, excelData);
-        new EasyExcelExporter(new TestCaseExcelDataFactory().getTestCaseExcelDataLocal().getClass())
-                .exportByCustomWriteHandler(response, headList, data, Translator.get("test_case_import_template_name"),
-                        Translator.get("test_case_import_template_sheet"), handler, writeHandler);
+            List<TestCaseDTO> exportData = getExportData(batchRequest);
+            exportData.forEach(item -> item.setNodePath(nodePathMap.get(item.getNodeId())));
+            List<TestCaseExcelData> excelData = parseCaseData2ExcelData(exportData, rowMergeInfo, isUseCustomId, request.getOtherHeaders());
+            List<List<Object>> data = parseExcelData2List(headList, excelData);
+
+            File createFile = new File(tmpZipPath + File.separatorChar + "caseExport_" + i.get() + ".xlsx");
+            if (!createFile.exists()) {
+                try {
+                    createFile.createNewFile();
+                } catch (IOException e) {
+                    MSException.throwException(e);
+                }
+            }
+            //生成临时EXCEL
+            EasyExcel.write(createFile)
+                    .head(Optional.ofNullable(headList).orElse(new ArrayList<>()))
+                    .registerWriteHandler(handler)
+                    .registerWriteHandler(writeHandler)
+                    .excelType(ExcelTypeEnum.XLSX).sheet(Translator.get("test_case_import_template_sheet")).doWrite(data);
+            tmpExportExcelList.add(createFile);
+        });
+        return tmpExportExcelList;
+    }
+
+    public void cleanUpTmpDirOfClassPath() {
+        File tmpDir = new File(this.getClass().getClassLoader().getResource(StringUtils.EMPTY).getPath() + EXPORT_CASE_TMP_DIR);
+        if (tmpDir.exists()) {
+            FileUtils.deleteDir(tmpDir.getPath());
+        }
     }
 
     @NotNull
@@ -1673,16 +1732,22 @@ public class TestCaseService {
     }
 
     public List<TestCaseDTO> getExportData(TestCaseBatchRequest request) {
-        ServiceUtils.getSelectAllIds(request, request.getCondition(),
-                (query) -> extTestCaseMapper.selectIds(query));
-        this.initRequest(request.getCondition(), true);
-        setDefaultOrder(request.getCondition());
-        Map<String, List<String>> filters = request.getCondition().getFilters();
+        return extTestCaseMapper.listByTestCaseIds(request);
+    }
+
+    private TestCaseBatchRequest setTestCaseExportParamIds(TestCaseBatchRequest param) {
+        boolean queryUi = DiscoveryUtil.hasService(MicroServiceName.UI_TEST);
+        param.getCondition().setQueryUi(queryUi);
+        this.initRequest(param.getCondition(), true);
+        setDefaultOrder(param.getCondition());
+        ServiceUtils.setBaseQueryRequestCustomMultipleFields(param.getCondition());
+        Map<String, List<String>> filters = param.getCondition().getFilters();
         if (filters != null && !filters.containsKey("status")) {
             filters.put("status", new ArrayList<>(0));
         }
-        List<TestCaseDTO> testCaseList = extTestCaseMapper.listByTestCaseIds(request);
-        return testCaseList;
+        ServiceUtils.getSelectAllIds(param, param.getCondition(),
+                (query) -> extTestCaseMapper.selectIds(query));
+        return param;
     }
 
     private List<TestCaseExcelData> parseCaseData2ExcelData(List<TestCaseDTO> testCaseList, Map<Integer, Integer> rowMergeInfo,
@@ -1725,6 +1790,7 @@ public class TestCaseService {
             buildExportCustomField(customSelectValueMap, customNameMap, t, data, textFields);
             buildExportOtherField(data, t, otherHeaders);
 
+            this.validateExportTextField(t);
             if (CollectionUtils.isNotEmpty(stepDescList)) {
                 // 如果有多条步骤则添加多条数据，之后合并单元格
                 buildExportMergeData(rowMergeInfo, list, stepDescList, stepResultList, data);
@@ -1733,6 +1799,21 @@ public class TestCaseService {
             }
         }
         return list;
+    }
+
+    private void validateExportTextField(TestCaseDTO data) {
+        List<String> textValues= Arrays.asList(data.getPrerequisite(), data.getStepDescription(), data.getExpectedResult(), data.getRemark());
+        for (String textValue : textValues) {
+            validateExportText(data.getName(), textValue);
+        }
+    }
+
+    private void validateExportText(String name, String textValue) {
+        // poi 导出的单个单元格最大字符数量为 32767 ，这里添加校验提示
+        int maxLength = 32767;
+        if (StringUtils.isNotBlank(textValue) && textValue.length() > maxLength) {
+            MSException.throwException(String.format(Translator.get("case_export_text_validate_tip"), name, maxLength));
+        }
     }
 
     private void buildExportOtherField(TestCaseExcelData data, TestCaseDTO t, List<TestCaseExportRequest.TestCaseExportHeader> otherHeaders) {
@@ -1801,6 +1882,7 @@ public class TestCaseService {
                 String id = field.getFieldId();
                 if (textFields.contains(id)) {
                     map.put(customNameMap.get(id), field.getTextValue());
+                    this.validateExportText(data.getName(), field.getTextValue());
                     continue;
                 }
                 if (StringUtils.isNotBlank(field.getValue())) {
@@ -1940,22 +2022,6 @@ public class TestCaseService {
             BeanUtils.copyBean(batchEdit, request);
             batchEdit.setUpdateTime(System.currentTimeMillis());
             bathUpdateByCondition(request, batchEdit);
-            //批量修改选中数据其他版本的模块路径
-            if (request != null && (request.getIds() != null || !request.getIds().isEmpty())) {
-                request.getIds().forEach(testCaseId -> {
-                    TestCaseWithBLOBs testCaseWithBLOBs = testCaseMapper.selectByPrimaryKey(testCaseId);
-                    if (testCaseWithBLOBs == null) {
-                        return;
-                    }
-                    if (StringUtils.isNotEmpty(request.getNodeId()) && StringUtils.isNotEmpty(request.getNodePath())) {
-                        testCaseWithBLOBs.setNodeId(request.getNodeId());
-                        testCaseWithBLOBs.setNodePath(request.getNodePath());
-                        EditTestCaseRequest editTestCaseRequest = new EditTestCaseRequest();
-                        BeanUtils.copyBean(editTestCaseRequest, testCaseWithBLOBs);
-                        updateOtherVersionModule(editTestCaseRequest);
-                    }
-                });
-            }
         }
     }
 
@@ -2068,7 +2134,7 @@ public class TestCaseService {
                 batchCopy.setMaintainer(SessionUtils.getUserId());
                 batchCopy.setReviewStatus(TestCaseReviewStatus.Prepare.name());
                 batchCopy.setStatus(TestCaseReviewStatus.Prepare.name());
-                batchCopy.setNodePath(request.getNodePath());
+                batchCopy.setNodePath(StringUtils.EMPTY);
                 batchCopy.setNodeId(request.getNodeId());
                 batchCopy.setCasePublic(false);
                 batchCopy.setRefId(id);
@@ -2637,24 +2703,6 @@ public class TestCaseService {
         return null;
     }
 
-    //    public List<ApiTestCaseDTO> getTestCaseApiCaseRelateList(ApiTestCaseRequest request) {
-    //        List<ApiTestCaseDTO> apiTestCaseDTOS = testCaseTestMapper.relevanceApiList(request);
-    //        ServiceUtils.buildVersionInfo(apiTestCaseDTOS);
-    //        return apiTestCaseDTOS;
-    //    }
-    //
-    //    public List<ApiScenarioDTO> getTestCaseScenarioCaseRelateList(ApiScenarioRequest request) {
-    //        List<ApiScenarioDTO> apiScenarioDTOS = testCaseTestMapper.relevanceScenarioList(request);
-    //        ServiceUtils.buildVersionInfo(apiScenarioDTOS);
-    //        return apiScenarioDTOS;
-    //    }
-    //
-    //    public List<LoadTestDTO> getTestCaseLoadCaseRelateList(LoadCaseRequest request) {
-    //        List<LoadTestDTO> loadTestDTOS = testCaseTestMapper.relevanceLoadList(request);
-    //        ServiceUtils.buildVersionInfo(loadTestDTOS);
-    //        return loadTestDTOS;
-    //    }
-
     public void relateTest(String type, String caseId, List<String> apiIds) {
         apiIds.forEach(testId -> {
             TestCaseTest testCaseTest = new TestCaseTest();
@@ -2763,6 +2811,8 @@ public class TestCaseService {
             getTestCaseTestDaoList(TestCaseTestType.uiAutomation.name(), item.getNum(), item.getName(), item.getId(), projectNameMap.get(item.getProjectId()), versionNameMap.get(item.getVersionId()),
                     testCaseTestList, testCaseTestsMap);
         });
+        // 根据关联记录时间展示
+        Collections.sort(testCaseTestList, Comparator.comparingLong(TestCaseTestDao::getCreateTime));
         return testCaseTestList;
     }
 
@@ -2797,6 +2847,8 @@ public class TestCaseService {
     }
 
     public void initAttachment() {
+        // 处理SQL升级attachment_module_relation类型错误问题
+        extAttachmentModuleRelationMapper.batchUpdateErrRelationType();
         // 用例有关附件处理
         AttachmentModuleRelationExample relationExample = new AttachmentModuleRelationExample();
         relationExample.createCriteria().andRelationTypeEqualTo(AttachmentType.TEST_CASE.type());
@@ -2813,7 +2865,7 @@ public class TestCaseService {
             List<FileMetadata> allCaseFileMetadatas = fileMetadataMapper.selectByExample(fileMetadataExample);
             FileContentExample fileContentExample = new FileContentExample();
             fileContentExample.createCriteria().andFileIdIn(fileIds);
-            List<FileContent> allCaseFileContents = fileContentMapper.selectByExample(fileContentExample);
+            List<FileContent> allCaseFileContents = fileContentMapper.selectByExampleWithBLOBs(fileContentExample);
             entry.getValue().stream().forEach(relation -> {
                 String filename = StringUtils.EMPTY;
                 List<FileMetadata> fileMetadatas = allCaseFileMetadatas.stream().filter(fileMetadata -> fileMetadata.getId().equals(relation.getAttachmentId()))
@@ -2831,6 +2883,8 @@ public class TestCaseService {
                     fileAttachmentMetadataMapper.insert(fileAttachmentMetadata);
                     AttachmentModuleRelation record = new AttachmentModuleRelation();
                     record.setAttachmentId(fileAttachmentMetadata.getId());
+                    record.setRelationId(relation.getRelationId());
+                    record.setRelationType(relation.getRelationType());
                     AttachmentModuleRelationExample example = new AttachmentModuleRelationExample();
                     example.createCriteria().andRelationIdEqualTo(relation.getRelationId())
                             .andAttachmentIdEqualTo(relation.getAttachmentId()).andRelationTypeEqualTo(relation.getRelationType());
@@ -3025,7 +3079,7 @@ public class TestCaseService {
                     testCase.setName(testCase.getName().substring(0, 250) + testCase.getName().substring(testCase.getName().length() - 5));
                 }
                 testCase.setNodeId(request.getNodeId());
-                testCase.setNodePath(request.getNodePath());
+                testCase.setNodePath(StringUtils.EMPTY);
                 testCase.setOrder(nextOrder += ServiceUtils.ORDER_STEP);
                 testCase.setCustomNum(String.valueOf(nextNum));
                 testCase.setNum(nextNum++);

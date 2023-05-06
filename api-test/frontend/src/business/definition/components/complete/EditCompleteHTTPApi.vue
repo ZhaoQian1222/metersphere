@@ -50,6 +50,7 @@
             type="primary"
             size="small"
             @click="saveApi"
+            v-prevent-re-click
             title="ctrl + s"
             v-permission="['PROJECT_API_DEFINITION:READ+EDIT_API']"
             >{{ $t('commons.save') }}
@@ -219,7 +220,7 @@ export default {
   },
   data() {
     let validateURL = (rule, value, callback) => {
-      if (!this.httpForm.path.startsWith('/')) {
+      if (!this.httpForm.path || !this.httpForm.path.startsWith('/')) {
         callback(this.$t('api_test.definition.request.path_valid_info'));
       }
       callback();
@@ -250,10 +251,7 @@ export default {
             required: true,
             message: this.$t('api_test.definition.request.path_info'),
             trigger: 'blur',
-          },
-          {
             validator: validateURL,
-            trigger: 'blur',
           },
         ],
         userId: [

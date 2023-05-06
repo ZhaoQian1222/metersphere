@@ -684,6 +684,7 @@ export class DatabaseConfig extends BaseConfig {
     "com.microsoft.sqlserver.jdbc.SQLServerDriver",
     "org.postgresql.Driver",
     "oracle.jdbc.OracleDriver",
+    "dm.jdbc.driver.DmDriver"
   ];
 
   constructor(options) {

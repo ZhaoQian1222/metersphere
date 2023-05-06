@@ -15,7 +15,35 @@ import java.util.function.Function;
  */
 public class BatchProcessingUtil {
 
-    private static final int BATCH_PROCESS_QUANTITY = 1000;
+    private static final int BATCH_PROCESS_QUANTITY = 100;
+
+    public static ScenarioProjectDTO getProjectIdsByScenarioIdList(List<String> scenarioIdList, Function<List<String>, ScenarioProjectDTO> func) {
+        ScenarioProjectDTO returnDTO = new ScenarioProjectDTO();
+        if (CollectionUtils.isNotEmpty(scenarioIdList)) {
+            int unProcessingCount = scenarioIdList.size();
+            while (scenarioIdList.size() > BATCH_PROCESS_QUANTITY) {
+                List<String> processingList = new ArrayList<>();
+                for (int i = 0; i < BATCH_PROCESS_QUANTITY; i++) {
+                    processingList.add(scenarioIdList.get(i));
+                }
+                //函数处理
+                returnDTO.merge(func.apply(processingList));
+
+                scenarioIdList.removeAll(processingList);
+                //如果剩余数量没有发生变化，则跳出循环。防止出现死循环的情况
+                if (scenarioIdList.size() == unProcessingCount) {
+                    break;
+                } else {
+                    unProcessingCount = scenarioIdList.size();
+                }
+            }
+            if (CollectionUtils.isNotEmpty(scenarioIdList)) {
+                //剩余待处理数据进行处理
+                returnDTO.merge(func.apply(scenarioIdList));
+            }
+        }
+        return returnDTO;
+    }
 
     public static ScenarioProjectDTO getProjectIdsByScenarioIdList(List<String> scenarioIdList, Function<List<String>, ScenarioProjectDTO> func) {
         ScenarioProjectDTO returnDTO = new ScenarioProjectDTO();

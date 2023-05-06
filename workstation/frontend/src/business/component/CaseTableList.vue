@@ -1,7 +1,7 @@
 <template>
   <div class="card-container">
     <ms-table
-      :table-is-loading="page.result.loading"
+      :table-is-loading="loading"
       :data="page.data"
       :enableSelection="false"
       :condition="condition"
@@ -76,6 +76,9 @@
           :label="$t('test_track.case.module')"
           min-width="150px"
         >
+          <template v-slot:default="scope">
+            <span>{{ nodePathMap.get(scope.row.nodeId) }}</span>
+          </template>
         </ms-table-column>
 
         <ms-table-column
@@ -235,7 +238,6 @@ import { TEST_CASE_LIST } from "metersphere-frontend/src/utils/constants";
 
 import {
   getCustomFieldFilter,
-  getCustomFieldValue,
   getCustomTableHeader,
   getCustomTableWidth,
   getLastTableSortField,
@@ -248,7 +250,6 @@ import HeaderLabelOperate from "metersphere-frontend/src/components/head/HeaderL
 import {
   getCurrentProjectID,
   getCurrentUserId,
-  getCurrentWorkspaceId,
 } from "metersphere-frontend/src/utils/token";
 
 import { getProjectMember, getProjectMemberUserFilter } from "@/api/user";
@@ -258,7 +259,6 @@ import { SYSTEM_FIELD_NAME_MAP } from "metersphere-frontend/src/utils/table-cons
 import {
   editTestCaseOrder,
   getTestCaseListById,
-  getTestCasePages,
   getTestCaseStep,
   testCaseList,
 } from "@/api/test-case";
@@ -276,13 +276,10 @@ import { getAdvSearchCustomField } from "metersphere-frontend/src/components/sea
 import TestCaseReviewStatusTableItem from "@/business/othermodule/track/TestCaseReviewStatusTableItem";
 import TestPlanCaseStatusTableItem from "@/business/othermodule/track/TestPlanCaseStatusTableItem";
 import TestCasePreview from "@/business/othermodule/track/TestCasePreview";
-import { getUUID, parseTag } from "metersphere-frontend/src/utils";
-import { uuid } from "@/model/ApiTestModel";
-import {
-  getCustomFieldValueForTrack,
-  getCustomTableHeaderByXpack,
-  getTableHeaderWithCustomFieldsByXpack,
-} from "@/business/component/js/table-head-util";
+import { parseTag } from "metersphere-frontend/src/utils";
+import { getCustomFieldValueForTrack } from "@/business/component/js/table-head-util";
+import {getTestCaseNodes} from "@/api/test-case-node";
+import {buildTree, buildNodePath} from "metersphere-frontend/src/model/NodeTree";
 
 export default {
   name: "TableList",
@@ -313,6 +310,7 @@ export default {
           },
         },
       },
+      loading: false,
       versionFilters: [],
       statusFilters: [
         { text: this.$t("test_track.case.status_prepare"), value: "Prepare" },
@@ -341,6 +339,7 @@ export default {
       rowCaseResult: {},
       store: {},
       userFilter: [],
+      nodePathMap: new Map()
     };
   },
   props: {
@@ -399,6 +398,7 @@ export default {
     getProjectMemberUserFilter((data) => {
       this.userFilter = data;
     });
+    this.getNodePathMap();
     if (this.isFocus) {
       if (this.condition.filters) {
         delete this.condition.filters["user_id"];
@@ -562,6 +562,30 @@ export default {
           this.loading = false;
         });
       });
+    },
+    getNodePathMap() {
+      if (!this.projectId) {
+        return;
+      }
+      getTestCaseNodes(this.projectId)
+        .then((r) => {
+          let treeNodes = r.data;
+          treeNodes.forEach(node => {
+            node.name = node.name === '未规划用例' ? this.$t('api_test.unplanned_case') : node.name
+            buildTree(node, {path: ''});
+          });
+          let moduleOptions = [];
+          treeNodes.forEach(node => {
+            buildNodePath(node, {path: ''}, moduleOptions);
+          });
+          let map = new Map();
+          if (moduleOptions) {
+            moduleOptions.forEach((item) => {
+              map.set(item.id, item.path);
+            });
+          }
+          this.nodePathMap = map;
+        });
     },
     setTestCaseDefaultValue(template) {
       let testCaseDefaultValue = {};

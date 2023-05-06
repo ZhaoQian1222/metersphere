@@ -6,7 +6,9 @@ import io.metersphere.api.dto.definition.request.ParameterConfig;
 import io.metersphere.api.dto.definition.request.assertions.MsAssertions;
 import io.metersphere.api.dto.definition.request.auth.MsAuthManager;
 import io.metersphere.api.dto.definition.request.dns.MsDNSCacheManager;
+import io.metersphere.api.dto.definition.request.processors.post.MsJDBCPostProcessor;
 import io.metersphere.api.dto.definition.request.processors.post.MsJSR223PostProcessor;
+import io.metersphere.api.dto.definition.request.processors.pre.MsJDBCPreProcessor;
 import io.metersphere.api.dto.definition.request.processors.pre.MsJSR223PreProcessor;
 import io.metersphere.api.dto.mock.MockApiHeaders;
 import io.metersphere.api.dto.scenario.Body;
@@ -169,7 +171,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         }
         // 失败重试
         HashTree httpSamplerTree;
-        if (config.getRetryNum() > 0) {
+        if (config.getRetryNum() > 0 && !ElementUtil.isLoop(this.getParent())) {
             final HashTree loopTree = ElementUtil.retryHashTree(this.getName(), config.getRetryNum(), tree);
             httpSamplerTree = loopTree.add(sampler);
         } else {
@@ -237,6 +239,9 @@ public class MsHTTPSamplerProxy extends MsTestElement {
         if (CollectionUtils.isNotEmpty(hashTree)) {
             hashTree = ElementUtil.order(hashTree);
             for (MsTestElement el : hashTree) {
+                if (el instanceof MsJDBCPreProcessor || el instanceof MsJDBCPostProcessor) {
+                    el.setParent(this);
+                }
                 if (el.getEnvironmentId() == null) {
                     if (this.getEnvironmentId() == null) {
                         el.setEnvironmentId(useEnvironment);
@@ -424,14 +429,13 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                     if (StringUtils.isNotBlank(this.getPath())) {
                         envPath += this.getPath();
                     }
-                    sampler.setPort(httpConfig.getPort());
-                    if (httpConfig.getDomain().startsWith("${")){
-                        sampler.setProtocol(httpConfig.getProtocol());
-                        envPath = StringUtils.isNotBlank(this.path) ? StringUtils.join(httpConfig.getSocket(), this.path) : url;
+                    if (httpConfig.getDomain().startsWith("${")) {
+                        envPath = StringUtils.isNotBlank(this.path) ? StringUtils.join(url, this.path) : url;
                     } else if (StringUtils.isNotEmpty(httpConfig.getDomain())) {
                         sampler.setDomain(URLDecoder.decode(httpConfig.getDomain(), StandardCharsets.UTF_8.name()));
                         sampler.setProtocol(httpConfig.getProtocol());
-                    }  else {
+                        sampler.setPort(httpConfig.getPort());
+                    } else {
                         sampler.setDomain("");
                         sampler.setProtocol("");
                         sampler.setPort(-1);
@@ -579,7 +583,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
                 try {
                     String value = keyValue.getValue() != null && keyValue.getValue().startsWith("@") ?
                             ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
-                    value = keyValue.isUrlEncode() ? StringUtils.join("${__urlencode(", value, ")}") : value;
+                    value = keyValue.isUrlEncode() ? StringUtils.join("${__urlencode(", value.replace(",", "\\,"), ")}") : value;
                     keyValueMap.put(keyValue.getName(), value);
                 } catch (Exception e) {
                     LogUtil.error(e);
@@ -614,7 +618,7 @@ public class MsHTTPSamplerProxy extends MsTestElement {
             if (keyValue.getValue() != null) {
                 try {
                     String value = keyValue.getValue().startsWith("@") ? ScriptEngineUtils.buildFunctionCallString(keyValue.getValue()) : keyValue.getValue();
-                    value = keyValue.isUrlEncode() ? StringUtils.join("${__urlencode(", value, ")}") : value;
+                    value = keyValue.isUrlEncode() ? StringUtils.join("${__urlencode(", value.replace(",", "\\,"), ")}") : value;
                     if (StringUtils.isNotEmpty(value) && value.contains(StringUtils.CR)) {
                         value = value.replaceAll(StringUtils.CR, StringUtils.EMPTY);
                     }

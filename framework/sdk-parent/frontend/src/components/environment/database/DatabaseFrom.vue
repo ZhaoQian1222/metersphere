@@ -156,6 +156,8 @@ export default {
         this.currentConfig.dbUrl = "jdbc:postgresql://127.0.0.1:5432/database";
       }else if(type === "oracle.jdbc.OracleDriver"){
         this.currentConfig.dbUrl = "jdbc:oracle:thin:@192.168.2.1:1521:database";
+      }else if(type === "dm.jdbc.driver.DmDriver"){
+        this.currentConfig.dbUrl = "jdbc:dm://127.0.0.1:5236/database";
       }
     },
   }

@@ -174,7 +174,9 @@ import {
   testPlanLoadCaseSelectAllTableRows, testPlanLoadCaseUpdate, testPlanLoadList
 } from "@/api/remote/plan/test-plan-load-case";
 import MicroApp from "metersphere-frontend/src/components/MicroApp";
+import {baseSocket} from "@/api/base-network";
 
+let refreshTable = undefined;
 
 export default {
   name: "TestPlanLoadCaseList",
@@ -278,6 +280,7 @@ export default {
   created() {
     this.initTable();
     this.refreshStatus();
+    this.initWebSocket();
   },
   watch: {
     selectProjectId() {
@@ -323,7 +326,6 @@ export default {
             let obj = {config: config, requests: runArr, userId: getCurrentUser().id};
             this._runBatch(obj);
             this.initTable();
-            this.refreshStatus();
           });
       } else {
         let runArr = [];
@@ -339,7 +341,6 @@ export default {
         let obj = {config: config, requests: runArr, userId: getCurrentUser().id};
         this._runBatch(obj);
         this.initTable();
-        this.refreshStatus();
       }
     },
     _runBatch(loadCases) {
@@ -347,14 +348,16 @@ export default {
       this.$success(this.$t('test_track.plan.load_case.exec'));
       this.$message(this.$t('commons.run_message'));
       this.$refs.taskCenter.open();
-      this.initTable();
-      this.refreshStatus();
+      // 批量执行，15s后刷新一次列表状态，后续执行结果由socket推送
+      refreshTable = window.setTimeout(() => {
+        this.initTable(false);
+      }, 15 * 1000);
     },
     search() {
       this.currentPage = 1;
       this.initTable();
     },
-    initTable() {
+    initTable(showLoading = true) {
       this.autoCheckStatus();
       this.condition.testPlanId = this.planId;
       if (this.selectProjectId && this.selectProjectId !== 'root') {
@@ -372,7 +375,7 @@ export default {
         this.status = 'all';
       }
       this.enableOrderDrag = (this.condition.orders && this.condition.orders.length) > 0 ? false : true;
-      this.loading = true;
+      this.loading = showLoading;
       if (this.planId) {
         this.condition.testPlanId = this.planId;
         testPlanLoadList({pageNum: this.currentPage, pageSize: this.pageSize}, this.condition)
@@ -518,9 +521,41 @@ export default {
       });
       window.open(performanceResolve.href, '_blank');
     },
+    initWebSocket() {
+      this.websocket = baseSocket("/plan/load/" + this.planId);
+      this.websocket.onmessage = this.onMessage;
+      this.websocket.onopen = this.onOpen;
+      this.websocket.onerror = this.onError;
+      this.websocket.onclose = this.onClose;
+    },
+    onOpen() {
+    },
+    onError() {
+    },
+    onMessage(e) {
+      if (e.data === 'CONN_SUCCEEDED') {
+        return;
+      }
+      try {
+        // 收到消息刷新页面
+        refreshTable = window.setTimeout(() => {
+          this.initTable(false);
+        }, 10 * 1000);
+      } catch (ex) {
+        // nothing
+      }
+    },
+    onClose() {
+    },
   },
   beforeDestroy() {
     this.cancelRefresh();
+    if (refreshTable) {
+      window.clearTimeout(refreshTable);
+    }
+    if (this.websocket && this.websocket.close instanceof Function) {
+      this.websocket.close();
+    }
   },
 }
 </script>

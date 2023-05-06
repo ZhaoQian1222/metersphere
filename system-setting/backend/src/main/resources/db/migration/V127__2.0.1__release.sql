@@ -514,16 +514,12 @@ WHERE status IN ('UnPass', 'Pass');
 
 UPDATE test_case_comment
 SET `type` = 'PLAN'
-WHERE status IN ('Prepare', 'Underway', 'Failure', 'Blocking', 'Skip');
-
-UPDATE test_case_comment
-SET `type` = 'CASE'
 WHERE `type` = '';
 
 --
 -- 初始化attachment_module_relation数据
 INSERT INTO attachment_module_relation
-SELECT case_id, 'test_case', file_id
+SELECT case_id, 'testcase', file_id
 FROM test_case_file;
 -- 清空test_case_file表数据
 DELETE

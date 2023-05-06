@@ -3,6 +3,8 @@
   <test-case-relevance-base
     @setProject="setProject"
     @save="saveCaseRelevance"
+    :enable-full-screen="false"
+    @close="close"
     :flag="isTestPlan"
     :multiple-project="multipleProject"
     :is-saving="isSaving"
@@ -215,10 +217,10 @@ export default {
     },
   },
   watch: {
-    selectNodeIds() {
-      this.getTestCases();
-    },
     projectId(val) {
+      if (!this.projectId) {
+        return;
+      }
       this.setConditionModuleIdParam();
       this.page.condition.projectId = this.projectId;
       this.page.condition.versionId = null;
@@ -239,6 +241,7 @@ export default {
       }
       if (this.projectId) {
         this.getProjectNode(this.projectId);
+        this.getTestCases();
       }
     },
     setProject(projectId) {
@@ -298,10 +301,12 @@ export default {
       this.$refs.table.condition.selectAll = false;
       this.selectNodeIds = nodeIds;
       this.selectNodeNames = nodeNames;
+      this.getTestCases();
     },
     close() {
       this.selectNodeIds = [];
       this.selectNodeNames = [];
+      this.projectId = '';
       this.$refs.table.clear();
     },
     getProjectNode(projectId, condition) {

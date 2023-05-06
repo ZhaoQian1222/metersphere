@@ -24,7 +24,6 @@ import io.metersphere.plan.request.performance.LoadPlanReportDTO;
 import io.metersphere.plan.request.ui.TestPlanUiExecuteReportDTO;
 import io.metersphere.plan.request.ui.UiPlanReportRequest;
 import io.metersphere.plan.service.remote.api.*;
-import io.metersphere.plan.service.remote.performance.PlanLoadTestReportService;
 import io.metersphere.plan.service.remote.performance.PlanTestPlanLoadCaseService;
 import io.metersphere.plan.service.remote.ui.PlanTestPlanUiScenarioCaseService;
 import io.metersphere.plan.utils.TestPlanReportUtil;
@@ -69,8 +68,6 @@ public class TestPlanReportService {
     TestPlanReportDataMapper testPlanReportDataMapper;
     @Resource
     PlanTestPlanLoadCaseService planTestPlanLoadCaseService;
-    @Resource
-    PlanLoadTestReportService planLoadTestReportService;
     @Resource
     ExtTestPlanReportMapper extTestPlanReportMapper;
     @Resource
@@ -155,7 +152,7 @@ public class TestPlanReportService {
                     TestPlanReport testPlanReport = testPlanReportMapper.selectByPrimaryKey(testPlanReportDTO.getId());
                     TestPlanReportContentWithBLOBs content = this.selectTestPlanReportContentByReportId(testPlanReportDTO.getId());
                     TestPlanReportDataStruct testPlanReportCountData
-                            = testPlanService.buildTestPlanReportStructByTestPlanReport(testPlanReport, content);
+                            = testPlanService.buildOldVersionTestPlanReport(testPlanReport, content);
                     if (testPlanReportCountData != null) {
                         testPlanReportDTO.setPassRate(testPlanReportCountData.getPassRate());
                     }
@@ -224,22 +221,12 @@ public class TestPlanReportService {
             List<TestPlanApiScenarioInfoDTO> scenarios) {
 
         TestPlanReportRunInfoDTO runInfoDTO = new TestPlanReportRunInfoDTO();
-        if (MapUtils.isNotEmpty(config.getEnvMap())) {
-            //判断记录选择的环境还是默认环境
-            Map<String, List<String>> requestEnvMap = new HashMap<>();
-            for (Map.Entry<String, String> entry : config.getEnvMap().entrySet()) {
-                requestEnvMap.put(entry.getKey(), new ArrayList<>() {{
-                    this.add(entry.getValue());
-                }});
-            }
-            runInfoDTO.setRequestEnvMap(requestEnvMap);
-        } else {
-            runInfoDTO.setRequestEnvMap(config.getTestPlanDefaultEnvMap());
-        }
-
-        final Map<String, String> runEnvMap = MapUtils.isNotEmpty(config.getEnvMap()) ? config.getEnvMap() : new HashMap<>();
         runInfoDTO.setRunMode(config.getMode());
 
+        Map<String, List<String>> projectInvMap = TestPlanReportUtil.getTestPlanExecutedEnvironments(config.getTestPlanDefaultEnvMap(), config.getEnvMap());
+        runInfoDTO.setRequestEnvMap(projectInvMap);
+
+        final Map<String, String> runEnvMap = new HashMap<>();
         if (StringUtils.equals(GROUP, config.getEnvironmentType()) && StringUtils.isNotEmpty(config.getEnvironmentGroupId())) {
             Map<String, String> groupMap = baseEnvGroupProjectService.getEnvMap(config.getEnvironmentGroupId());
             if (MapUtils.isNotEmpty(groupMap)) {
@@ -352,7 +339,16 @@ public class TestPlanReportService {
             returnDTO.setUiScenarioIdMap(uiScenarioIdMap);
         }
 
-        if (testPlanReport == null) {
+        if (runInfoDTO != null && testPlanReport == null) {
+            if (!saveRequest.isApiCaseIsExecuting() && !saveRequest.isScenarioIsExecuting()) {
+                //如果没有接口用例以及场景运行，执行配置中所选的资源池配置置空，避免报告显示资源池时给用户造成困扰;
+                runModeConfigDTO.setResourcePoolId(null);
+                if (!saveRequest.isUiScenarioIsExecuting()) {
+                    //如果也没有ui运行，则运行环境也置空，避免显示了没用到的环境给用户造成困扰。
+                    runInfoDTO.setRequestEnvMap(new HashMap<>());
+                }
+            }
+
             runInfoDTO.setResourcePools(loadResourcePools);
             if (StringUtils.isNotEmpty(runModeConfigDTO.getResourcePoolId())) {
                 if (!runInfoDTO.getResourcePools().contains(runModeConfigDTO.getResourcePoolId())) {
@@ -556,20 +552,27 @@ public class TestPlanReportService {
     }
 
     //更新测试计划报告的数据结构
-    private void updateReportStructInfo(TestPlanReportContentWithBLOBs testPlanReportContentWithBLOBs, TestPlanReportDataStruct reportStruct) {
+    public void updateReportStructInfo(TestPlanReportContentWithBLOBs testPlanReportContentWithBLOBs, TestPlanReportDataStruct reportStruct) {
         //更新BaseCount统计字段和通过率
         testPlanReportContentWithBLOBs.setPassRate(reportStruct.getPassRate());
         testPlanReportContentWithBLOBs.setApiBaseCount(JSON.toJSONString(reportStruct));
         testPlanReportContentMapper.updateByPrimaryKeySelective(testPlanReportContentWithBLOBs);
     }
 
-    public void testPlanExecuteOver(String testPlanReportId, String finishStatus) {
-        TestPlanReport testPlanReport = this.getTestPlanReport(testPlanReportId);
+    private boolean isTestPlanCountOver(TestPlanReport testPlanReport) {
         if (testPlanReport != null && StringUtils.equalsAnyIgnoreCase(testPlanReport.getStatus(),
                 "stopped",
                 TestPlanReportStatus.COMPLETED.name(),
                 TestPlanReportStatus.SUCCESS.name(),
                 TestPlanReportStatus.FAILED.name())) {
+            return !extTestPlanReportContentMapper.isApiBasicCountIsNull(testPlanReport.getId());
+        }
+        return false;
+    }
+
+    public void testPlanExecuteOver(String testPlanReportId, String finishStatus) {
+        TestPlanReport testPlanReport = this.getTestPlanReport(testPlanReportId);
+        if (this.isTestPlanCountOver(testPlanReport)) {
             return;
         }
         boolean isSendMessage = false;
@@ -587,7 +590,7 @@ public class TestPlanReportService {
                 boolean isRerunningTestPlan = BooleanUtils.isTrue(StringUtils.equalsIgnoreCase(testPlanReport.getStatus(), APITestStatus.Rerunning.name()));
                 //测试计划报告结果数据初始化
                 testPlanReport.setStatus(finishStatus);
-                content = this.initTestPlanReportInfo(testPlanReport, isRerunningTestPlan);
+                content = this.countAndSaveTestPlanReport(testPlanReport, isRerunningTestPlan);
                 this.setReportExecuteResult(testPlanReport, finishStatus);
             } catch (Exception e) {
                 testPlanReport.setStatus(finishStatus);
@@ -615,7 +618,7 @@ public class TestPlanReportService {
     /**
      * 统计测试计划报告信息
      */
-    public TestPlanReportContentWithBLOBs initTestPlanReportInfo(TestPlanReport testPlanReport, boolean isRerunningTestPlan) throws Exception {
+    public TestPlanReportContentWithBLOBs countAndSaveTestPlanReport(TestPlanReport testPlanReport, boolean isRerunningTestPlan) {
         long endTime = System.currentTimeMillis();
         //原逻辑中要判断包含测试计划功能用例时才会赋予结束时间。执行测试计划产生的测试报告，它的结束时间感觉没有这种判断必要。
         testPlanReport.setEndTime(endTime);
@@ -626,11 +629,12 @@ public class TestPlanReportService {
             if (!isRerunningTestPlan) {
                 content.setStartTime(testPlanReport.getStartTime());
                 content.setEndTime(endTime);
-                //重跑的报告要重新生成统计数据
+            } else {
+                //重跑的测试计划需要重新统计报告信息
                 content.setApiBaseCount(null);
             }
             TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(testPlanReport.getTestPlanId());
-            TestPlanReportDataStruct apiBaseCountStruct = this.genReportStruct(testPlan, testPlanReport, content, isRerunningTestPlan);
+            TestPlanReportDataStruct apiBaseCountStruct = testPlanService.generateReportStruct(testPlan, testPlanReport, content, isRerunningTestPlan);
             if (apiBaseCountStruct.getPassRate() == 1) {
                 testPlanReport.setStatus(TestPlanReportStatus.SUCCESS.name());
             } else if (apiBaseCountStruct.getPassRate() < 1) {
@@ -682,21 +686,6 @@ public class TestPlanReportService {
                 }
             }
         }
-    }
-
-    //构建测试计划报告的数据结构
-    private TestPlanReportDataStruct genReportStruct(TestPlanWithBLOBs testPlan, TestPlanReport testPlanReport, TestPlanReportContentWithBLOBs reportContent, boolean rebuildReport) {
-        TestPlanReportDataStruct returnDTO = null;
-        if (testPlanReport != null && reportContent != null) {
-            try {
-                returnDTO = testPlanService.buildReportStruct(testPlan, testPlanReport, reportContent, rebuildReport);
-                //查找运行环境
-                this.initRunInformation(returnDTO, testPlanReport);
-            } catch (Exception e) {
-                LogUtil.error("计算测试计划报告信息出错!", e);
-            }
-        }
-        return returnDTO == null ? new TestPlanReportDataStruct() : returnDTO;
     }
 
     /**
@@ -1076,7 +1065,7 @@ public class TestPlanReportService {
         }
         if (this.isDynamicallyGenerateReports(testPlanReportContent) || StringUtils.isNotEmpty(testPlanReportContent.getApiBaseCount())) {
             TestPlanWithBLOBs testPlan = testPlanMapper.selectByPrimaryKey(testPlanReport.getTestPlanId());
-            testPlanReportDTO = this.genReportStruct(testPlan, testPlanReport, testPlanReportContent, false);
+            testPlanReportDTO = testPlanService.generateReportStruct(testPlan, testPlanReport, testPlanReportContent, false);
         }
         if (StringUtils.isNotEmpty(testPlanReportContent.getSummary())) {
             testPlanReportDTO.setSummary(testPlanReportContent.getSummary());
@@ -1142,7 +1131,7 @@ public class TestPlanReportService {
     }
 
     public void initRunInformation(TestPlanReportDataStruct testPlanReportDTO, TestPlanReport testPlanReport) {
-        if (StringUtils.isNotEmpty(testPlanReport.getRunInfo())) {
+        if (ObjectUtils.isNotEmpty(testPlanReportDTO) && StringUtils.isNotEmpty(testPlanReport.getRunInfo())) {
             try {
                 TestPlanReportRunInfoDTO runInfoDTO = JSON.parseObject(testPlanReport.getRunInfo(), TestPlanReportRunInfoDTO.class);
                 this.setEnvironmentToDTO(testPlanReportDTO, runInfoDTO);
@@ -1192,7 +1181,7 @@ public class TestPlanReportService {
                 if (MapUtils.isEmpty(runInfoDTO.getRequestEnvMap())) {
                     if (MapUtils.isNotEmpty(runInfoDTO.getApiCaseRunInfo())) {
                         for (Map<String, String> map : runInfoDTO.getApiCaseRunInfo().values()) {
-                            requestEnvMap = TestPlanReportUtil.mergeApiCaseEnvMap(requestEnvMap, map);
+                            requestEnvMap = TestPlanReportUtil.mergeEnvironmentMap(requestEnvMap, map);
                         }
                     }
                     if (MapUtils.isNotEmpty(runInfoDTO.getScenarioRunInfo())) {
@@ -1219,7 +1208,9 @@ public class TestPlanReportService {
                         List<String> envNameList = new ArrayList<>();
                         for (String envId : envIdList) {
                             String envName = apiTestEnvironmentService.selectNameById(envId);
-                            envNameList.add(envName);
+                            if (StringUtils.isNoneBlank(envName)) {
+                                envNameList.add(envName);
+                            }
                         }
                         //考虑到存在不同工作空间下有相同名称的项目，这里还是要检查一下项目名称是否已被记录
                         if (projectEnvMap.containsKey(projectName)) {

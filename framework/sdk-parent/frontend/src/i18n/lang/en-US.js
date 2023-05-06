@@ -4,6 +4,7 @@ import test_track from "./track/en-US";
 
 const message = {
   commons: {
+    insert: "Insert",
     pre_page: "Pre page",
     next_page: "Next page",
     already_pre_page: "It's already page one",
@@ -519,6 +520,10 @@ const message = {
       ui_module: "default",
     },
     other: "Other",
+    function_introduction: 'Function introduction',
+    page_guidance: 'Page guidance',
+    novice_journey: 'Novice Journey',
+    minder_operation: 'Minder Operation'
   },
   login: {
     normal_Login: "Normal Login",
@@ -3530,6 +3535,120 @@ const message = {
     ui_title: "UI testing tasks",
     perf_title: "Perf testing tasks",
   },
+  shepherd: {
+    step1: {
+      title: 'A Workspaces and Projects',
+      text: 'MeterSphere uses [workspace] and [project] to isolate test data, and you can switch between workspace and project in the top menu.'
+    },
+    step2: {
+      title: 'Side navigation menu',
+      text: 'The navigation menu shows which function module you are in.'
+    },
+    step3: {
+      title: 'One workspace holds multiple projects',
+      text: 'A "project" is a collection of use cases and members. Various types of tests on MeterSphere are viewed and managed through projects.'
+    },
+    step4: {
+      title: 'Top function menu',
+      text: 'The topl function menu supports switching subdivision functions under the current first-class module.'
+    },
+    step5: {
+      title: "Where are you?",
+      text: "Now, that you have joined a workspace and become a member of the current project, start your testing journey from here."
+    },
+    exit:'skip',
+    next: 'Next',
+    know:'know',
+  },
+  guide: {
+    home: {
+      title: 'Welcome to MeterSphere!',
+      desc: 'A quickstart guide to see what MeterSphere can do for you.',
+      button: 'Lets get started'
+    },
+    test: {
+      title: 'Test cases are the cornerstone of testing',
+      desc: '<span>Maintain your test cases through online editing/file import/URL synchronization/multi-person review,</span><br><span>add them to your test plan,quantitatively manage test progress, record results, synchronize issues, </span><br><span>retain/share test reports, and cover the entire software testing life cycle.</span>',
+      button: 'Next: Interface Test'
+    },
+    api: {
+      title: 'Simulate real scenarios to automate API testing',
+      desc: '<span>API testing is triggered by manual/scheduled tasks/plug-ins, supporting multiple communication protocols; </span><br><span>scenario case-sets are arranged based on real business processes, </span><br><span>and multi-type controllers/custom scripts/assertions are supported to meet various user needs.</span>',
+      button: 'Next: UI Test'
+    },
+    ui: {
+      title: 'Portable UI element library and command set',
+      desc: '<span>Arrange scenario cases based on reusable element library and commands;</span><br><span>combine your commonly used test steps into new command, which can be flexibly called in automation scenarios.</span><br><span style="background-color: #ffffff;color:#ffffff">/</span>',
+      button: 'Next: Performance Test'
+    },
+    performance: {
+      title: 'One-click launch performance testing',
+      desc: '<span>Provides a distributed performance testing solution, supporting multiple types of testing resource pools </span><br><span>such as physical machines/virtual machines/k8s container clusters; </span><br><span>One-click to initiate API scenario case to performance testing, and view real-time reports;</span><br><span>Provides report comparison under different configurations to control performance bottlenecks and optimize them.</span>',
+      button: 'To create your first test case'
+    },
+    go_prev: 'Return to previous'
+  },
+  side_task: {
+    test_tracking: {
+      title: "<span>Challenging</span><br><span>Test Track</span>",
+      task_1: "Join a project",
+      task_2: "Create a functional test case",
+      task_3: "Create a review plan",
+      task_4: "Post a comment in a review",
+      task_5: "Create a test plan",
+      task_6: "Add test cases to test plan",
+      task_7: "Add ralated issue to test case",
+    },
+    api_test: {
+      title: "<span>Challenging</span><br><span>API Test</span>",
+      task_1: "Create an API definition",
+      task_2: "Import local API definition or  API cases",
+      task_3: "Execute an API testing",
+      task_4: "Create a new test case based on API testing",
+      task_5: "Share API documents",
+      task_6: "Create an automation scenario case",
+      task_7: "Execute automated API testing with scheduled task",
+    },
+    performance_test: {
+      title: "<span>Challenging</span><br><span>Performance Test</span>",
+      task_1: "Convert API scenario case into performance testing",
+      task_2: "Share performance testing report",
+    },
+    project_setting: {
+      title: "<span>Challenging</span><br><span>Project Settings</span>",
+      task_1: "Create a new project",
+      task_2: "Add a project member",
+      task_3: "Create a project environment",
+    },
+    ui_test: {
+      title: "<span>Challenging</span><br><span>UI Test</span>",
+      task_1: "Create an element",
+      task_2: "Create an automated UI scenario case",
+      task_3: "Execute an automated UI scenario case",
+    },
+    next: "Next",
+    prev: "Previous",
+    skip: "Skip",
+    not_show: "don't show again",
+    novice_task: "Novice Journey",
+    over: {
+      title: "Congratulations!",
+      subtitle: "You have completed all the novice journey, full of energy",
+      desc: "If you want to continue to learn about advanced tutorials, please follow our technical blog and live channel",
+      blog_url: "Technical Blog",
+      live_url: "Live Channel"
+    },
+    close: {
+      title: "Close the novice journey",
+      subtitle: "After closing, the novice task float button will be hidden.",
+      desc: 'You can still find us in the top "?" dropdown menu.',
+      continue_btn: "Continue",
+      close_btn: "Still Close",
+    },
+    save_success: "Closed successfully",
+    to_try: "Go to try it",
+    view_video: "View video tutorial"
+  }
 };
 
 export default {

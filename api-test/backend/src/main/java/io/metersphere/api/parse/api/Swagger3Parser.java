@@ -527,9 +527,15 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         } else if (schema instanceof ArraySchema) {
             Schema items = ((ArraySchema) schema).getItems();
             item.setType(PropertyConstant.ARRAY);
-            item.setItems(new ArrayList<>());
             JsonSchemaItem arrayItem = parseSchema(items, refSet);
-            if (arrayItem != null) item.getItems().add(arrayItem);
+            Map<String, String> mock = new LinkedHashMap<>();
+            if (arrayItem != null && MapUtils.isNotEmpty(arrayItem.getProperties())) {
+                arrayItem.getProperties().forEach((k, v) -> {
+                    mock.put(k, StringUtils.isBlank(v.getMock().get(PropertyConstant.MOCK).toString()) ? v.getType() :
+                            v.getMock().get(PropertyConstant.MOCK).toString());
+                });
+            }
+            item.getMock().put(PropertyConstant.MOCK, JSONUtil.toJSONString(mock));
         } else if (schema instanceof ObjectSchema) {
             item.setType(PropertyConstant.OBJECT);
             item.setProperties(parseSchemaProperties(schema, refSet));
@@ -542,10 +548,12 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         } else if (schema instanceof BooleanSchema) {
             item.setType(PropertyConstant.BOOLEAN);
         } else {
-            return null;
+            item.setType("null");
         }
         if (schema.getExample() != null) {
             item.getMock().put(PropertyConstant.MOCK, schema.getExample());
+        } else if (StringUtils.isNotBlank(item.getMock().get(PropertyConstant.MOCK).toString())){
+            item.getMock().put(PropertyConstant.MOCK, item.getMock().get(PropertyConstant.MOCK));
         } else {
             item.getMock().put(PropertyConstant.MOCK, StringUtils.EMPTY);
         }
@@ -611,7 +619,17 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         Schema schema = getSchema(parameter.getSchema());
         Set<String> refSet = new HashSet<>();
         JsonSchemaItem jsonSchemaItem = parseSchema(schema, refSet);
-        arguments.add(new KeyValue(queryParameter.getName(), getDefaultValue(queryParameter, jsonSchemaItem), getDefaultStringValue(queryParameter.getDescription()), parameter.getRequired(), getMin(jsonSchemaItem), getMax(jsonSchemaItem)));
+        if (MapUtils.isEmpty(jsonSchemaItem.getProperties())) {
+            arguments.add(new KeyValue(queryParameter.getName(), getDefaultValue(queryParameter, jsonSchemaItem), getDefaultStringValue(queryParameter.getDescription()), parameter.getRequired(), getMin(jsonSchemaItem), getMax(jsonSchemaItem)));
+        } else {
+            Map<String, JsonSchemaItem> properties = jsonSchemaItem.getProperties();
+            properties.forEach((key, value) -> {
+                arguments.add(new KeyValue(key, getDefaultValue(queryParameter, value),
+                        getDefaultStringValue(value.getDescription()),
+                        parameter.getRequired(),
+                        getMin(value), getMax(value)));
+            });
+        }
     }
 
     private Schema getSchema(Schema schema) {
@@ -644,6 +662,9 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         if (queryParameter.getExample() != null) {
             return String.valueOf(queryParameter.getExample());
         } else {
+            if (MapUtils.isNotEmpty(jsonSchemaItem.getMock())) {
+                return String.valueOf(jsonSchemaItem.getMock().get(PropertyConstant.MOCK));
+            }
             if (jsonSchemaItem != null && jsonSchemaItem.getDefaultValue() != null) {
                 return String.valueOf(jsonSchemaItem.getDefaultValue());
             }
@@ -696,9 +717,14 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             JSONObject requestBody = buildRequestBody(requestObject, schemas);
 
             swaggerApiInfo.setRequestBody(JSONUtil.parseObjectNode(requestBody.toString()));
-            //  设置响应体
-            JSONObject responseObject = JSONUtil.parseObject(apiDefinition.getResponse());
-            JSONObject jsonObject = buildResponseBody(responseObject);
+            JSONObject responseObject = new JSONObject();
+            try {
+                //  设置响应体
+                responseObject = JSONUtil.parseObject(apiDefinition.getResponse());
+            } catch (Exception e) {
+                responseObject = new JSONObject(new ApiResponse());
+            }
+            JSONObject jsonObject = buildResponseBody(responseObject, schemas);
             swaggerApiInfo.setResponses(JSONUtil.parseObjectNode(jsonObject.toString()));
             //  设置请求参数列表
             List<JSONObject> paramsList = buildParameters(requestObject);
@@ -766,7 +792,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
         JSONObject schema = new JSONObject();
         schema.put(PropertyConstant.TYPE, PropertyConstant.OBJECT);
         JSONObject properties = buildSchema(requestBody);
-        schema.put(PropertyConstant.REQUIRED, properties);
+        schema.put(PropertyConstant.PROPERTIES, properties);
         return schema;
     }
 
@@ -780,7 +806,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             Object example = requestBody.get(0);
             if (example instanceof JSONObject) {
                 items.put(PropertyConstant.TYPE, PropertyConstant.OBJECT);
-                items.put(PropertyConstant.REQUIRED, buildSchema((JSONObject) example));
+                items.put(PropertyConstant.PROPERTIES, buildSchema((JSONObject) example));
             } else if (example instanceof String) {
                 items.put(PropertyConstant.TYPE, PropertyConstant.STRING);
             } else if (example instanceof Integer) {
@@ -1109,7 +1135,7 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             }
         }
     */
-    private JSONObject buildResponseBody(JSONObject response) {
+    private JSONObject buildResponseBody(JSONObject response, List<JSONObject> schemas) {
         if (response == null) {
             return new JSONObject();
         }
@@ -1137,13 +1163,13 @@ public class Swagger3Parser extends SwaggerAbstractParser {
             for (int i = 0; i < statusCode.length(); i++) {
                 JSONObject statusCodeInfo = new JSONObject();
                 statusCodeInfo.put("headers", headers);
-                statusCodeInfo.put("content", buildContent(response, null));
+                statusCodeInfo.put("content", buildContent(response, schemas));
                 statusCodeInfo.put("description", StringUtils.EMPTY);
                 JSONObject jsonObject = statusCode.getJSONObject(i);
-                if (jsonObject.optString("value") != null) {
+                if (StringUtils.isNotBlank(jsonObject.optString("value"))) {
                     statusCodeInfo.put("description", jsonObject.optString("value"));
                 }
-                if (jsonObject.optString("name") != null) {
+                if (StringUtils.isNotBlank(jsonObject.optString("name"))) {
                     responseBody.put(jsonObject.optString("name"), statusCodeInfo);
                 }
             }
@@ -1201,10 +1227,13 @@ public class Swagger3Parser extends SwaggerAbstractParser {
                             bodyInfo = buildJsonSchema(jsonObject, required);
                         }
                     } else {
-                        try {    //  若请求体是一个 object
-                            bodyInfo = buildRequestBodyJsonInfo(body.optJSONArray("raw"));
-                        } catch (Exception e) {
-                            bodyInfo = buildRequestBodyJsonInfo(body.optJSONObject("raw"));
+                        String raw = body.optString("raw");
+                        if (StringUtils.isNotBlank(raw)) {
+                            if (StringUtils.startsWith(raw, "[") && StringUtils.endsWith(raw, "]")) {
+                                bodyInfo = buildRequestBodyJsonInfo(JSONUtil.parseArray(raw));
+                            } else {
+                                bodyInfo = buildRequestBodyJsonInfo(JSONUtil.parseObject(raw));
+                            }
                         }
                     }
                 } catch (Exception e1) {    //  若请求体 json 不合法，则忽略错误，原样字符串导出/导入

@@ -37,6 +37,14 @@ const message = {
     request: {
       auto_redirects: 'Auto redirects',
     },
+    document_tooltip: 'Only valid for displayed parameters',
+  },
+  filters: {
+    schedule: {
+      open: 'Open',
+      close: 'Closed',
+      unset: 'Unset',
+    },
   },
   home: {
     dashboard: {

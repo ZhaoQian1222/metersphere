@@ -340,7 +340,7 @@ public class ApiScenarioReportService {
         List<String> testPlanReportIdList = new ArrayList<>();
 
         ResultVO resultVO = ReportStatusUtil.computedProcess(dto);
-        ApiScenarioReportWithBLOBs report = editReport(dto.getReportType(), dto.getReportId(), resultVO.getStatus(), dto.getRunMode());
+        ApiScenarioReport report = editReport(dto.getReportType(), dto.getReportId(), resultVO.getStatus(), dto.getRunMode());
         if (report != null) {
             if (StringUtils.isNotEmpty(dto.getTestPlanReportId()) && !testPlanReportIdList.contains(dto.getTestPlanReportId())) {
                 testPlanReportIdList.add(dto.getTestPlanReportId());

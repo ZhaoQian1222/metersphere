@@ -198,6 +198,10 @@ export default {
           setLanguage(lang);
           this.rules = this.getDefaultRules();
         }
+        let url = localStorage.getItem('oidcLoginUrl');
+        if (url) {
+          window.location.href = url;
+        }
       });
 
   },
@@ -337,6 +341,10 @@ export default {
           if (source.type === 'OIDC') {
             url = config.authUrl + "?client_id=" + config.clientId + "&redirect_uri=" + redirectUrl +
               "&response_type=code&scope=openid+profile+email&state=" + authId;
+            // 保存一个登录地址，禁用本地登录
+            if (config.loginUrl) {
+              localStorage.setItem('oidcLoginUrl', config.loginUrl);
+            }
           }
           if (source.type === 'OAuth2') {
             url = config.authUrl

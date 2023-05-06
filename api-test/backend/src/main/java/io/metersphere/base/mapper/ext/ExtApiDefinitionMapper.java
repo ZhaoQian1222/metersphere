@@ -32,7 +32,7 @@ public interface ExtApiDefinitionMapper {
 
     List<ApiDataCountResult> countStateByProjectID(@Param("projectId") String projectId, @Param("versionId") String versionId);
 
-    List<ApiDataCountResult> countApiCoverageByProjectID(@Param("projectId") String projectId, @Param("versionId") String versionId);
+    List<ApiDataCountResult> countApiHasNotCaseByProjectID(@Param("projectId") String projectId, @Param("versionId") String versionId);
 
     ApiDefinition getNextNum(@Param("projectId") String projectId);
 
@@ -47,6 +47,8 @@ public interface ExtApiDefinitionMapper {
     List<ApiDefinitionResult> listByIds(@Param("ids") List<String> ids);
 
     List<ApiModuleDTO> moduleCountByCollection(@Param("request") ApiDefinitionRequest request);
+
+    List<ApiModuleDTO> moduleCaseCountByCollection(@Param("request") ApiDefinitionRequest request);
 
     int checkOriginalStatusByIds(@Param("ids") List<String> ids);
 

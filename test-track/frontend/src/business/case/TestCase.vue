@@ -270,13 +270,6 @@ export default {
         this.refresh();
       }
     },
-    activeDom(newVal, oldVal) {
-      this.$nextTick(() => {
-        if (oldVal !== 'left' && newVal === 'left' && this.$refs.testCaseList) {
-          this.$refs.testCaseList.getTemplateField();
-        }
-      });
-    },
     trashEnable() {
       if (this.trashEnable) {
         this.activeName = 'trash';

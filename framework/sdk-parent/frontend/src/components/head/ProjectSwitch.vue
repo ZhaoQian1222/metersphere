@@ -1,5 +1,5 @@
 <template>
-  <el-menu class="header-menu" :unique-opened="true" mode="horizontal" default-active="1" router>
+  <el-menu class="header-menu  shepherd-project" :unique-opened="true" mode="horizontal" default-active="1" router>
     <!-- 不激活项目路由-->
     <el-menu-item index="1" v-show="false">Placeholder</el-menu-item>
     <el-submenu index="2" popper-class="submenu">
@@ -31,6 +31,7 @@
 import ProjectSearchList from "./ProjectSearchList";
 import {PROJECT_NAME} from "../../utils/constants";
 import {getCurrentProjectID} from "../../utils/token";
+
 
 export default {
   name: "ProjectSwitch",

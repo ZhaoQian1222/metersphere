@@ -9,12 +9,12 @@
     <template v-slot:aside>
       <ms-api-scenario-module
         :relevance-project-id="projectId"
-        :show-case-num="false"
         @nodeSelectEvent="nodeChange"
         @refreshTable="refresh"
         @setModuleOptions="setModuleOptions"
         @enableTrash="false"
         :is-read-only="true"
+        :case-condition="condition"
         ref="nodeTree"
       />
     </template>
@@ -26,6 +26,7 @@
       :versionEnable="versionEnable"
       :test-case-id="caseId"
       @selectCountChange="setSelectCounts"
+      @setCondition="setCondition"
       ref="apiCaseList"
     />
   </test-case-relevance-base>
@@ -111,6 +112,10 @@ export default {
     setSelectCounts(data) {
       this.$refs.baseRelevance.selectCounts = data;
     },
+    setCondition(data) {
+      this.condition = data;
+      this.$refs.nodeTree.list(this.projectId);
+    }
   },
 };
 </script>

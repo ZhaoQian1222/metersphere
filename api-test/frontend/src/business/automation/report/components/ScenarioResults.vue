@@ -28,13 +28,13 @@
     </el-tree>
   </el-card>
 </template>
-
 <script>
 import MsScenarioResult from './ScenarioResult';
+import InfiniteScrollTree from '@/business/automation/report/components/tree/InfiniteScrollTree.vue';
 
 export default {
   name: 'MsScenarioResults',
-  components: { MsScenarioResult },
+  components: { MsScenarioResult, InfiniteScrollTree },
   props: {
     scenarios: Array,
     treeData: Array,

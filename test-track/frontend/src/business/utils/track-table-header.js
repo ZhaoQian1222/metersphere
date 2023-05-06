@@ -62,7 +62,7 @@ const TRACK_HEADER = {
     {id: 'projectName', key: '3', label: 'load_test.project_name'},
     {id: 'userName', key: '4', label: 'load_test.user_name'},
     {id: 'createTime', key: '5', label: 'commons.create_time'},
-    {id: 'status', key: '6', label: 'commons.status'},
+    // {id: 'status', key: '6', label: 'commons.status'},
     {id: 'caseStatus', key: '7', label: 'test_track.plan.load_case.execution_status'},
     {id: 'loadReportId', key: '8', label: 'test_track.plan.load_case.report'},
   ],
@@ -130,7 +130,7 @@ const TRACK_HEADER = {
   ISSUE_LIST: [
     {id: 'num', key: '1', label: 'test_track.issue.id'},
     {id: 'title', key: '2', label: 'test_track.issue.title'},
-    {id: 'platformStatus', key: '3', label: 'test_track.issue.platform_status'},
+    {id: 'platformStatus', key: '3', label: 'test_track.issue.platform_status', width: 120},
     {id: 'platform', key: '4', label: 'test_track.issue.platform'},
     {id: 'creatorName', key: '5', label: 'custom_field.issue_creator'},
     {id: 'resourceName', key: '6', label: 'test_track.issue.issue_resource'},
@@ -157,14 +157,15 @@ const TRACK_HEADER = {
   TEST_CASE_REVIEW_FUNCTION_TEST_CASE: [
     {id: 'num', key: '1', label: 'commons.id'},
     {id: 'name', key: '2', label: 'commons.name'},
-    {id: 'versionId', key: 'b', label: 'commons.version'},
     {id: 'priority', key: '3', label: 'test_track.case.priority'},
+    {id: 'tags', key: '4', label: 'commons.tag'},
     {id: 'nodePath', key: '5', label: 'test_track.case.module'},
     {id: 'projectName', key: '6', label: 'test_track.review.review_project'},
     {id: 'reviewerName', key: '7', label: 'test_track.review.reviewer'},
     {id: 'reviewStatus', key: '8', label: 'test_track.case.status'},
     {id: 'updateTime', key: '9', label: 'commons.update_time'},
     {id: 'maintainerName', key: 'a', label: 'custom_field.case_maintainer'},
+    {id: 'versionId', key: 'b', label: 'commons.version'}
   ],
 }
 

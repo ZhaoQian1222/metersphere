@@ -268,7 +268,10 @@ export default {
           ? this.contentObject.content.value
           : this.contentObject.content.defaultValue;
         if(!tempValue || Array.isArray(tempValue) && tempValue.length <= 0){
-          let customVal = this.model[this.contentObject.content.name];
+          let customVal;
+          if (this.model) {
+            customVal = this.model[this.contentObject.content.name];
+          }
           if (customVal) {
             this.isCustomNone = false;
             tempValue = customVal;
@@ -513,7 +516,6 @@ export default {
   font-weight: 400;
   font-size: 14px;
   color: #1f2329;
-  overflow-y: scroll;
 }
 // .select:hover {
 //   background: rgba(31, 35, 41, 0.1);

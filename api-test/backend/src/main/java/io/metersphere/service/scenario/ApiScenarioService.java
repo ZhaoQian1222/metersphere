@@ -9,7 +9,6 @@ import io.metersphere.api.dto.definition.ApiTestCaseInfo;
 import io.metersphere.api.dto.definition.RunDefinitionRequest;
 import io.metersphere.api.dto.definition.request.*;
 import io.metersphere.api.dto.definition.request.sampler.MsHTTPSamplerProxy;
-import io.metersphere.api.dto.definition.request.unknown.MsJmeterElement;
 import io.metersphere.api.dto.export.ScenarioToPerformanceInfoDTO;
 import io.metersphere.api.dto.scenario.ApiScenarioParamDTO;
 import io.metersphere.api.exec.scenario.ApiScenarioEnvService;
@@ -71,6 +70,10 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mybatis.spring.SqlSessionUtils;
+import org.quartz.CronExpression;
+import org.quartz.CronScheduleBuilder;
+import org.quartz.CronTrigger;
+import org.quartz.TriggerBuilder;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -614,7 +617,7 @@ public class ApiScenarioService {
             return;
         }
         List<String> scenarioIds = apiScenarioVersions.stream().map(ApiScenario::getId).collect(toList());
-        scenarioIds.forEach(scenarioId -> scheduleService.deleteByResourceId(scenarioId, ScheduleGroup.API_SCENARIO_TEST.name()));
+        scenarioIds.forEach(scenarioId -> scheduleService.closeByResourceId(scenarioId, ScheduleGroup.API_SCENARIO_TEST.name()));
 
         ApiScenarioExampleWithOperation example = new ApiScenarioExampleWithOperation();
         example.createCriteria().andRefIdIn(refIds);
@@ -728,6 +731,16 @@ public class ApiScenarioService {
             hashTreeService.dataFormatting(element);
             ElementUtil.dataFormatting(element);
             scenarioWithBLOBs.setScenarioDefinition(element.toString());
+        }
+        if (scenarioWithBLOBs != null && StringUtils.isNotBlank(scenarioWithBLOBs.getEnvironmentJson())) {
+            ApiScenarioEnvRequest request = new ApiScenarioEnvRequest();
+            request.setEnvironmentEnable(false);
+            request.setDefinition(scenarioWithBLOBs.getScenarioDefinition());
+            request.setEnvironmentMap(JSON.parseObject(scenarioWithBLOBs.getEnvironmentJson(), Map.class));
+            request.setEnvironmentType(scenarioWithBLOBs.getEnvironmentType());
+            request.setEnvironmentGroupId(scenarioWithBLOBs.getEnvironmentGroupId());
+            request.setId(scenarioWithBLOBs.getId());
+            scenarioWithBLOBs.setScenarioDefinition(this.setDomain(request));
         }
         return scenarioWithBLOBs;
     }
@@ -872,34 +885,19 @@ public class ApiScenarioService {
                 Map<String, String> envMap = environmentGroupProjectService.getEnvMap(environmentGroupId);
                 scenario.setEnvironmentMap(envMap);
             }
-            // 针对导入的jmx 处理
-            boolean isUseElement = false;
-            if (CollectionUtils.isNotEmpty(scenario.getHashTree())) {
-                for (MsTestElement testElement : scenario.getHashTree()) {
-                    if (testElement instanceof MsJmeterElement) {
-                        isUseElement = true;
-                    }
-                }
-            }
-            if (isUseElement) {
-                scenario.toHashTree(jmeterHashTree, scenario.getHashTree(), config);
-                ElementUtil.accuracyHashTree(jmeterHashTree);
-                repositoryMetadata = ApiFileUtil.getRepositoryFileMetadata(jmeterHashTree);
-                jmx = scenario.getJmx(jmeterHashTree);
-            } else {
-                MsThreadGroup group = new MsThreadGroup();
-                group.setLabel(apiScenario.getName());
-                group.setName(apiScenario.getName());
-                group.setEnableCookieShare(scenario.isEnableCookieShare());
-                group.setOnSampleError(scenario.getOnSampleError());
-                group.setHashTree(new LinkedList<MsTestElement>() {{
-                    this.add(scenario);
-                }});
-                testPlan.getHashTree().add(group);
-                testPlan.toHashTree(jmeterHashTree, testPlan.getHashTree(), config);
-                repositoryMetadata = ApiFileUtil.getRepositoryFileMetadata(jmeterHashTree);
-                jmx = testPlan.getJmx(jmeterHashTree);
-            }
+
+            MsThreadGroup group = new MsThreadGroup();
+            group.setLabel(apiScenario.getName());
+            group.setName(apiScenario.getName());
+            group.setEnableCookieShare(scenario.isEnableCookieShare());
+            group.setOnSampleError(scenario.getOnSampleError());
+            group.setHashTree(new LinkedList<MsTestElement>() {{
+                this.add(scenario);
+            }});
+            testPlan.getHashTree().add(group);
+            testPlan.toHashTree(jmeterHashTree, testPlan.getHashTree(), config);
+            repositoryMetadata = ApiFileUtil.getRepositoryFileMetadata(jmeterHashTree);
+            jmx = testPlan.getJmx(jmeterHashTree);
 
         } catch (Exception ex) {
             LogUtil.error(ex);
@@ -2079,8 +2077,6 @@ public class ApiScenarioService {
     public void deleteApiScenarioByVersion(String refId, String version) {
         ApiScenarioExample example = new ApiScenarioExample();
         example.createCriteria().andRefIdEqualTo(refId).andVersionIdEqualTo(version);
-        List<ApiScenario> apiScenarios = apiScenarioMapper.selectByExample(example);
-        List<String> scenarioIds = apiScenarios.stream().map(ApiScenario::getId).collect(toList());
 
         apiScenarioMapper.deleteByExample(example);
         scheduleService.deleteByResourceId(refId, ScheduleGroup.API_SCENARIO_TEST.name());
@@ -2340,4 +2336,26 @@ public class ApiScenarioService {
     }
 
 
+    public Map<String, ScheduleDTO> selectScheduleInfo(List<String> scenarioIds) {
+        if (CollectionUtils.isNotEmpty(scenarioIds)) {
+            List<ScheduleDTO> scheduleInfoList = scheduleService.selectByResourceIds(scenarioIds);
+            for (ScheduleDTO schedule : scheduleInfoList) {
+                schedule.setScheduleExecuteTime(this.getNextTriggerTime(schedule.getValue()));
+            }
+            return scheduleInfoList.stream().collect(Collectors.toMap(Schedule::getResourceId, item -> item));
+        } else {
+            return new HashMap<>();
+        }
+    }
+
+    //获取下次执行时间（getFireTimeAfter，也可以下下次...）
+    private long getNextTriggerTime(String cron) {
+        if (!CronExpression.isValidExpression(cron)) {
+            return 0;
+        }
+        CronTrigger trigger = TriggerBuilder.newTrigger().withIdentity("Calculate Date").withSchedule(CronScheduleBuilder.cronSchedule(cron)).build();
+        Date time0 = trigger.getStartTime();
+        Date time1 = trigger.getFireTimeAfter(time0);
+        return time1 == null ? 0 : time1.getTime();
+    }
 }

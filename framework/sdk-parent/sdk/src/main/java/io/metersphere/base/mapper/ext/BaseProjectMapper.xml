@@ -438,4 +438,26 @@
     <select id="selectOne" resultType="io.metersphere.base.domain.Project">
         SELECT * FROM project LIMIT 1
     </select>
+    <select id="selectPage" resultType="java.lang.String">
+        SELECT
+            project.id
+        FROM
+            project
+                LEFT JOIN project_application ON project.id = project_application.project_id
+                AND type = 'POOL_ENABLE'
+        WHERE
+            project_application.project_id IS NULL
+        LIMIT #{pageNum}, #{pageSize}
+    </select>
+
+    <select id="count" resultType="java.lang.Long">
+        SELECT
+            COUNT( project.id )
+        FROM
+            project
+                LEFT JOIN project_application ON project.id = project_application.project_id
+                AND type = 'POOL_ENABLE'
+        WHERE
+            project_application.project_id IS NULL
+    </select>
 </mapper>

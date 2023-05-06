@@ -54,56 +54,14 @@
           />
         </template>
       </el-table-column>
-      <el-table-column :label="$t('commons.operating')" min-width="8%">
+      <el-table-column :label="$t('commons.operating')" width="150px">
         <template v-slot:default="scope">
-          <el-popover
-            placement="bottom-start"
-            trigger="hover"
-            popper-class="case-step-item-popover"
-            :visible-arrow="false"
-          >
-            <div class="opt-row">
-              <div
-                class="copy-row sub-opt-row"
-                :class="{'disable-row' : readOnly}"
-                @click="handleCopyStep(scope.$index, scope.row)"
-              >
-                <div class="icon">
-                  <i class="el-icon-copy-document"></i>
-                </div>
-                <div class="title">{{ $t("case.copy_this_step") }}</div>
-              </div>
-              <div class="split"></div>
-              <div
-                class="delete-row sub-opt-row"
-                @click="handleDeleteStep(scope.$index, scope.row)"
-                :class="
-                  readOnly || (scope.$index == 0 && form.steps.length <= 1)
-                    ? 'opt-readonly disable-row'
-                    : ''
-                "
-              >
-                <div class="icon">
-                  <i class="el-icon-delete"></i>
-                </div>
-                <div class="title">{{ $t("commons.delete") }}</div>
-              </div>
-            </div>
-            <i slot="reference" class="el-icon-more"></i>
-          </el-popover>
+          <el-link type="primary" :disabled="readOnly" class="opt-item" :underline="false" @click="handleAddStep(scope.$index, scope.row)">{{ $t("commons.insert") }}</el-link>
+          <el-link type="primary" :disabled="readOnly" class="opt-item" :underline="false" @click="handleCopyStep(scope.$index, scope.row)">{{ $t("commons.copy") }}</el-link>
+          <el-link type="primary" :disabled="readOnly || (scope.$index === 0 && form.steps.length <= 1)" class="opt-item delete-item" :underline="false" @click="handleDeleteStep(scope.$index, scope.row)">{{ $t("commons.delete") }}</el-link>
         </template>
       </el-table-column>
     </el-table>
-    <div class="add-step-row" :class="{'disable-row' : readOnly}">
-      <div class="add-step-hover" style="display: flex; padding-right: 1rem">
-        <div class="add-icon" @click="handleAddStepStandAlone">
-          <i class="el-icon-plus"></i>
-        </div>
-        <div class="add-label" @click="handleAddStepStandAlone">
-          {{ $t("case.add_steps") }}
-        </div>
-      </div>
-    </div>
   </el-form-item>
 </template>
 
@@ -159,17 +117,6 @@ export default {
         this.saveCase();
       }, 500);
     },
-    handleAddStepStandAlone() {
-      if (this.readOnly) {
-        return;
-      }
-      let step = {};
-      let index = this.form.steps.length || 0;
-      step.num = index + 1;
-      step.desc = "";
-      step.result = "";
-      this.form.steps.splice(index + 1, 0, step);
-    },
     handleAddStep(index, data) {
       let step = {};
       step.num = data.num + 1;
@@ -220,6 +167,10 @@ export default {
 </script>
 
 <style scoped>
+.el-table :deep(td:nth-child(1) .cell),
+.el-table :deep(td:nth-child(1)) {
+  padding-left: 8px;
+}
 .el-table :deep(td:nth-child(2) .cell),
 .el-table :deep(td:nth-child(2)),
 .el-table :deep(td:nth-child(3) .cell),
@@ -376,16 +327,25 @@ i.el-icon-more:hover {
   color: #f54a45;
 }
 
+
+.case-step-item-popover .add-row:hover {
+  background-color: rgba(31, 35, 41, 0.1);
+}
+
+.case-step-item-popover .add-row .icon {
+  color: #646a73;
+}
+.case-step-item-popover .add-row .title {
+  color: #1f2329;
+}
+
+
 .case-step-item-popover .delete-row {
   background-color: transparent;
   padding: 0;
 }
-.opt-readonly {
-  pointer-events: none;
-  color: #fab6b6;
-  cursor: not-allowed;
-}
-.add-step-hover:hover{
-  background-color: rgba(117, 36, 101, 0.1);
+
+.opt-item {
+  margin-right: 10px;
 }
 </style>

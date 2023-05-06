@@ -56,7 +56,7 @@
 
       <ms-table-column
         prop="deleteTime"
-        sortable
+        sortable="custom"
         v-if="this.trashEnable"
         :fields-width="fieldsWidth"
         :label="$t('commons.delete_time')"
@@ -81,11 +81,11 @@
           :fields-width="fieldsWidth"
           :column-key="'num'"
           :prop="'num'"
-          sortable
+          sortable="custom"
           :label="$t('commons.id')"
           min-width="80">
           <template v-slot:default="scope">
-            <a style="cursor:pointer" @click="handleEdit(scope.row)"> {{ scope.row.num }} </a>
+            <a style="cursor:pointer"> {{ scope.row.num }} </a>
           </template>
         </ms-table-column>
 
@@ -94,23 +94,23 @@
           :fields-width="fieldsWidth"
           :column-key="'customNum'"
           prop="customNum"
-          sortable
+          sortable="custom"
           :label="$t('commons.id')"
           min-width="80">
           <template v-slot:default="scope">
-            <a style="cursor:pointer" @click="handleEdit(scope.row)"> {{ scope.row.customNum }} </a>
+            <a style="cursor:pointer"> {{ scope.row.customNum }} </a>
           </template>
         </ms-table-column>
 
         <ms-table-column
           prop="name"
-          sortable
+          sortable="custom"
           :field="item"
           :fields-width="fieldsWidth"
           :label="$t('test_track.case.name')"
           min-width="120">
           <template v-slot:default="scope">
-            <a style="cursor:pointer" @click="handleEdit(scope.row)"> {{ scope.row.name }} </a>
+            <a style="cursor:pointer"> {{ scope.row.name }} </a>
           </template>
         </ms-table-column>
 
@@ -121,7 +121,7 @@
         </ms-table-column>
 
         <ms-table-column
-          sortable
+          sortable="custom"
           prop="createUser"
           min-width="120"
           :field="item"
@@ -187,6 +187,9 @@
           :fields-width="fieldsWidth"
           :label="$t('test_track.case.module')"
           min-width="150px">
+          <template v-slot:default="scope">
+            <span>{{ nodePathMap.get(scope.row.nodeId) }}</span>
+          </template>
         </ms-table-column>
 
         <ms-update-time-column :field="item"
@@ -314,6 +317,7 @@ import TestCaseReviewStatusTableItem from "@/business/common/tableItems/TestCase
 import RelateDemand from "@/business/case/components/RelateDemand";
 import TestPlanCaseStatusTableItem from "@/business/common/tableItems/TestPlanCaseStatusTableItem";
 import {
+  fileDownloadPost,
   generateColumnKey,
   getCustomFieldValueForTrack,
   getProjectMemberOption
@@ -525,7 +529,16 @@ export default {
       selectNode: 'testCaseSelectNode',
       moduleOptions: 'testCaseModuleOptions',
       customNum: 'currentProjectIsCustomNum'
-    })
+    }),
+    nodePathMap() {
+      let map = new Map();
+      if (this.moduleOptions) {
+        this.moduleOptions.forEach((item) => {
+          map.set(item.id, item.path);
+        });
+      }
+      return map;
+    }
   },
   created: function () {
     this.checkCurrentProject();
@@ -625,6 +638,7 @@ export default {
         });
       let p2 = getTestTemplate();
       Promise.all([p1, p2]).then((data) => {
+        this.loading = false;
         let template = data[1];
         this.testCaseTemplate = template;
         this.fields = getTableHeaderWithCustomFields(this.tableHeaderKey, this.testCaseTemplate.customFields, this.members);
@@ -636,13 +650,6 @@ export default {
           name: this.$t('commons.tag')
         })
         getCustomFieldBatchEditOption(template.customFields, this.typeArr, this.valueArr, this.members);
-
-        this.$nextTick(() => {
-          if (this.$refs.table) {
-            this.$refs.table.resetHeader();
-          }
-          this.loading = false;
-        });
       });
     },
     checkCurrentProject() {
@@ -829,17 +836,13 @@ export default {
             parseCustomFilesForList(this.page.data);
             parseTag(this.page.data);
             this.page.data.forEach(item => {
-              let nodePath = item.nodePath;
               if (item.customFields) {
                 item.customFields = JSON.parse(item.customFields);
-              }
-              if (nodePath.startsWith("/未规划用例", "0")) {
-                item.nodePath = nodePath.replaceAll("/未规划用例", "/" + this.$t('api_test.unplanned_case'));
               }
             });
           });
         this.$emit("getTrashList");
-        this.$emit("getPublicList");
+        this.$emit("getPublicList")
       }
     },
     search() {
@@ -1050,45 +1053,26 @@ export default {
       }
       let param = buildBatchParam(this, this.$refs.table.selectIds);
       Object.assign(param, fieldParam);
-      let config = {};
-      let fileNameSuffix = "";
+      let fileNameSuffix;
+      let url;
       if (exportType === 'xmind') {
-        config = {
-          url: '/test/case/export/testcase/xmind',
-          method: 'post',
-          responseType: 'blob',
-          data: param
-        };
+        url = '/test/case/export/testcase/xmind';
         fileNameSuffix = ".xmind";
       } else {
-        config = {
-          url: '/test/case/export/testcase',
-          method: 'post',
-          responseType: 'blob',
-          data: param
-        };
-        fileNameSuffix = ".xlsx";
+        url = '/test/case/export/testcase'
+        fileNameSuffix = this.selectCounts > 1000 ? ".zip" : ".xlsx";
       }
       this.loading = true;
       store.isTestCaseExporting = true;
-
-      this.$request(config).then(response => {
-        this.loading = false;
-        const filename = "Metersphere_case_" + this.projectName + fileNameSuffix;
-        const blob = new Blob([response.data]);
-        if ("download" in document.createElement("a")) {
-          let aTag = document.createElement('a');
-          aTag.download = filename;
-          aTag.href = URL.createObjectURL(blob);
-          aTag.click();
-          URL.revokeObjectURL(aTag.href);
+      fileDownloadPost(url, param, "Metersphere_case_" + this.projectName + fileNameSuffix)
+        .then(() => {
+          this.loading = false;
           this.$emit('closeExport');
-        } else {
-          navigator.msSaveBlob(blob, filename);
-          this.$emit('closeExport');
-        }
-        store.isTestCaseExporting = false;
-      });
+          store.isTestCaseExporting = false;
+        }).catch(() => {
+          this.loading = false;
+          store.isTestCaseExporting = false;
+        });
     },
     batchEdit(form) {
       let ids = this.$refs.table.selectIds;
@@ -1216,6 +1200,7 @@ export default {
       this.loading = true;
       func(param)
         .then(() => {
+          this.$refs.testBatchMove.btnDisable = false;
           this.$success(this.$t('commons.save_success'), false);
           this.$refs.testBatchMove.close();
           this.refresh();

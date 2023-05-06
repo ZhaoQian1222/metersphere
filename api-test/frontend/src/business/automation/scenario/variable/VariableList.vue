@@ -142,7 +142,7 @@
                   <ms-edit-counter v-if="editData.type == 'COUNTER'" ref="counter" :editData.sync="editData" />
                   <ms-edit-random v-if="editData.type == 'RANDOM'" ref="random" :editData.sync="editData" />
                   <ms-edit-list-value v-if="editData.type == 'LIST'" ref="listValue" :editData="editData" />
-                  <ms-edit-csv v-if="editData.type === 'CSV' && !loading" ref="csv" :editData.sync="editData" />
+                  <ms-edit-csv v-if="editData.type === 'CSV' && !loading" ref="csv" :editData.sync="editData" :disabled="disabled"/>
                   <div v-if="editData.type" style="float: right">
                     <el-button size="small" style="margin-left: 10px" type="primary" @click="confirmVariable">
                       {{ $t('commons.confirm') }}
@@ -336,7 +336,7 @@ export default {
         params.forEach((item) => {
           if (item) {
             let line = item.split(/：|:/);
-            let values = item.substr(line[0].length + 1);
+            let values = item.substr(line[0].length + 1).trim();
             let required = false;
             keyValues.push(
               new KeyValue({
@@ -531,6 +531,11 @@ export default {
           this.$warning(this.$t('api_test.automation.csv_warning'));
           return;
         }
+        this.variables.forEach((item) => {
+          if (item.id === this.editData.id) {
+            item.files = this.editData.files;
+          }
+        });
       }
       // 更新场景，修改左边数据
       if (this.showDelete) {

@@ -53,6 +53,21 @@
           :min-width="120"
           :label="$t('load_test.file_name')"
         >
+          <template v-slot="scope">
+            <span v-if="scope.row.storage !== 'GIT'">
+              {{ scope.row.name }}
+            </span>
+            <div v-else>
+              <span>
+                {{ scope.row.name }}
+              </span>
+              <ms-tag
+                effect="plain"
+                class="ms-tags"
+                :content="parseGitBranch(scope.row.attachInfo)"
+              />
+            </div>
+          </template>
         </ms-table-column>
         <ms-table-column
           sortable
@@ -62,9 +77,12 @@
           :label="$t('load_test.file_type')"
         >
         </ms-table-column>
-
-        <ms-table-column prop="description" :label="$t('group.description')">
-        </ms-table-column>
+        <ms-table-column
+          :min-width="120"
+          :label="$t('project.project_file.file.path')"
+          prop="path"
+        />
+        <ms-table-column prop="description" :label="$t('group.description')" />
 
         <ms-table-column
           prop="tags"
@@ -424,6 +442,11 @@ export default {
       }
       downloadMetaData(row.id, name);
       // this.$fileDownload("/file/metadata/download/" + row.id, name);
+    },
+    parseGitBranch(attachInfo) {
+      let branch = "master";
+      branch = JSON.parse(attachInfo)["branch"];
+      return branch;
     },
     exportZip() {
       let array = [];

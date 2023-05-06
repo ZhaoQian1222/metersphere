@@ -104,12 +104,20 @@
             width="150"
             show-overflow-tooltip
             :filters="userFilters" />
-          <el-table-column prop="createTime" min-width="120" :label="$t('commons.create_time')" sortable>
+          <el-table-column
+            prop="createTime"
+            min-width="125"
+            :label="$t('commons.create_time')"
+            sortable>
             <template v-slot:default="scope">
               <span>{{ scope.row.createTime | datetimeFormat }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="endTime" min-width="120" :label="$t('report.test_end_time')" sortable>
+          <el-table-column
+            prop="endTime"
+            min-width="125"
+            :label="$t('report.test_end_time')"
+            sortable>
             <template v-slot:default="scope">
               <span v-if="scope.row.endTime && scope.row.endTime > 0">
                 {{ scope.row.endTime | datetimeFormat }}
@@ -174,7 +182,7 @@
 </template>
 <script>
 import { getCurrentProjectID } from 'metersphere-frontend/src/utils/token';
-import { REPORT_CASE_CONFIGS, REPORT_CONFIGS } from 'metersphere-frontend/src/components/search/search-components';
+import { REPORT_CASE_CONFIGS, REPORT_SCENARIO_CONFIGS } from 'metersphere-frontend/src/components/search/search-components';
 import { _filter, _sort } from 'metersphere-frontend/src/utils/tableUtils';
 import MsRenameReportDialog from 'metersphere-frontend/src/components/report/MsRenameReportDialog';
 import MsTableColumn from 'metersphere-frontend/src/components/table/MsTableColumn';
@@ -211,7 +219,7 @@ export default {
       reportId: '',
       debugVisible: false,
       condition: {
-        components: REPORT_CONFIGS,
+        components: REPORT_SCENARIO_CONFIGS,
       },
       tableData: [],
       multipleSelection: [],
@@ -392,6 +400,10 @@ export default {
       this.search();
     },
     sort(column) {
+      // 每次只对一个字段排序
+      if (this.condition.orders) {
+        this.condition.orders = [];
+      }
       _sort(column, this.condition);
       this.init();
     },
@@ -484,7 +496,7 @@ export default {
       if (tabType === 'right') {
         this.condition.components = REPORT_CASE_CONFIGS;
       } else {
-        this.condition.components = REPORT_CONFIGS;
+        this.condition.components = REPORT_SCENARIO_CONFIGS;
       }
       this.loadIsOver = false;
       this.$nextTick(() => {

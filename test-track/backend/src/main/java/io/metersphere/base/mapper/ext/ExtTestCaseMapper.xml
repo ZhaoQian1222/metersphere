@@ -88,18 +88,18 @@
                 <property name="object" value="${condition}.creator"/>
             </include>
         </if>
-        <if test='${condition}.tags != null and ${objectKey}.operator == "not like"'>
-            and (test_case.tags is null or test_case.tags
-            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
-                <property name="object" value="${condition}.tags"/>
-            </include>
+        <if test='${condition}.tags != null and ${objectKey}.value.size() > 0 and ${objectKey}.operator == "not like"'>
+            and ( test_case.tags is null or
+            <foreach collection="${objectKey}.value" item="tag" separator="and" open="(" close=")">
+                test_case.tags not like concat('%', #{tag},'%')
+            </foreach>
             )
         </if>
-        <if test='${condition}.tags != null and ${objectKey}.operator == "like"'>
-            and test_case.tags
-            <include refid="io.metersphere.base.mapper.ext.ExtBaseMapper.condition">
-                <property name="object" value="${condition}.tags"/>
-            </include>
+        <if test='${condition}.tags != null and ${objectKey}.value.size() > 0 and ${objectKey}.operator == "like"'>
+            and
+            <foreach collection="${objectKey}.value" item="tag" separator="or" open="(" close=")">
+                test_case.tags like concat('%', #{tag},'%')
+            </foreach>
         </if>
         <if test="${condition}.reviewStatus != null">
             and test_case.review_status
@@ -375,8 +375,7 @@
     </select>
 
     <select id="listByTestCaseIds" resultType="io.metersphere.dto.TestCaseDTO">
-        select test_case.*, api_test.name as apiName, load_test.name AS performName from test_case left join api_test on
-        test_case.test_id=api_test.id left join load_test on test_case.test_id=load_test.id
+        select test_case.* from test_case
         <where>
             <if test="!request.exportAll and request.ids != null and request.ids.size() > 0">
                 and test_case.id in
@@ -393,6 +392,9 @@
             <foreach collection="request.condition.orders" separator="," item="order">
                 test_case.`${order.name}` ${order.type}
             </foreach>
+        </if>
+        <if test="request.pageCount != 0">
+            limit ${request.pageStart}, ${request.pageCount}
         </if>
     </select>
 
@@ -672,9 +674,8 @@
                     #{id}
                 </foreach>
             </if>
-            <if test="request.relevanceCreateTime >0">
-                and test_case.id in (select test_case_id from test_case_test where test_case_test.create_time >=
-                #{request.createTime})
+            <if test="request.relevanceCreateTime > 0">
+                and test_case.id in (select test_case_id from test_case_test where test_case_test.create_time >= #{request.relevanceCreateTime})
             </if>
             <if test="request.createTime >0">
                 and test_case.create_time >= #{request.createTime}
@@ -873,7 +874,7 @@
 
     <select id="countRelevance" resultType="io.metersphere.dto.TrackCountResult">
         SELECT test_case_test.test_type           AS groupField,
-               count(test_case_test.test_case_id) AS countNumber
+               count(DISTINCT test_case_test.test_id ) AS countNumber
         FROM test_case
                  INNER JOIN (SELECT test_case_id, test_id, test_type
                              FROM test_case_test
@@ -1324,14 +1325,6 @@
         ON test_case.id = t.id
             SET test_case.latest = TRUE
         WHERE ref_id = #{refId,jdbcType=VARCHAR}
-    </update>
-
-    <update id="updateVersionModule">
-        UPDATE test_case
-        SET node_id   = #{moduleId},
-            node_path = #{modulePath}
-        WHERE ref_id = #{refId}
-          AND version_id != #{versionId}
     </update>
 
     <update id="bathUpdateByCondition">

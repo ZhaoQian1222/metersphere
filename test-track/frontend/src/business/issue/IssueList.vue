@@ -12,11 +12,13 @@
               <span v-if="isThirdPart && hasPermission('PROJECT_TRACK_ISSUE:READ+CREATE')">
                 <ms-table-button
                   v-if="hasLicense"
+                  :disabled="syncDisable"
                   icon="el-icon-refresh"
                   :content="$t('test_track.issue.sync_bugs')"
                   @click="syncAllIssues"/>
                 <ms-table-button
                   v-if="!hasLicense"
+                  :disabled="syncDisable"
                   icon="el-icon-refresh"
                   :content="$t('test_track.issue.sync_bugs')"
                   @click="syncIssues"/>
@@ -56,9 +58,10 @@
             :label="item.label"
             :prop="item.id"
             :field="item"
-            :sortable="item.sortable"
+            :sortable="item.sortable ? 'custom' : item.sortable"
             :min-width="item.minWidth"
             :column-key="item.columnKey"
+            :width="item.width"
             :fields-width="fieldsWidth"
             :filters="item.filters"
           >
@@ -247,6 +250,7 @@ export default {
       platformStatus: [],
       platformStatusMap: new Map(),
       hasLicense: false,
+      syncDisable: false,
       columns: {
         num: {
           sortable: true,
@@ -261,7 +265,10 @@ export default {
           filters: this.platformFilters
         },
         platformStatus: {
+          sortable: true,
           minWidth: 110,
+          type: 'select',
+          filters: this.getPlatformStatusFiltes(),
         },
         creatorName: {
           columnKey: 'creator',
@@ -327,6 +334,14 @@ export default {
         this.platformStatus.forEach(item => {
           this.platformStatusMap.set(item.value, item.label);
         });
+        this.page.condition.components.forEach(item => {
+          if (item.key === 'platformStatus') {
+            item.options =[];
+            this.platformStatus.forEach(option => {
+              item.options.push({label: option.label, value: option.value});
+            });
+          }
+        });
       }
     });
   },
@@ -363,6 +378,23 @@ export default {
     tableDoLayout() {
       if (this.$refs.table) this.$refs.table.doLayout();
     },
+    getPlatformStatusFiltes() {
+      let options = [];
+      getPlatformStatus({
+        projectId: getCurrentProjectID(),
+        workspaceId: getCurrentWorkspaceId()
+      }).then((r) => {
+        this.platformStatus = r.data;
+        if (this.platformStatus) {
+          this.platformStatus.forEach(item => {
+            options.push({"text":item.label,"value":item.value,"system": false});
+          });
+          return options;
+        }
+        return options;
+      });
+      return options;
+    },
     getCustomFieldValue(row, field, defaultVal) {
       let value = getCustomFieldValue(row, field, this.members);
       return value ? value : defaultVal;
@@ -387,6 +419,13 @@ export default {
         // 如果不是三方平台则移除备选字段中的平台状态
         let removeField = {id: 'platformStatus', name: 'platformStatus', remove: true};
         template.customFields.push(removeField);
+        for (let i = 0; i < this.page.condition.components.length; i++) {
+          if (this.page.condition.components[i].key === 'platformStatus') {
+            this.page.condition.components.splice(i, 1);
+            break;
+          }
+        }
+
       }
       this.issueTemplate = template;
       fields.forEach(item => {
@@ -553,39 +592,44 @@ export default {
     },
     syncConfirm(data) {
       this.loading = true;
+      this.syncDisable = true;
       let param = {
         "projectId": getCurrentProjectID(),
         "createTime": data.createTime.getTime(),
         "pre": data.preValue
       }
       syncAllIssues(param)
-        .then((response) => {
-          if (response.data === false) {
-            checkSyncIssues(this.loading);
-          } else {
-            this.$success(this.$t('test_track.issue.sync_complete'));
-
-            this.getIssues();
-          }
-        })
-      .catch(() => {
-        this.loading = false;
+        .then(() => {
+          this.repeatCheckSyncRes();
+        }).catch(() => {
+        this.resetSyncParam();
       });
     },
     syncIssues() {
       this.loading = true;
+      this.syncDisable = true;
       syncIssues()
-        .then((response) => {
-          if (response.data === false) {
-            checkSyncIssues(this.loading);
-          } else {
-            this.$success(this.$t('test_track.issue.sync_complete'));
-            this.loading = false;
-            this.getIssues();
-          }
+        .then(() => {
+          this.repeatCheckSyncRes();
         }).catch(() => {
-          this.loading = false;
-        });
+        this.resetSyncParam();
+      });
+    },
+    repeatCheckSyncRes() {
+      checkSyncIssues(this.loading, false, (errorData) => {
+        this.loading = false;
+        this.syncDisable = false;
+        if (errorData.syncResult && errorData.syncResult !== '') {
+          this.$error(errorData.syncResult, false);
+        } else {
+          this.$success(this.$t('test_track.issue.sync_complete'), false);
+          this.getIssues();
+        }
+      });
+    },
+    resetSyncParam() {
+      this.loading = false;
+      this.syncDisable = false;
     },
     editParam() {
       let id = this.$route.query.id;

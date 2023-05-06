@@ -18,7 +18,7 @@
     <el-container>
       <el-aside
         :class="[isCollapse ? 'ms-aside': 'ms-aside-collapse-open', isFullScreen ? 'is-fullscreen' : '']"
-        class="ms-left-aside"
+        class="ms-left-aside shepherd-menu"
         :style="isFixed ? 'opacity:100%; position: relative;z-index: 666;': 'opacity: 95%;position: fixed'"
         @mouseenter.native="collapseOpen"
         @mouseleave.native="collapseClose">
@@ -277,8 +277,9 @@ export default {
 }
 
 .container {
-  padding: 0px !important;
+  padding: 0!important;
   height: calc(100vh);
+  background-color: #F5F6F7;
 }
 
 .ms-aside-left {

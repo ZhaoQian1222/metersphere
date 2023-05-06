@@ -72,7 +72,9 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -93,6 +95,9 @@ public class IssuesService {
     private BaseIntegrationService baseIntegrationService;
     @Resource
     private TrackProjectService trackProjectService;
+    @Resource
+    @Lazy
+    private IssuesSyncService issuesSyncService;
     @Resource
     private BaseUserService baseUserService;
     @Resource
@@ -147,6 +152,7 @@ public class IssuesService {
     private BasePluginService basePluginService;
 
     private static final String SYNC_THIRD_PARTY_ISSUES_KEY = "ISSUE:SYNC";
+    private static final String SYNC_THIRD_PARTY_ISSUES_ERROR_KEY = "ISSUE:SYNC:ERROR";
 
     public void testAuth(String workspaceId, String platform) {
         IssuesRequest issuesRequest = new IssuesRequest();
@@ -437,7 +443,7 @@ public class IssuesService {
     public List<IssuesDao> getIssues(String caseResourceId, String refType) {
         IssuesRequest issueRequest = new IssuesRequest();
         issueRequest.setCaseResourceId(caseResourceId);
-        ServiceUtils.getDefaultOrder(issueRequest.getOrders());
+        issueRequest.setOrders(ServiceUtils.getDefaultOrder(issueRequest.getOrders(),"relate_time"));
         issueRequest.setRefType(refType);
         List<IssuesDao> issues = extIssuesMapper.getIssuesByCaseId(issueRequest);
         Map<String, User> userMap = getUserMap(issues);
@@ -872,7 +878,7 @@ public class IssuesService {
         List<String> projectIds = trackProjectService.getThirdPartProjectIds();
         projectIds.forEach(id -> {
             try {
-                syncThirdPartyIssues(id);
+                issuesSyncService.syncIssues(id);
             } catch (Exception e) {
                 LogUtil.error(e.getMessage(), e);
             }
@@ -894,12 +900,20 @@ public class IssuesService {
         LogUtil.info("测试计划-测试用例同步缺陷信息结束");
     }
 
-    public boolean checkSync(String projectId) {
+    public IssueSyncCheckResult checkSync(String projectId) {
+        IssueSyncCheckResult issueSyncCheckResult = IssueSyncCheckResult.builder().syncComplete(Boolean.FALSE).syncResult(StringUtils.EMPTY).build();
         String syncValue = getSyncKey(projectId);
         if (StringUtils.isNotEmpty(syncValue)) {
-            return false;
+            return issueSyncCheckResult;
         }
-        return true;
+        issueSyncCheckResult.setSyncComplete(Boolean.TRUE);
+        String syncMsg = getSyncErrorMsg(projectId);
+        issueSyncCheckResult.setSyncResult(syncMsg);
+        if (StringUtils.isNotEmpty(syncMsg)) {
+            // 清空同步异常信息
+            deleteSyncErrorMsg(projectId);
+        }
+        return issueSyncCheckResult;
     }
 
     public String getSyncKey(String projectId) {
@@ -915,47 +929,41 @@ public class IssuesService {
         stringRedisTemplate.delete(SYNC_THIRD_PARTY_ISSUES_KEY + ":" + projectId);
     }
 
-    public boolean syncThirdPartyIssues(String projectId) {
-        if (StringUtils.isNotBlank(projectId)) {
-            String syncValue = getSyncKey(projectId);
-            if (StringUtils.isNotEmpty(syncValue)) {
-                return false;
-            }
-
-            setSyncKey(projectId);
-
-            Project project = baseProjectService.getProjectById(projectId);
-            List<IssuesDao> issues = extIssuesMapper.getIssueForSync(projectId, project.getPlatform());
-
-            if (CollectionUtils.isEmpty(issues)) {
-                deleteSyncKey(projectId);
-                return true;
-            }
-
-            IssuesRequest issuesRequest = new IssuesRequest();
-            issuesRequest.setProjectId(projectId);
-            issuesRequest.setWorkspaceId(project.getWorkspaceId());
-
-            try {
-                issuesRequest.setDefaultCustomFields(getDefaultCustomField(project));
-                if (PlatformPluginService.isPluginPlatform(project.getPlatform())) {
-                    // 分批处理
-                    SubListUtil.dealForSubList(issues, 500, (subIssue) ->
-                            syncPluginThirdPartyIssues(subIssue, project, issuesRequest.getDefaultCustomFields()));
-                } else {
-                    IssuesPlatform platform = IssueFactory.createPlatform(project.getPlatform(), issuesRequest);
-                    syncThirdPartyIssues(platform::syncIssues, project, issues);
-                }
-            } catch (Exception e) {
-                throw e;
-            } finally {
-                deleteSyncKey(projectId);
-            }
-        }
-        return true;
+    public void setSyncErrorMsg(String projectId, String errorMsg) {
+        stringRedisTemplate.opsForValue().set(SYNC_THIRD_PARTY_ISSUES_ERROR_KEY + ":" + projectId, errorMsg, 30, TimeUnit.SECONDS);
     }
 
-    private String getDefaultCustomField(Project project) {
+    public String getSyncErrorMsg(String projectId) {
+        return stringRedisTemplate.opsForValue().get(SYNC_THIRD_PARTY_ISSUES_ERROR_KEY + ":" + projectId);
+    }
+
+    public void deleteSyncErrorMsg(String projectId) {
+        stringRedisTemplate.delete(SYNC_THIRD_PARTY_ISSUES_ERROR_KEY + ":" + projectId);
+    }
+
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void syncThirdPartyIssues(List<IssuesDao> issues, IssuesRequest issuesRequest, Project project) {
+        try {
+            if (PlatformPluginService.isPluginPlatform(project.getPlatform())) {
+                // 分批处理
+                SubListUtil.dealForSubList(issues, 500, (subIssue) ->
+                        syncPluginThirdPartyIssues(subIssue, project, issuesRequest.getDefaultCustomFields()));
+            } else {
+                IssuesPlatform platform = IssueFactory.createPlatform(project.getPlatform(), issuesRequest);
+                syncThirdPartyIssues(platform::syncIssues, project, issues);
+            }
+        } catch (Exception e) {
+            LogUtil.error(e);
+            // 同步缺陷异常, 当前同步错误信息 -> Redis(check接口获取)
+            setSyncErrorMsg(project.getId(), e.getMessage());
+        } finally {
+            // 异常或正常结束都得删除当前项目执行同步的Key
+            deleteSyncKey(project.getId());
+        }
+    }
+
+    public String getDefaultCustomField(Project project) {
         if (isThirdPartTemplate(project)) {
             return null;
         }
@@ -1510,8 +1518,7 @@ public class IssuesService {
                         platformStatusDTO.setLabel(item.getLabel());
                         platformStatusDTO.setValue(item.getValue());
                         return platformStatusDTO;
-                    })
-                    .collect(Collectors.toList());
+                    }).collect(Collectors.collectingAndThen(Collectors.toCollection(()->new TreeSet<>(Comparator.comparing(PlatformStatusDTO::getValue))),ArrayList::new));
         } else {
             List<String> platforms = getPlatforms(project);
             if (CollectionUtils.isEmpty(platforms)) {
@@ -1913,39 +1920,22 @@ public class IssuesService {
                 && platformPluginService.isThirdPartTemplateSupport(project.getPlatform());
     }
 
-    public boolean syncThirdPartyAllIssues(IssueSyncRequest syncRequest) {
-        syncRequest.setProjectId(syncRequest.getProjectId());
-        XpackIssueService xpackIssueService = CommonBeanFactory.getBean(XpackIssueService.class);
-        if (StringUtils.isNotBlank(syncRequest.getProjectId())) {
-            // 获取当前项目执行同步缺陷Key
-            String syncValue = getSyncKey(syncRequest.getProjectId());
-            // 存在即正在同步中
-            if (StringUtils.isNotEmpty(syncValue)) {
-                return false;
+    @Async
+    public void syncThirdPartyAllIssues(IssueSyncRequest syncRequest, Project project) {
+        try {
+            XpackIssueService xpackIssueService = CommonBeanFactory.getBean(XpackIssueService.class);
+            xpackIssueService.syncThirdPartyIssues(project, syncRequest);
+            if (platformPluginService.isPluginPlatform(project.getPlatform())) {
+                syncAllPluginIssueAttachment(project, syncRequest);
             }
-            // 不存在则设置Key, 设置过期时间, 执行完成后delete掉
-            setSyncKey(syncRequest.getProjectId());
-
-            try {
-                Project project = baseProjectService.getProjectById(syncRequest.getProjectId());
-
-                if (!isThirdPartTemplate(project)) {
-                    syncRequest.setDefaultCustomFields(getDefaultCustomFields(syncRequest.getProjectId()));
-                }
-
-                xpackIssueService.syncThirdPartyIssues(project, syncRequest);
-
-                if (platformPluginService.isPluginPlatform(project.getPlatform())) {
-                    syncAllPluginIssueAttachment(project, syncRequest);
-                }
-            } catch (Exception e) {
-                LogUtil.error(e);
-                MSException.throwException(e);
-            } finally {
-                deleteSyncKey(syncRequest.getProjectId());
-            }
+        } catch (Exception e) {
+            LogUtil.error(e);
+            // 同步缺陷异常, 当前同步错误信息 -> Redis(check接口获取)
+            setSyncErrorMsg(syncRequest.getProjectId(), e.getMessage());
+        } finally {
+            // 异常或正常结束都得删除当前项目执行同步的Key
+            deleteSyncKey(syncRequest.getProjectId());
         }
-        return true;
     }
 
     /**
@@ -1955,7 +1945,6 @@ public class IssuesService {
         Platform platform = platformPluginService.getPlatform(project.getPlatform(), project.getWorkspaceId());
         SyncAllIssuesRequest syncAllIssuesRequest = new SyncAllIssuesRequest();
         BeanUtils.copyBean(syncAllIssuesRequest, issueSyncRequest);
-        syncAllIssuesRequest.setDefaultCustomFields(getDefaultCustomField(project));
         syncAllIssuesRequest.setProjectConfig(PlatformPluginService.getCompatibleProjectConfig(project));
         syncAllIssuesRequest.setHandleSyncFunc(issueSyncRequest.getHandleSyncFunc());
         platform.syncAllIssues(syncAllIssuesRequest);
